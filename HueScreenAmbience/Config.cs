@@ -8,7 +8,8 @@ namespace HueScreenAmbience
 {
     public class Config
     {
-		public ConfigModel config { get; private set; }
+		private ConfigModel _config;
+		public ConfigModel config { get { return _config; } private set { _config = value; } }
 
 		public void loadConfig()
 		{
@@ -52,5 +53,7 @@ namespace HueScreenAmbience
 	{
 		public string appKey;
 		public string ip;
+		public string roomId;
+		public int pixelCount = 921600;
 	}
 }

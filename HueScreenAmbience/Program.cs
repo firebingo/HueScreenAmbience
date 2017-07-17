@@ -10,6 +10,7 @@ namespace HueScreenAmbience
 		InputHandler input = null;
 		Core core = null;
 		Config config = null;
+		ScreenReader screen = null;
 		IServiceProvider map = null;
 
 		static void Main(string[] args)
@@ -34,7 +35,12 @@ namespace HueScreenAmbience
 				Thread coreThread = new Thread(new ThreadStart(core.start));
 				coreThread.Name = "Core Thread";
 				coreThread.Start();
-				
+
+				screen.installServices(map);
+				Thread screenThread = new Thread(new ThreadStart(screen.start));
+				screenThread.Name = "Screen Reader Thread";
+				screenThread.Start();
+
 				//Delay until application quit
 				await Task.Delay(-1);
 			}
@@ -50,11 +56,13 @@ namespace HueScreenAmbience
 			config = new Config();
 			input = new InputHandler();
 			core = new Core();
+			screen = new ScreenReader();
 		
 			var services = new ServiceCollection()
 				.AddSingleton(config)
 				.AddSingleton(input)
-				.AddSingleton(core);
+				.AddSingleton(core)
+				.AddSingleton(screen);
 			var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
 			return provider;
 		}
