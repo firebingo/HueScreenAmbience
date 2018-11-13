@@ -7,44 +7,44 @@ namespace HueScreenAmbience
 {
 	class HueScreenAmbience
 	{
-		InputHandler input = null;
-		Core core = null;
-		Config config = null;
-		ScreenReader screen = null;
-		IServiceProvider map = null;
+		private InputHandler _input = null;
+		private Core _core = null;
+		private Config _config = null;
+		private ScreenReader _screen = null;
+		private IServiceProvider _map = null;
 
 		static void Main(string[] args)
 		{
-			new HueScreenAmbience().run().GetAwaiter().GetResult();
+			new HueScreenAmbience().Run().GetAwaiter().GetResult();
 		}
 
-		public async Task run()
+		public async Task Run()
 		{
 			try
 			{
-				map = ConfigureServices();
+				_map = ConfigureServices();
 				
-				config.loadConfig();
+				_config.LoadConfig();
 
-				input.installServices(map);
-				Thread inputThread = new Thread(new ThreadStart(input.handleInput));
+				_input.InstallServices(_map);
+				Thread inputThread = new Thread(new ThreadStart(_input.HandleInput));
 				inputThread.Name = "Input Thread";
 				inputThread.Start();
 				
-				core.installServices(map);
-				Thread coreThread = new Thread(new ThreadStart(core.start));
+				_core.InstallServices(_map);
+				Thread coreThread = new Thread(new ThreadStart(_core.Start));
 				coreThread.Name = "Core Thread";
 				coreThread.Start();
 
-				screen.installServices(map);
-				Thread screenThread = new Thread(new ThreadStart(screen.start));
+				_screen.InstallServices(_map);
+				Thread screenThread = new Thread(new ThreadStart(_screen.Start));
 				screenThread.Name = "Screen Reader Thread";
 				screenThread.Start();
 
 				//Delay until application quit
 				await Task.Delay(-1);
 			}
-			catch (Exception e)
+			catch
 			{
 				return;
 			}
@@ -53,16 +53,16 @@ namespace HueScreenAmbience
 		private IServiceProvider ConfigureServices()
 		{
 			//setup and add command service.
-			config = new Config();
-			input = new InputHandler();
-			core = new Core();
-			screen = new ScreenReader();
+			_config = new Config();
+			_input = new InputHandler();
+			_core = new Core();
+			_screen = new ScreenReader();
 		
 			var services = new ServiceCollection()
-				.AddSingleton(config)
-				.AddSingleton(input)
-				.AddSingleton(core)
-				.AddSingleton(screen);
+				.AddSingleton(_config)
+				.AddSingleton(_input)
+				.AddSingleton(_core)
+				.AddSingleton(_screen);
 			var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
 			return provider;
 		}

@@ -9,24 +9,24 @@ namespace HueScreenAmbience
     public class Config
     {
 		private ConfigModel _config;
-		public ConfigModel config { get { return _config; } private set { _config = value; } }
+		public ConfigModel Model { get => _config; private set => _config = value; }
 
-		public void loadConfig()
+		public void LoadConfig()
 		{
 			try
 			{
-				config = null;
+				_config = null;
 				if (File.Exists("Data/Config.json"))
 				{
-					config = JsonConvert.DeserializeObject<ConfigModel>(File.ReadAllText("Data/Config.json"));
+					_config = JsonConvert.DeserializeObject<ConfigModel>(File.ReadAllText("Data/Config.json"));
 				}
 				else
 				{
 					if (!Directory.Exists("Data"))
 						Directory.CreateDirectory("Data");
 					using (File.Create("Data/Config.json")) { }
-					config = new ConfigModel();
-					saveConfig();
+					_config = new ConfigModel();
+					SaveConfig();
 				}
 			}
 			catch(Exception e)
@@ -35,11 +35,11 @@ namespace HueScreenAmbience
 			}
 		}
 
-		public void saveConfig()
+		public void SaveConfig()
 		{
 			try
 			{
-				File.WriteAllText("Data/Config.json", JsonConvert.SerializeObject(config));
+				File.WriteAllText("Data/Config.json", JsonConvert.SerializeObject(_config));
 			}
 			catch(Exception e)
 			{

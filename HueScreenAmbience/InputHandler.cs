@@ -11,7 +11,7 @@ namespace HueScreenAmbience
 		private Config config;
 		private ScreenReader screen;
 
-		public void installServices(IServiceProvider _map)
+		public void InstallServices(IServiceProvider _map)
 		{
 			core = _map.GetService(typeof(Core)) as Core;
 			config = _map.GetService(typeof(Config)) as Config;
@@ -22,12 +22,12 @@ namespace HueScreenAmbience
 		/// <summary>
 		/// Handles input to the console.
 		/// </summary>
-		public async void handleInput()
+		public async void HandleInput()
 		{
 			isRunning = true;
 			string input = "";
 
-			resetConsole();
+			ResetConsole();
 			//while the input thread is set to run
 			do
 			{
@@ -49,19 +49,19 @@ namespace HueScreenAmbience
 					case "-connect":
 					case "-c":
 						Console.WriteLine("Searching");
-						await core.connectToBridge();
-						resetConsole();
+						await core.ConnectToBridge();
+						ResetConsole();
 						break;
 					case "-start":
 					case "-s":
-						core.startScreenReading();
-						resetConsole();
+						core.StartScreenReading();
+						ResetConsole();
 						break;
 					case "-stop":
 					case "-end":
 					case "-e":
-						core.stopScreenReading();
-						resetConsole();
+						core.StopScreenReading();
+						ResetConsole();
 						break;
 					//Quit the application.
 					case "-quit":
@@ -74,14 +74,14 @@ namespace HueScreenAmbience
 					//Select a room
 					case "-room":
 					case "-r":
-						await core.selectRoom();
-						resetConsole();
+						await core.SelectRoom();
+						ResetConsole();
 						break;
 					//Change pixel count
 					case "-pixels":
 					case "-p":
-						core.changePixelCount();
-						resetConsole();
+						core.ChangePixelCount();
+						ResetConsole();
 						break;
 					default:
 						Console.WriteLine("Invalid Input Given");
@@ -91,16 +91,16 @@ namespace HueScreenAmbience
 			while (isRunning);
 		}
 
-		public void resetConsole()
+		public void ResetConsole()
 		{
 			Console.Clear();
 			Console.WriteLine("HUE Screen Based Lighting");
-			if (core.isConnectedToBridge)
+			if (core.IsConnectedToBridge)
 				Console.WriteLine("Connected to Bridge");
-			if (core.useRoom != null)
-				Console.WriteLine($"Using room: {core.useRoom.Name}");
+			if (core.UseRoom != null)
+				Console.WriteLine($"Using room: {core.UseRoom.Name}");
 			Console.WriteLine("Use -h for help");
-			if (screen.isRunning)
+			if (screen.IsRunning)
 				Console.WriteLine($"Lighting is running");
 		}
 	}

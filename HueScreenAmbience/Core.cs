@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using StringExtensions;
 using Q42.HueApi.Models.Groups;
 using System.Threading;
 using System.Drawing;
@@ -17,59 +16,54 @@ namespace HueScreenAmbience
 {
 	public class Core
 	{
-		public ILocalHueClient _client
-		{
-			get { return Client; }
-			private set { Client = value; }
-		}
-		private ILocalHueClient Client = null;
-		private LocatedBridge useBridge = null;
-		public Group useRoom { get; private set; } = null;
-		private const string appName = "HUEScreenAmbience";
+		private ILocalHueClient _client = null;
+		private LocatedBridge _useBridge = null;
+		public Group UseRoom { get; private set; } = null;
+		private const string _appName = "HUEScreenAmbience";
 
-		public bool isConnectedToBridge { get; private set; } = false;
-		private IServiceProvider map;
-		private Config config;
-		private InputHandler input;
-		private ScreenReader screen;
-		private Thread screenLoopThread;
-		private bool sendingCommand;
+		public bool IsConnectedToBridge { get; private set; } = false;
+		private IServiceProvider _map;
+		private Config _config;
+		private InputHandler _input;
+		private ScreenReader _screen;
+		private Thread _screenLoopThread;
+		private bool _sendingCommand;
 
-		public void start()
+		public void Start()
 		{
-			autoConnectAttempt();
+			Task.Run(() => AutoConnectAttempt());
 		}
 
-		public void installServices(IServiceProvider _map)
+		public void InstallServices(IServiceProvider _map)
 		{
-			config = _map.GetService(typeof(Config)) as Config;
-			input = _map.GetService(typeof(InputHandler)) as InputHandler;
-			screen = _map.GetService(typeof(ScreenReader)) as ScreenReader;
-			map = _map;
+			_config = _map.GetService(typeof(Config)) as Config;
+			_input = _map.GetService(typeof(InputHandler)) as InputHandler;
+			_screen = _map.GetService(typeof(ScreenReader)) as ScreenReader;
+			this._map = _map;
 		}
 
-		private async Task<bool> autoConnectAttempt()
+		private async Task<bool> AutoConnectAttempt()
 		{
-			if (config.config.appKey.isNullOrEmpty() || config.config.ip.isNullOrEmpty())
+			if (string.IsNullOrWhiteSpace(_config.Model.appKey) || string.IsNullOrWhiteSpace(_config.Model.ip))
 				return Task.FromResult<bool>(false).Result;
 
 			Console.WriteLine("Attempting auto-connect");
-			Client = new LocalHueClient(config.config.ip);
-			Client.Initialize(config.config.appKey);
-			isConnectedToBridge = true;
+			_client = new LocalHueClient(_config.Model.ip);
+			_client.Initialize(_config.Model.appKey);
+			IsConnectedToBridge = true;
 
-			if (!config.config.roomId.isNullOrEmpty())
+			if (!string.IsNullOrWhiteSpace(_config.Model.roomId))
 			{
-				var Groups = await Client.GetGroupsAsync();
+				var Groups = await _client.GetGroupsAsync();
 				if (Groups != null && Groups.Count != 0)
-					useRoom = Groups.FirstOrDefault(x => x.Id == config.config.roomId);
+					UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.roomId);
 			}
 
-			input.resetConsole();
+			_input.ResetConsole();
 			return Task.FromResult<bool>(true).Result;
 		}
 
-		public async Task<bool> connectToBridge()
+		public async Task<bool> ConnectToBridge()
 		{
 			try
 			{
@@ -100,7 +94,7 @@ namespace HueScreenAmbience
 						if (readInt > bridges.Count || readInt < 1)
 							continue;
 						validInput = true;
-						useBridge = bridges[readInt - 1];
+						_useBridge = bridges[readInt - 1];
 						bool nameValid = false;
 						do
 						{
@@ -112,13 +106,13 @@ namespace HueScreenAmbience
 								if (deviceName == string.Empty || deviceName.Length > 19 || deviceName.Contains(" "))
 									continue;
 								nameValid = true;
-								Client = new LocalHueClient(useBridge.IpAddress);
-								var appKey = await Client.RegisterAsync(appName, deviceName);
-								Client.Initialize(appKey);
-								isConnectedToBridge = true;
-								config.config.ip = useBridge.IpAddress;
-								config.config.appKey = appKey;
-								config.saveConfig();
+								_client = new LocalHueClient(_useBridge.IpAddress);
+								var appKey = await _client.RegisterAsync(_appName, deviceName);
+								_client.Initialize(appKey);
+								IsConnectedToBridge = true;
+								_config.Model.ip = _useBridge.IpAddress;
+								_config.Model.appKey = appKey;
+								_config.SaveConfig();
 							}
 							catch (Exception e)
 							{
@@ -133,20 +127,20 @@ namespace HueScreenAmbience
 
 				return Task.FromResult<bool>(true).Result;
 			}
-			catch (Exception e)
+			catch
 			{
 				return Task.FromResult<bool>(true).Result;
 			}
 		}
 
-		public async Task<bool> selectRoom()
+		public async Task<bool> SelectRoom()
 		{
-			if (!isConnectedToBridge)
+			if (!IsConnectedToBridge)
 				return Task.FromResult<bool>(false).Result;
 
-			var Groups = await Client.GetGroupsAsync();
+			var Groups = await _client.GetGroupsAsync();
 
-			if (Groups.Count == null || Groups.Count == 0)
+			if (Groups?.Count == 0)
 			{
 				Console.WriteLine("No rooms defined on bridge. Please use another HUE app to define a room.");
 				Console.ReadLine();
@@ -171,24 +165,25 @@ namespace HueScreenAmbience
 					if (readInt > Groups.Count || readInt < 1)
 						continue;
 					validInput = true;
-					useRoom = Groups.ElementAt(readInt-1);
-					config.config.roomId = useRoom.Id;
-					config.saveConfig();
+					UseRoom = Groups.ElementAt(readInt-1);
+					_config.Model.roomId = UseRoom.Id;
+					_config.SaveConfig();
 				}
 			} while (!validInput);
 
 			return Task.FromResult<bool>(true).Result;
 		}
 
-		public void changePixelCount()
+		public void ChangePixelCount()
 		{
 			var valid = false;
-			var screenPixelCount = screen.screenInfo.height * screen.screenInfo.width;
+			var screenPixelCount = _screen.ScreenInfo.height * _screen.ScreenInfo.width;
 			do
 			{
 				Console.Clear();
-				Console.WriteLine($"Current Count: {config.config.pixelCount}");
-				Console.WriteLine("Large pixel counts will take too long to calculate and will lag behind the screen. Recommended to leave at default");
+				Console.WriteLine($"Current Count: {_config.Model.pixelCount}");
+				Console.WriteLine("Large pixel counts may take too long to calculate and will lag behind the screen. Recommended to leave at default.");
+				Console.WriteLine("Entering 0 will read the whole screen.");
 				Console.WriteLine($"Max: {Math.Min(screenPixelCount, 10000000)}");
 				Console.WriteLine("Input new pixel count:");
 				var read = Console.ReadLine();
@@ -198,62 +193,66 @@ namespace HueScreenAmbience
 					if (readInt > screenPixelCount || readInt > 10000000)
 						continue;
 					valid = true;
-					config.config.pixelCount = readInt;
-					config.saveConfig();
-					screen.preparePixelsToGet();
+					_config.Model.pixelCount = readInt;
+					_config.SaveConfig();
+					_screen.PreparePixelsToGet();
 				}
 			}
 			while (!valid);
 		}
 
-		public async void startScreenReading()
+		public async void StartScreenReading()
 		{
-			if (!isConnectedToBridge || useRoom == null)
+			if (!IsConnectedToBridge || UseRoom == null)
 			{
 				Console.Clear();
 				Console.WriteLine("Either not connected to a bridge or room has not been selected");
 				Console.ReadLine();
-				input.resetConsole();
+				_input.ResetConsole();
 				return;
 			}
-			var command = new LightCommand();
-			command.On = true;
-			command.TransitionTime = new TimeSpan(0, 0, 0, 0, (int)screen.averageDt);
+			var command = new LightCommand
+			{
+				On = true,
+				TransitionTime = new TimeSpan(0, 0, 0, 0, (int)_screen.AverageDt)
+			};
 			command.TurnOn();
-			await Client.SendCommandAsync(command, useRoom.Lights);
-			screenLoopThread = new Thread(new ThreadStart(screen.readScreenLoop));
-			screenLoopThread.Name = "Screen Loop Thread";
-			screenLoopThread.Start();
-			input.resetConsole();
+			await _client.SendCommandAsync(command, UseRoom.Lights);
+			_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoop));
+			_screenLoopThread.Name = "Screen Loop Thread";
+			_screenLoopThread.Start();
+			_input.ResetConsole();
 		}
 		
-		public void stopScreenReading()
+		public void StopScreenReading()
 		{
-			if (screenLoopThread != null && screenLoopThread.IsAlive)
+			if (_screenLoopThread != null && _screenLoopThread.IsAlive)
 			{
-				screen.stopScreenLoop();
-				screenLoopThread.Abort();
+				_screen.StopScreenLoop();
+				_screenLoopThread.Abort();
 			}
-			input.resetConsole();
+			_input.ResetConsole();
 		}
 
-		public async Task changeLightColor(Color c)
+		public async Task ChangeLightColor(Color c)
 		{
-			if (sendingCommand)
+			if (_sendingCommand)
 				return;
-			var command = new LightCommand();
-			command.TransitionTime = new TimeSpan(0, 0, 0, 0, (int)screen.averageDt);
+			var command = new LightCommand
+			{
+				TransitionTime = new TimeSpan(0, 0, 0, 0, (int)_screen.AverageDt)
+			};
 			command.SetColor(new RGBColor(Helpers.ColorToHex(c)));
-			sendingCommand = true;
+			_sendingCommand = true;
 			try
 			{
-				await Client.SendCommandAsync(command, useRoom.Lights);
+				await _client.SendCommandAsync(command, UseRoom.Lights);
 			}
-			catch (Exception e)
+			catch
 			{
 
 			}
-			sendingCommand = false;
+			_sendingCommand = false;
 		}
 	}
 }

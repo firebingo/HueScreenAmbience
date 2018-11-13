@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -24,38 +25,32 @@ namespace HueScreenAmbience
 		[DllImport("user32.dll")]
 		private static extern Boolean GetMonitorInfo(IntPtr hMonitor, MonitorInfo lpmi);
 
-		private List<Point> pixelsToGet = null;
-		private MonitorInfo screen = null;
-		public screenDimensions screenInfo { get; private set; }
-		private Config config;
-		private Core core;
-		public bool isRunning { get; private set; } = false;
-		public double averageDt = 0;
-		private int thres = 15;
+		private Point[] _pixelsToRead = null;
+		private MonitorInfo _screen = null;
+		public ScreenDimensions ScreenInfo { get; private set; }
+		private Config _onfig;
+		private Core _core;
+		public bool IsRunning { get; private set; } = false;
+		public double AverageDt = 0;
+		private readonly int _thres = 15;
 
-		object lockPixelsObj = new object();
-		private int frameRate = 7;
+		private readonly object _lockPixelsObj = new object();
+		private readonly int _frameRate = 7;
 
-		public void start()
+		public void Start()
 		{
-			getScreenInfo();
-			pixelsToGet = new List<Point>();
-			preparePixelsToGet();
+			GetScreenInfo();
+			_pixelsToRead = new Point[0];
+			PreparePixelsToGet();
 		}
 
-		public void installServices(IServiceProvider _map)
+		public void InstallServices(IServiceProvider _map)
 		{
-			config = _map.GetService(typeof(Config)) as Config;
-			core = _map.GetService(typeof(Core)) as Core;
+			_onfig = _map.GetService(typeof(Config)) as Config;
+			_core = _map.GetService(typeof(Core)) as Core;
 		}
 
-		public Color GetColorAt(Point p, IntPtr dc)
-		{
-			int a = (int)GetPixel(dc, p.X, p.Y);
-			return Color.FromArgb(255, (a >> 0) & 0xff, (a >> 8) & 0xff, (a >> 16) & 0xff);
-		}
-
-		public void getScreenInfo()
+		public void GetScreenInfo()
 		{
 			var desk = GetDesktopWindow();
 			var monitor = MonitorFromWindow(desk, MONITOR_DEFAULTTONEAREST);
@@ -63,43 +58,42 @@ namespace HueScreenAmbience
 			{
 				var monitorInfo = new MonitorInfo();
 				GetMonitorInfo(monitor, monitorInfo);
-				screen = monitorInfo;
-				screenInfo = new screenDimensions();
-				screenInfo.left = monitorInfo.Monitor.Left;
-				screenInfo.top = monitorInfo.Monitor.Top;
-				screenInfo.width = (monitorInfo.Monitor.Right - monitorInfo.Monitor.Left);
-				screenInfo.height = (monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top);
+				_screen = monitorInfo;
+				ScreenInfo = new ScreenDimensions();
+				ScreenInfo.left = monitorInfo.Monitor.Left;
+				ScreenInfo.top = monitorInfo.Monitor.Top;
+				ScreenInfo.width = (monitorInfo.Monitor.Right - monitorInfo.Monitor.Left);
+				ScreenInfo.height = (monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top);
 			}
 		}
 
-		public void preparePixelsToGet()
+		public void PreparePixelsToGet()
 		{
-			lock (lockPixelsObj)
+			lock (_lockPixelsObj)
 			{
-				pixelsToGet.Clear();
+				var pixelsToGet = new ConcurrentBag<Point>();
+				GC.Collect();
 				var r = new Random();
 
-				object tempLock = new object();
-				Parallel.For(0, config.config.pixelCount, index =>
+				Parallel.For(0, _onfig.Model.pixelCount, index =>
 				{
-					var p = new Point(r.Next(0, screenInfo.width), r.Next(0, screenInfo.height));
-					lock (tempLock)
-					{
-						pixelsToGet.Add(p);
-					}
+					var p = new Point(r.Next(0, ScreenInfo.width), r.Next(0, ScreenInfo.height));
+					pixelsToGet.Add(p);
 				});
+				//looping over an array is noticeably faster than a list at this scale
+				_pixelsToRead = pixelsToGet.Distinct().ToArray();
 			}
 		}
 
-		public void readScreenLoop()
+		public void ReadScreenLoop()
 		{
-			isRunning = true;
+			IsRunning = true;
 			Color lastColor = Color.FromArgb(255, 255, 255);
 			do
 			{
-				var start = DateTime.Now;
+				var start = DateTime.UtcNow;
 				Color avg = new Color();
-				using (var bmp = CaptureScreen.GetDesktopImage(screenInfo.width, screenInfo.height))
+				using (var bmp = CaptureScreen.GetDesktopImage(ScreenInfo.width, ScreenInfo.height))
 				{
 					BitmapData srcData = bmp.LockBits(
 					new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height),
@@ -112,56 +106,88 @@ namespace HueScreenAmbience
 
 					long[] totals = new long[] { 0, 0, 0 };
 
-					int width = bmp.Width;
-					int height = bmp.Height;
+					var t1 = DateTime.UtcNow;
+					Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
 
+					var totalSize = _pixelsToRead.Length;
 					unsafe
 					{
 						byte* p = (byte*)(void*)Scan0;
-						lock (lockPixelsObj)
+						//Colors in are bitmap format are 32bpp so 4 bytes for each color in RGBA format
+						lock (_lockPixelsObj)
 						{
-							foreach (var pix in pixelsToGet)
+							//If we are set to 0 just read the full screen
+							//At above 1080p this will be slower than using an actual number
+							if (_onfig.Model.pixelCount == 0 || _pixelsToRead.Length == 0)
 							{
-								for (int color = 0; color < 3; color++)
+								totalSize = srcData.Width * srcData.Height;
+								for (var i = 0; i < totalSize * 4; i += 4)
 								{
-									int idx = (pix.Y * stride) + pix.X * 4 + color;
-									totals[color] += p[idx];
+									//index is our power of 4 padded index in the bitmap.
+									totals[0] += p[i]; //r
+									totals[1] += p[i + 1]; //g
+									totals[2] += p[i + 2]; //b
+								}
+							}
+							else
+							{
+								foreach (var pix in _pixelsToRead)
+								{
+									//y * stride gives us the offset for the scanline we are in on the bitmap (ex. line 352 * 1080 = 380160 bits)
+									//x * 4 gives us our power of 4 for column
+									//ex. total offset for coord 960x540 on a 1080p image is is (540 * 1080) + 960 * 4 = 587040 bits
+									int index = (pix.Y * stride) + pix.X * 4;
+									//Then each r, g, b index is added to this offset
+									totals[0] += p[index];
+									totals[1] += p[index + 1];
+									totals[2] += p[index + 2];
 								}
 							}
 						}
 					}
 
-					int avgB = (int)(totals[0] / (pixelsToGet.Count));
-					int avgG = (int)(totals[1] / (pixelsToGet.Count));
-					int avgR = (int)(totals[2] / (pixelsToGet.Count));
-					if (lastColor.R >= avgR - thres && lastColor.R <= avgR + thres)
+					var t2 = DateTime.UtcNow;
+					Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
+					//Total colors are averaged
+					int avgB = (int)(totals[0] / (totalSize));
+					int avgG = (int)(totals[1] / (totalSize));
+					int avgR = (int)(totals[2] / (totalSize));
+					//If the last colors set are close enough to the current color keep the current color.
+					//This is to prevent a lot of color jittering that can happen otherwise.
+					if (lastColor.R >= avgR - _thres && lastColor.R <= avgR + _thres)
 						avgR = lastColor.R;
-					if (lastColor.G >= avgG - thres && lastColor.G <= avgG + thres)
+					if (lastColor.G >= avgG - _thres && lastColor.G <= avgG + _thres)
 						avgG = lastColor.G;
-					if (lastColor.B >= avgB - thres && lastColor.B <= avgB + thres)
+					if (lastColor.B >= avgB - _thres && lastColor.B <= avgB + _thres)
 						avgB = lastColor.B;
 					avg = Color.FromArgb(0, avgR, avgG, avgB);
 					if (avg != lastColor)
-						core.changeLightColor(avg).ConfigureAwait(false);
+						Task.Run(() => _core.ChangeLightColor(avg));
 					lastColor = avg;
 					bmp.UnlockBits(srcData);
+					var t3 = DateTime.UtcNow;
+					Console.WriteLine($"Average Calc Time: {(t3 - t2).TotalMilliseconds}");
 					GC.Collect();
+					Console.WriteLine($"GC Time:           {(DateTime.UtcNow - t3).TotalMilliseconds}");
 				}
+				
 
-				var end = DateTime.Now;
-				var dt = end - start;
-				averageDt = (averageDt + dt.TotalMilliseconds) / 2;
-				if (dt.TotalMilliseconds < 1000 / frameRate)
-					Thread.Sleep((int)((1000 / frameRate) - dt.TotalMilliseconds));
-			} while (isRunning);
+				var dt = DateTime.UtcNow - start;
+				AverageDt = (AverageDt + dt.TotalMilliseconds) / 2;
+				Console.WriteLine($"Total Time:        {dt.TotalMilliseconds}");
+				Console.WriteLine("---------------------------------------");
+				//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
+				if (dt.TotalMilliseconds < 1000 / _frameRate)
+					Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
+			} while (IsRunning);
 		}
 
-		public void stopScreenLoop()
+		public void StopScreenLoop()
 		{
-			isRunning = false;
+			IsRunning = false;
 		}
 
-		public class screenDimensions
+		public class ScreenDimensions
 		{
 			public int left;
 			public int top;
