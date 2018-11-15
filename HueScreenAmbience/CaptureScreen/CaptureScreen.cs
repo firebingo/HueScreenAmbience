@@ -19,8 +19,11 @@ namespace HueScreenAmbience
 			//Variable to keep the handle to bitmap.
 			IntPtr hBitmap;
 
+			//Get a handle to the desktop
+			IntPtr dskHandle = PlatformInvokeUSER32.GetDesktopWindow();
+
 			//Here we get the handle to the desktop device context.
-			IntPtr hDC = PlatformInvokeUSER32.GetDC(PlatformInvokeUSER32.GetDesktopWindow()); 
+			IntPtr hDC = PlatformInvokeUSER32.GetDC(dskHandle); 
 
 			//Here we make a compatible device context in memory for screen device context.
 			IntPtr hMemDC = PlatformInvokeGDI32.CreateCompatibleDC(hDC);
@@ -40,13 +43,13 @@ namespace HueScreenAmbience
 				//Here we select the compatible bitmap in memeory device context and keeps the refrence to Old bitmap.
 				IntPtr hOld = (IntPtr) PlatformInvokeGDI32.SelectObject(hMemDC, hBitmap);
 				//We copy the Bitmap to the memory device context.
-				PlatformInvokeGDI32.BitBlt(hMemDC, 0, 0, width, height, hDC, 0, 0, PlatformInvokeGDI32.SRCCOPY);
+				PlatformInvokeGDI32.BitBlt(hMemDC, 0, 0, width, height, hDC, 0, 0, CopyPixelOperation.SourceCopy | CopyPixelOperation.CaptureBlt);
 				//We select the old bitmap back to the memory device context.
 				PlatformInvokeGDI32.SelectObject(hMemDC, hOld);
 				//We delete the memory device context.
 				PlatformInvokeGDI32.DeleteDC(hMemDC);
 				//We release the screen device context.
-				PlatformInvokeUSER32.ReleaseDC(PlatformInvokeUSER32.GetDesktopWindow(), hDC);
+				PlatformInvokeUSER32.ReleaseDC(dskHandle, hDC);
 				//Image is created by Image bitmap handle and stored in local variable.
 				Bitmap bmp = System.Drawing.Image.FromHbitmap(hBitmap); 
 				//Release the memory for compatible bitmap.

@@ -107,7 +107,7 @@ namespace HueScreenAmbience
 					long[] totals = new long[] { 0, 0, 0 };
 
 					var t1 = DateTime.UtcNow;
-					Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
+					//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
 
 					var totalSize = _pixelsToRead.Length;
 					unsafe
@@ -147,7 +147,7 @@ namespace HueScreenAmbience
 					}
 
 					var t2 = DateTime.UtcNow;
-					Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
+					//Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
 					//Total colors are averaged
 					int avgB = (int)(totals[0] / (totalSize));
 					int avgG = (int)(totals[1] / (totalSize));
@@ -166,16 +166,16 @@ namespace HueScreenAmbience
 					lastColor = avg;
 					bmp.UnlockBits(srcData);
 					var t3 = DateTime.UtcNow;
-					Console.WriteLine($"Average Calc Time: {(t3 - t2).TotalMilliseconds}");
+					//Console.WriteLine($"Average Calc Time: {(t3 - t2).TotalMilliseconds}");
 					GC.Collect();
-					Console.WriteLine($"GC Time:           {(DateTime.UtcNow - t3).TotalMilliseconds}");
+					//Console.WriteLine($"GC Time:           {(DateTime.UtcNow - t3).TotalMilliseconds}");
 				}
 				
 
 				var dt = DateTime.UtcNow - start;
 				AverageDt = (AverageDt + dt.TotalMilliseconds) / 2;
-				Console.WriteLine($"Total Time:        {dt.TotalMilliseconds}");
-				Console.WriteLine("---------------------------------------");
+				//Console.WriteLine($"Total Time:        {dt.TotalMilliseconds}");
+				//Console.WriteLine("---------------------------------------");
 				//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
 				if (dt.TotalMilliseconds < 1000 / _frameRate)
 					Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
