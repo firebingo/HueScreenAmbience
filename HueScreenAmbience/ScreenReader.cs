@@ -16,10 +16,6 @@ namespace HueScreenAmbience
 	{
 		private const Int32 MONITOR_DEFAULTTOPRIMERTY = 0x00000001;
 		private const Int32 MONITOR_DEFAULTTONEAREST = 0x00000002;
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern IntPtr GetDesktopWindow();
-		[DllImport("gdi32.dll", SetLastError = true)]
-		private static extern uint GetPixel(IntPtr dc, int x, int y);
 		[DllImport("user32.dll")]
 		private static extern IntPtr MonitorFromWindow(IntPtr handle, Int32 flags);
 		[DllImport("user32.dll")]
@@ -28,7 +24,7 @@ namespace HueScreenAmbience
 		private Point[] _pixelsToRead = null;
 		private MonitorInfo _screen = null;
 		public ScreenDimensions ScreenInfo { get; private set; }
-		private Config _onfig;
+		private Config _config;
 		private Core _core;
 		public bool IsRunning { get; private set; } = false;
 		public double AverageDt = 0;
@@ -46,24 +42,26 @@ namespace HueScreenAmbience
 
 		public void InstallServices(IServiceProvider _map)
 		{
-			_onfig = _map.GetService(typeof(Config)) as Config;
+			_config = _map.GetService(typeof(Config)) as Config;
 			_core = _map.GetService(typeof(Core)) as Core;
 		}
 
 		public void GetScreenInfo()
 		{
-			var desk = GetDesktopWindow();
-			var monitor = MonitorFromWindow(desk, MONITOR_DEFAULTTONEAREST);
+			var desk = PlatformInvokeUSER32.GetDesktopWindow();
+			var monitor = MonitorFromWindow(desk, MONITOR_DEFAULTTOPRIMERTY);
 			if (monitor != IntPtr.Zero)
 			{
 				var monitorInfo = new MonitorInfo();
 				GetMonitorInfo(monitor, monitorInfo);
 				_screen = monitorInfo;
-				ScreenInfo = new ScreenDimensions();
-				ScreenInfo.left = monitorInfo.Monitor.Left;
-				ScreenInfo.top = monitorInfo.Monitor.Top;
-				ScreenInfo.width = (monitorInfo.Monitor.Right - monitorInfo.Monitor.Left);
-				ScreenInfo.height = (monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top);
+				ScreenInfo = new ScreenDimensions
+				{
+					left = monitorInfo.Monitor.Left,
+					top = monitorInfo.Monitor.Top,
+					width = (monitorInfo.Monitor.Right - monitorInfo.Monitor.Left),
+					height = (monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top)
+				};
 			}
 		}
 
@@ -75,7 +73,7 @@ namespace HueScreenAmbience
 				GC.Collect();
 				var r = new Random();
 
-				Parallel.For(0, _onfig.Model.pixelCount, index =>
+				Parallel.For(0, _config.Model.pixelCount, index =>
 				{
 					var p = new Point(r.Next(0, ScreenInfo.width), r.Next(0, ScreenInfo.height));
 					pixelsToGet.Add(p);
@@ -92,6 +90,7 @@ namespace HueScreenAmbience
 			do
 			{
 				var start = DateTime.UtcNow;
+				var t2 = DateTime.UtcNow;
 				Color avg = new Color();
 				using (var bmp = CaptureScreen.GetDesktopImage(ScreenInfo.width, ScreenInfo.height))
 				{
@@ -100,25 +99,22 @@ namespace HueScreenAmbience
 					ImageLockMode.ReadOnly,
 					PixelFormat.Format32bppArgb);
 
-					int stride = srcData.Stride;
-
-					IntPtr Scan0 = srcData.Scan0;
-
-					long[] totals = new long[] { 0, 0, 0 };
-
-					var t1 = DateTime.UtcNow;
-					//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
-
-					var totalSize = _pixelsToRead.Length;
 					unsafe
 					{
-						byte* p = (byte*)(void*)Scan0;
+						long* totals = stackalloc long[] { 0, 0, 0 };
+
+						//var t1 = DateTime.UtcNow;
+						//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
+
+						var totalSize = _pixelsToRead.Length;
+
+						byte* p = (byte*)(void*)srcData.Scan0;
 						//Colors in are bitmap format are 32bpp so 4 bytes for each color in RGBA format
 						lock (_lockPixelsObj)
 						{
 							//If we are set to 0 just read the full screen
 							//At above 1080p this will be slower than using an actual number
-							if (_onfig.Model.pixelCount == 0 || _pixelsToRead.Length == 0)
+							if (_config.Model.pixelCount == 0 || _pixelsToRead.Length == 0)
 							{
 								totalSize = srcData.Width * srcData.Height;
 								for (var i = 0; i < totalSize * 4; i += 4)
@@ -131,46 +127,46 @@ namespace HueScreenAmbience
 							}
 							else
 							{
+								int pixIndex = 0;
 								foreach (var pix in _pixelsToRead)
 								{
 									//y * stride gives us the offset for the scanline we are in on the bitmap (ex. line 352 * 1080 = 380160 bits)
 									//x * 4 gives us our power of 4 for column
 									//ex. total offset for coord 960x540 on a 1080p image is is (540 * 1080) + 960 * 4 = 587040 bits
-									int index = (pix.Y * stride) + pix.X * 4;
+									pixIndex = (pix.Y * srcData.Stride) + pix.X * 4;
 									//Then each r, g, b index is added to this offset
-									totals[0] += p[index];
-									totals[1] += p[index + 1];
-									totals[2] += p[index + 2];
+									totals[0] += p[pixIndex];
+									totals[1] += p[pixIndex + 1];
+									totals[2] += p[pixIndex + 2];
 								}
 							}
 						}
-					}
 
-					var t2 = DateTime.UtcNow;
-					//Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
-					//Total colors are averaged
-					int avgB = (int)(totals[0] / (totalSize));
-					int avgG = (int)(totals[1] / (totalSize));
-					int avgR = (int)(totals[2] / (totalSize));
-					//If the last colors set are close enough to the current color keep the current color.
-					//This is to prevent a lot of color jittering that can happen otherwise.
-					if (lastColor.R >= avgR - _thres && lastColor.R <= avgR + _thres)
-						avgR = lastColor.R;
-					if (lastColor.G >= avgG - _thres && lastColor.G <= avgG + _thres)
-						avgG = lastColor.G;
-					if (lastColor.B >= avgB - _thres && lastColor.B <= avgB + _thres)
-						avgB = lastColor.B;
-					avg = Color.FromArgb(0, avgR, avgG, avgB);
+						//t2 = DateTime.UtcNow;
+						//Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
+						//Total colors are averaged
+						int avgB = (int)(totals[0] / (totalSize));
+						int avgG = (int)(totals[1] / (totalSize));
+						int avgR = (int)(totals[2] / (totalSize));
+						//If the last colors set are close enough to the current color keep the current color.
+						//This is to prevent a lot of color jittering that can happen otherwise.
+						if (lastColor.R >= avgR - _thres && lastColor.R <= avgR + _thres)
+							avgR = lastColor.R;
+						if (lastColor.G >= avgG - _thres && lastColor.G <= avgG + _thres)
+							avgG = lastColor.G;
+						if (lastColor.B >= avgB - _thres && lastColor.B <= avgB + _thres)
+							avgB = lastColor.B;
+						avg = Color.FromArgb(0, avgR, avgG, avgB);
+					}
 					if (avg != lastColor)
 						Task.Run(() => _core.ChangeLightColor(avg));
 					lastColor = avg;
 					bmp.UnlockBits(srcData);
-					var t3 = DateTime.UtcNow;
+					//var t3 = DateTime.UtcNow;
 					//Console.WriteLine($"Average Calc Time: {(t3 - t2).TotalMilliseconds}");
-					GC.Collect();
+					//GC.Collect();
 					//Console.WriteLine($"GC Time:           {(DateTime.UtcNow - t3).TotalMilliseconds}");
 				}
-				
 
 				var dt = DateTime.UtcNow - start;
 				AverageDt = (AverageDt + dt.TotalMilliseconds) / 2;

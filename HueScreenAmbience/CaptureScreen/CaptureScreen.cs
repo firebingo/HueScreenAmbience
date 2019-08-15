@@ -23,7 +23,7 @@ namespace HueScreenAmbience
 			IntPtr dskHandle = PlatformInvokeUSER32.GetDesktopWindow();
 
 			//Here we get the handle to the desktop device context.
-			IntPtr hDC = PlatformInvokeUSER32.GetDC(dskHandle); 
+			IntPtr hDC = PlatformInvokeUSER32.GetWindowDC(dskHandle); 
 
 			//Here we make a compatible device context in memory for screen device context.
 			IntPtr hMemDC = PlatformInvokeGDI32.CreateCompatibleDC(hDC);

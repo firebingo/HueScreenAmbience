@@ -201,6 +201,16 @@ namespace HueScreenAmbience
 			while (!valid);
 		}
 
+		public void SelectMonitor()
+		{
+			var valid = false;
+			do
+			{
+
+			}
+			while (!valid);
+		}
+
 		public async void StartScreenReading()
 		{
 			if (!IsConnectedToBridge || UseRoom == null)
