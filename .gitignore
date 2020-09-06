@@ -33,6 +33,7 @@ ExportedObj/
 bin/
 obj/
 packages/
+.vs/
 
 # =========================
 # Operating System Files
