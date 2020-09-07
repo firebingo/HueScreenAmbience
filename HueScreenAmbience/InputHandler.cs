@@ -6,17 +6,13 @@ namespace HueScreenAmbience
 	class InputHandler
 	{
 		public bool isRunning = false;
-		private IServiceProvider map;
 		private Core core;
-		private Config config;
 		private ScreenReader screen;
 
-		public void InstallServices(IServiceProvider _map)
+		public void InstallServices(IServiceProvider map)
 		{
-			core = _map.GetService(typeof(Core)) as Core;
-			config = _map.GetService(typeof(Config)) as Config;
-			screen = _map.GetService(typeof(ScreenReader)) as ScreenReader;
-			map = _map;
+			core = map.GetService(typeof(Core)) as Core;
+			screen = map.GetService(typeof(ScreenReader)) as ScreenReader;
 		}
 
 		/// <summary>
@@ -25,7 +21,7 @@ namespace HueScreenAmbience
 		public async void HandleInput()
 		{
 			isRunning = true;
-			string input = "";
+			string input;
 
 			ResetConsole();
 			//while the input thread is set to run

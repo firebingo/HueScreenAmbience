@@ -55,5 +55,6 @@ namespace HueScreenAmbience
 		public string ip;
 		public string roomId;
 		public int pixelCount = 921600;
+		public bool intrinsicsEnabled;
 	}
 }

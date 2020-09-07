@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,11 +28,22 @@ namespace HueScreenAmbience
 		private Config _config;
 		private Core _core;
 		public bool IsRunning { get; private set; } = false;
-		public double AverageDt = 0;
+		public double AverageDt
+		{
+			get
+			{
+				double val = 0.0;
+				for (var i = 0; i < _averageValues.Length; ++i)
+					val += _averageValues[i];
+				return val / _averageValues.Length;
+			}
+		}
+		private double[] _averageValues = new double[20];
+		private int _averageIter = 0;
 		private readonly int _thres = 15;
+		private int _frameRate = 7;
 
 		private readonly object _lockPixelsObj = new object();
-		private readonly int _frameRate = 7;
 
 		public void Start()
 		{
@@ -83,17 +95,27 @@ namespace HueScreenAmbience
 			}
 		}
 
+		public void InitScreenLoop(int frameRate)
+		{
+			_frameRate = frameRate;
+		}
+
 		public void ReadScreenLoop()
 		{
 			IsRunning = true;
 			Color lastColor = Color.FromArgb(255, 255, 255);
 			do
 			{
-				var start = DateTime.UtcNow;
-				var t2 = DateTime.UtcNow;
-				Color avg = new Color();
-				using (var bmp = CaptureScreen.GetDesktopImage(ScreenInfo.width, ScreenInfo.height))
+				try
 				{
+					var start = DateTime.UtcNow;
+					//var t2 = DateTime.UtcNow;
+					Color avg = new Color();
+					using var bmp = CaptureScreen.GetDesktopImage(ScreenInfo.width, ScreenInfo.height);
+
+					if (bmp == null)
+						continue;
+
 					BitmapData srcData = bmp.LockBits(
 					new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height),
 					ImageLockMode.ReadOnly,
@@ -128,12 +150,12 @@ namespace HueScreenAmbience
 							else
 							{
 								int pixIndex = 0;
-								foreach (var pix in _pixelsToRead)
+								for (var i = 0; i < totalSize; ++i)
 								{
 									//y * stride gives us the offset for the scanline we are in on the bitmap (ex. line 352 * 1080 = 380160 bits)
 									//x * 4 gives us our power of 4 for column
 									//ex. total offset for coord 960x540 on a 1080p image is is (540 * 1080) + 960 * 4 = 587040 bits
-									pixIndex = (pix.Y * srcData.Stride) + pix.X * 4;
+									pixIndex = (_pixelsToRead[i].Y * srcData.Stride) + _pixelsToRead[i].X * 4;
 									//Then each r, g, b index is added to this offset
 									totals[0] += p[pixIndex];
 									totals[1] += p[pixIndex + 1];
@@ -166,15 +188,23 @@ namespace HueScreenAmbience
 					//Console.WriteLine($"Average Calc Time: {(t3 - t2).TotalMilliseconds}");
 					//GC.Collect();
 					//Console.WriteLine($"GC Time:           {(DateTime.UtcNow - t3).TotalMilliseconds}");
-				}
 
-				var dt = DateTime.UtcNow - start;
-				AverageDt = (AverageDt + dt.TotalMilliseconds) / 2;
-				//Console.WriteLine($"Total Time:        {dt.TotalMilliseconds}");
-				//Console.WriteLine("---------------------------------------");
-				//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
-				if (dt.TotalMilliseconds < 1000 / _frameRate)
-					Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
+					var dt = DateTime.UtcNow - start;
+					if (++_averageIter >= _averageValues.Length)
+						_averageIter = 0;
+					_averageValues[_averageIter] = dt.TotalMilliseconds;
+					Console.WriteLine($"Total Time:        {dt.TotalMilliseconds}");
+					//Console.WriteLine($"AverageDt:         {AverageDt}");
+					Console.WriteLine("---------------------------------------");
+					//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
+					if (dt.TotalMilliseconds < 1000 / _frameRate)
+						Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine(ex);
+					StopScreenLoop();
+				}
 			} while (IsRunning);
 		}
 

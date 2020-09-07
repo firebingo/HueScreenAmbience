@@ -22,7 +22,7 @@ namespace HueScreenAmbience
 		private const string _appName = "HUEScreenAmbience";
 
 		public bool IsConnectedToBridge { get; private set; } = false;
-		private IServiceProvider _map;
+		public readonly int FrameRate = 7;
 		private Config _config;
 		private InputHandler _input;
 		private ScreenReader _screen;
@@ -34,12 +34,11 @@ namespace HueScreenAmbience
 			Task.Run(() => AutoConnectAttempt());
 		}
 
-		public void InstallServices(IServiceProvider _map)
+		public void InstallServices(IServiceProvider map)
 		{
-			_config = _map.GetService(typeof(Config)) as Config;
-			_input = _map.GetService(typeof(InputHandler)) as InputHandler;
-			_screen = _map.GetService(typeof(ScreenReader)) as ScreenReader;
-			this._map = _map;
+			_config = map.GetService(typeof(Config)) as Config;
+			_input = map.GetService(typeof(InputHandler)) as InputHandler;
+			_screen = map.GetService(typeof(ScreenReader)) as ScreenReader;
 		}
 
 		private async Task<bool> AutoConnectAttempt()
@@ -159,8 +158,7 @@ namespace HueScreenAmbience
 				}
 				Console.WriteLine("Input a room(#) to connect to: ");
 				var read = Console.ReadLine();
-				var readInt = -1;
-				if (Int32.TryParse(read, out readInt))
+				if (Int32.TryParse(read, out var readInt))
 				{
 					if (readInt > Groups.Count || readInt < 1)
 						continue;
@@ -187,8 +185,7 @@ namespace HueScreenAmbience
 				Console.WriteLine($"Max: {Math.Min(screenPixelCount, 10000000)}");
 				Console.WriteLine("Input new pixel count:");
 				var read = Console.ReadLine();
-				var readInt = -1;
-				if (Int32.TryParse(read, out readInt))
+				if (Int32.TryParse(read, out var readInt))
 				{
 					if (readInt > screenPixelCount || readInt > 10000000)
 						continue;
@@ -224,10 +221,11 @@ namespace HueScreenAmbience
 			var command = new LightCommand
 			{
 				On = true,
-				TransitionTime = new TimeSpan(0, 0, 0, 0, (int)_screen.AverageDt)
+				TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)
 			};
 			command.TurnOn();
 			await _client.SendCommandAsync(command, UseRoom.Lights);
+			_screen.InitScreenLoop(FrameRate);
 			_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoop));
 			_screenLoopThread.Name = "Screen Loop Thread";
 			_screenLoopThread.Start();
@@ -250,7 +248,7 @@ namespace HueScreenAmbience
 				return;
 			var command = new LightCommand
 			{
-				TransitionTime = new TimeSpan(0, 0, 0, 0, (int)_screen.AverageDt)
+				TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)
 			};
 			command.SetColor(new RGBColor(Helpers.ColorToHex(c)));
 			_sendingCommand = true;
