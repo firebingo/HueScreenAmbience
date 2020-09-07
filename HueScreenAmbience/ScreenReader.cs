@@ -193,9 +193,9 @@ namespace HueScreenAmbience
 					if (++_averageIter >= _averageValues.Length)
 						_averageIter = 0;
 					_averageValues[_averageIter] = dt.TotalMilliseconds;
-					Console.WriteLine($"Total Time:        {dt.TotalMilliseconds}");
+					//Console.WriteLine($"Total Time:        {dt.TotalMilliseconds}");
 					//Console.WriteLine($"AverageDt:         {AverageDt}");
-					Console.WriteLine("---------------------------------------");
+					//Console.WriteLine("---------------------------------------");
 					//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
 					if (dt.TotalMilliseconds < 1000 / _frameRate)
 						Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
