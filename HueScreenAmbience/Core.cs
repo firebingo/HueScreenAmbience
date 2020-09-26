@@ -27,6 +27,7 @@ namespace HueScreenAmbience
 		private InputHandler _input;
 		private ScreenReader _screen;
 		private Thread _screenLoopThread;
+		private DateTime _lastHueChangeTime;
 		private bool _sendingCommand;
 
 		public void Start()
@@ -180,18 +181,19 @@ namespace HueScreenAmbience
 			{
 				Console.Clear();
 				Console.WriteLine($"Current Count: {_config.Model.pixelCount}");
-				Console.WriteLine("Large pixel counts may take too long to calculate and will lag behind the screen. Recommended to leave at default.");
+				Console.WriteLine("Large pixel counts may take too long to calculate and will lag behind the screen.");
 				Console.WriteLine("Entering 0 will read the whole screen.");
-				Console.WriteLine($"Max: {Math.Min(screenPixelCount, 10000000)}");
+				Console.WriteLine($"Max: {Math.Min(screenPixelCount, 1000000)}");
 				Console.WriteLine("Input new pixel count:");
 				var read = Console.ReadLine();
 				if (Int32.TryParse(read, out var readInt))
 				{
-					if (readInt > screenPixelCount || readInt > 10000000)
+					if (readInt > screenPixelCount || readInt > 1000000)
 						continue;
 					valid = true;
 					_config.Model.pixelCount = readInt;
 					_config.SaveConfig();
+					_screen.SetupPixelZones();
 					_screen.PreparePixelsToGet();
 				}
 			}
@@ -246,6 +248,10 @@ namespace HueScreenAmbience
 		{
 			if (_sendingCommand)
 				return;
+			var dt = DateTime.UtcNow - _lastHueChangeTime;
+			//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
+			if (dt.TotalMilliseconds < 1000 / FrameRate)
+				return;
 			var command = new LightCommand
 			{
 				TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)
@@ -260,6 +266,7 @@ namespace HueScreenAmbience
 			{
 
 			}
+			_lastHueChangeTime = DateTime.UtcNow;
 			_sendingCommand = false;
 		}
 	}

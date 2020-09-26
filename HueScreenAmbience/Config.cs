@@ -39,7 +39,7 @@ namespace HueScreenAmbience
 		{
 			try
 			{
-				File.WriteAllText("Data/Config.json", JsonConvert.SerializeObject(_config));
+				File.WriteAllText("Data/Config.json", JsonConvert.SerializeObject(_config, Formatting.Indented));
 			}
 			catch(Exception e)
 			{
@@ -54,7 +54,9 @@ namespace HueScreenAmbience
 		public string appKey;
 		public string ip;
 		public string roomId;
-		public int pixelCount = 921600;
+		public int zoneColumns = 1;
+		public int zoneRows = 1;
+		public int pixelCount = 150000;
 		public bool intrinsicsEnabled;
 	}
 }
