@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Xml.Schema;
 
 namespace HueScreenAmbience
 {
@@ -19,22 +15,38 @@ namespace HueScreenAmbience
 		{
 			get
 			{
-				return (byte)(Totals[0] / Count);
+				if(Count > 0)
+					return (byte)(Totals[0] / Count);
+				return 0;
 			}
 		}
 		public byte AvgG
 		{
 			get
 			{
-				return (byte)(Totals[1] / Count);
+				if (Count > 0)
+					return (byte)(Totals[1] / Count);
+				return 0;
 			}
 		}
 		public byte AvgB
 		{
 			get
 			{
-				return (byte)(Totals[2] / Count);
+				if (Count > 0)
+					return (byte)(Totals[2] / Count);
+				return 0;
 			}
+		}
+
+		public PixelZone(Point topLeft, Point bottomRight, int row, int column, int count, long[] totals)
+		{
+			TopLeft = topLeft;
+			BottomRight = bottomRight;
+			Row = row;
+			Column = column;
+			Count = count;
+			Totals = totals;
 		}
 
 		public PixelZone(int row, int column, int xMin, int xMax, int yMin, int yMax)
@@ -43,7 +55,7 @@ namespace HueScreenAmbience
 			Column = column;
 			TopLeft = new Point(xMin, yMin);
 			BottomRight = new Point(xMax, yMax);
-			Totals = new long[3] { 0, 0, 0 };
+			Totals = new long[] { 0, 0, 0 };
 			Count = 0;
 		}
 
@@ -52,6 +64,14 @@ namespace HueScreenAmbience
 			if(p.X >= TopLeft.X && p.X < BottomRight.X && p.Y >= TopLeft.Y && p.Y < BottomRight.Y)
 				return true;
 			return false;
+		}
+
+		public static PixelZone Clone(PixelZone source)
+		{
+			var topLeft = new Point(source.TopLeft.X, source.TopLeft.Y);
+			var bottomRight = new Point(source.BottomRight.X, source.BottomRight.Y);
+			var totals = new long[] { source.Totals[0], source.Totals[1], source.Totals[2] };
+			return new PixelZone(topLeft, bottomRight, source.Row, source.Column, source.Count, totals);
 		}
 	}
 

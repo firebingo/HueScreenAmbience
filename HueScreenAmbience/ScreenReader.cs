@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
@@ -30,6 +31,8 @@ namespace HueScreenAmbience
 		public ScreenDimensions ScreenInfo { get; private set; }
 		private Config _config;
 		private Core _core;
+		private ImageDumper _imageDumper;
+		private int _frame;
 		public bool IsRunning { get; private set; } = false;
 		public double AverageDt
 		{
@@ -60,6 +63,7 @@ namespace HueScreenAmbience
 		{
 			_config = _map.GetService(typeof(Config)) as Config;
 			_core = _map.GetService(typeof(Core)) as Core;
+			_imageDumper = _map.GetService(typeof(ImageDumper)) as ImageDumper;
 		}
 
 		public void GetScreenInfo()
@@ -261,6 +265,19 @@ namespace HueScreenAmbience
 					}
 					if (avg != lastColor)
 						Task.Run(() => _core.ChangeLightColor(avg));
+					if (_config.Model.dumpPngs)
+					{
+						int f = _frame;
+						var tempZones = new PixelZone[_zones.Length];
+						for (var i = 0; i < tempZones.Length; ++i)
+						{
+							tempZones[i] = PixelZone.Clone(_zones[i]);
+						}
+						Task.Run(() =>
+						{
+							_imageDumper.DumpZonesToImage(tempZones, ScreenInfo.width, ScreenInfo.height, $"{f.ToString().PadLeft(5, '0')}.png");
+						});
+					}
 					lastColor = avg;
 					bmp.UnlockBits(srcData);
 					//var t3 = DateTime.UtcNow;
@@ -274,6 +291,7 @@ namespace HueScreenAmbience
 					//Console.WriteLine($"Total Time:        {dt.TotalMilliseconds}");
 					//Console.WriteLine($"AverageDt:         {AverageDt}");
 					//Console.WriteLine("---------------------------------------");
+					_frame++;
 				}
 				catch (Exception ex)
 				{

@@ -57,8 +57,9 @@ namespace HueScreenAmbience
 			_input = new InputHandler();
 			_core = new Core();
 			_screen = new ScreenReader();
-		
+
 			var services = new ServiceCollection()
+				.AddScoped<ImageDumper>()
 				.AddSingleton(_config)
 				.AddSingleton(_input)
 				.AddSingleton(_core)

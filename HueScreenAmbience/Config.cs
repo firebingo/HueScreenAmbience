@@ -57,6 +57,8 @@ namespace HueScreenAmbience
 		public int zoneColumns = 1;
 		public int zoneRows = 1;
 		public int pixelCount = 150000;
+		public bool dumpPngs = false;
+		public string imageDumpLocation = "Images";
 		public bool intrinsicsEnabled;
 	}
 }
