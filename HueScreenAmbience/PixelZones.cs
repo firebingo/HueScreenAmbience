@@ -7,42 +7,22 @@ namespace HueScreenAmbience
 	{
 		public readonly Point TopLeft;
 		public readonly Point BottomRight;
+		public readonly int Width;
+		public readonly int Height;
 		public readonly int Row;
 		public readonly int Column;
 		public int Count;
 		public readonly long[] Totals;
-		public byte AvgR
-		{
-			get
-			{
-				if(Count > 0)
-					return (byte)(Totals[0] / Count);
-				return 0;
-			}
-		}
-		public byte AvgG
-		{
-			get
-			{
-				if (Count > 0)
-					return (byte)(Totals[1] / Count);
-				return 0;
-			}
-		}
-		public byte AvgB
-		{
-			get
-			{
-				if (Count > 0)
-					return (byte)(Totals[2] / Count);
-				return 0;
-			}
-		}
+		public byte AvgR { get; private set; }
+		public byte AvgG { get; private set; }
+		public byte AvgB { get; private set; }
 
 		public PixelZone(Point topLeft, Point bottomRight, int row, int column, int count, long[] totals)
 		{
 			TopLeft = topLeft;
 			BottomRight = bottomRight;
+			Width = BottomRight.X - TopLeft.X;
+			Height = BottomRight.Y - TopLeft.Y;
 			Row = row;
 			Column = column;
 			Count = count;
@@ -55,8 +35,31 @@ namespace HueScreenAmbience
 			Column = column;
 			TopLeft = new Point(xMin, yMin);
 			BottomRight = new Point(xMax, yMax);
+			Width = BottomRight.X - TopLeft.X;
+			Height = BottomRight.Y - TopLeft.Y;
 			Totals = new long[] { 0, 0, 0 };
 			Count = 0;
+		}
+
+		public void ResetAverages()
+		{
+			AvgR = 0;
+			AvgG = 0;
+			AvgB = 0;
+		}
+
+		public void CalculateAverages()
+		{
+			AvgR = (byte)(Totals[0] / Count);
+			AvgG = (byte)(Totals[1] / Count);
+			AvgB = (byte)(Totals[2] / Count);
+		}
+
+		public bool IsCoordInZone(int x, int y)
+		{
+			if (x >= TopLeft.X && x < BottomRight.X && y >= TopLeft.Y && y < BottomRight.Y)
+				return true;
+			return false;
 		}
 
 		public bool IsPointInZone(Point p)

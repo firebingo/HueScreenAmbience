@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace HueScreenAmbience
 {
@@ -36,7 +37,7 @@ namespace HueScreenAmbience
 				else if (!_isReady)
 				{
 					ResetConsole();
-					Thread.Sleep(1000);
+					Thread.Sleep(500);
 					continue;
 				}
 				 
@@ -63,13 +64,13 @@ namespace HueScreenAmbience
 						break;
 					case "-start":
 					case "-s":
-						_core.StartScreenReading();
+						_ = _core.StartScreenReading();
 						ResetConsole();
 						break;
 					case "-stop":
 					case "-end":
 					case "-e":
-						_core.StopScreenReading();
+						_ = _core.StopScreenReading();
 						ResetConsole();
 						break;
 					//Quit the application.

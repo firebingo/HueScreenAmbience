@@ -29,9 +29,13 @@ namespace HueScreenAmbience
 		private Thread _screenLoopThread;
 		private DateTime _lastHueChangeTime;
 		private bool _sendingCommand;
+		private Color _lastColor;
+		private byte _colorChangeThreshold = 15;
 
 		public void Start()
 		{
+			_lastColor = Color.FromArgb(255, 255, 255);
+			_colorChangeThreshold = _config.Model.hueSettings.colorChangeThreshold;
 			Task.Run(() => AutoConnectAttempt());
 		}
 
@@ -114,9 +118,9 @@ namespace HueScreenAmbience
 								_config.Model.appKey = appKey;
 								_config.SaveConfig();
 							}
-							catch (Exception e)
+							catch (Exception ex)
 							{
-								Console.WriteLine(e.Message);
+								Console.WriteLine(ex.Message);
 								Console.ReadLine();
 							}
 						}
@@ -176,7 +180,7 @@ namespace HueScreenAmbience
 		public void ChangePixelCount()
 		{
 			var valid = false;
-			var screenPixelCount = _screen.ScreenInfo.height * _screen.ScreenInfo.width;
+			var screenPixelCount = _screen.ScreenInfo.Height * _screen.ScreenInfo.Width;
 			do
 			{
 				Console.Clear();
@@ -210,7 +214,7 @@ namespace HueScreenAmbience
 			while (!valid);
 		}
 
-		public async void StartScreenReading()
+		public async Task StartScreenReading()
 		{
 			if (!IsConnectedToBridge || UseRoom == null)
 			{
@@ -220,13 +224,16 @@ namespace HueScreenAmbience
 				_input.ResetConsole();
 				return;
 			}
-			var command = new LightCommand
+			if (_config.Model.hueSettings.turnLightOnIfOff)
 			{
-				On = true,
-				TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)
-			};
-			command.TurnOn();
-			await _client.SendCommandAsync(command, UseRoom.Lights);
+				var command = new LightCommand
+				{
+					On = true,
+					TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)
+				};
+				command.TurnOn();
+				await _client.SendCommandAsync(command, UseRoom.Lights);
+			}
 			_screen.InitScreenLoop(FrameRate);
 			_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoop));
 			_screenLoopThread.Name = "Screen Loop Thread";
@@ -234,12 +241,22 @@ namespace HueScreenAmbience
 			_input.ResetConsole();
 		}
 		
-		public void StopScreenReading()
+		public async Task StopScreenReading()
 		{
 			if (_screenLoopThread != null && _screenLoopThread.IsAlive)
 			{
 				_screen.StopScreenLoop();
-				_screenLoopThread.Abort();
+				_screenLoopThread = null;
+			}
+			if (_config.Model.hueSettings.shutLightOffOnStop)
+			{
+				var command = new LightCommand
+				{
+					On = false,
+					TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)
+				};
+				command.TurnOff();
+				await _client.SendCommandAsync(command, UseRoom.Lights);
 			}
 			_input.ResetConsole();
 		}
@@ -252,6 +269,23 @@ namespace HueScreenAmbience
 			//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
 			if (dt.TotalMilliseconds < 1000 / FrameRate)
 				return;
+
+			//If the last colors set are close enough to the current color keep the current color.
+			//This is to prevent a lot of color jittering that can happen otherwise.
+			var r = (byte)Math.Floor(c.R * _config.Model.hueSettings.colorMultiplier);
+			var g = (byte)Math.Floor(c.G * _config.Model.hueSettings.colorMultiplier);
+			var b = (byte)Math.Floor(c.B * _config.Model.hueSettings.colorMultiplier);
+			if (_lastColor.R >= c.R - _colorChangeThreshold && _lastColor.R <= c.R + _colorChangeThreshold)
+				r = _lastColor.R;
+			if (_lastColor.G >= c.G - _colorChangeThreshold && _lastColor.G <= c.G + _colorChangeThreshold)
+				g = _lastColor.G;
+			if (_lastColor.B >= c.B - _colorChangeThreshold && _lastColor.B <= c.B + _colorChangeThreshold)
+				b = _lastColor.B;
+			c = Color.FromArgb(255, r, g, b);
+			if (c == _lastColor)
+				return;
+			_lastColor = c;
+
 			var command = new LightCommand
 			{
 				TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)

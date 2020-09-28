@@ -11,6 +11,7 @@ namespace HueScreenAmbience
 		private Core _core = null;
 		private Config _config = null;
 		private ScreenReader _screen = null;
+		private ZoneProcessor _zoneProcesser = null;
 		private IServiceProvider _map = null;
 
 		static void Main(string[] args)
@@ -41,6 +42,8 @@ namespace HueScreenAmbience
 				screenThread.Name = "Screen Reader Thread";
 				screenThread.Start();
 
+				_zoneProcesser.InstallServices(_map);
+
 				//Delay until application quit
 				await Task.Delay(-1);
 			}
@@ -57,13 +60,16 @@ namespace HueScreenAmbience
 			_input = new InputHandler();
 			_core = new Core();
 			_screen = new ScreenReader();
+			_zoneProcesser = new ZoneProcessor();
 
 			var services = new ServiceCollection()
-				.AddScoped<ImageDumper>()
+				.AddScoped<ImageHandler>()
+				.AddScoped<FileLogger>()
 				.AddSingleton(_config)
 				.AddSingleton(_input)
 				.AddSingleton(_core)
-				.AddSingleton(_screen);
+				.AddSingleton(_screen)
+				.AddSingleton(_zoneProcesser);
 			var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
 			return provider;
 		}

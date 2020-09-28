@@ -12,6 +12,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 
 namespace HueScreenAmbience
 {
@@ -31,7 +32,8 @@ namespace HueScreenAmbience
 		public ScreenDimensions ScreenInfo { get; private set; }
 		private Config _config;
 		private Core _core;
-		private ImageDumper _imageDumper;
+		private ZoneProcessor _zoneProcesser;
+		private FileLogger _logger;
 		private int _frame;
 		public bool IsRunning { get; private set; } = false;
 		public double AverageDt
@@ -46,7 +48,6 @@ namespace HueScreenAmbience
 		}
 		private readonly double[] _averageValues = new double[20];
 		private int _averageIter = 0;
-		private readonly int _thres = 15;
 		private int _frameRate = 7;
 
 		private readonly object _lockPixelsObj = new object();
@@ -63,7 +64,8 @@ namespace HueScreenAmbience
 		{
 			_config = _map.GetService(typeof(Config)) as Config;
 			_core = _map.GetService(typeof(Core)) as Core;
-			_imageDumper = _map.GetService(typeof(ImageDumper)) as ImageDumper;
+			_zoneProcesser = _map.GetService(typeof(ZoneProcessor)) as ZoneProcessor;
+			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
 		}
 
 		public void GetScreenInfo()
@@ -77,10 +79,11 @@ namespace HueScreenAmbience
 				_screen = monitorInfo;
 				ScreenInfo = new ScreenDimensions
 				{
-					left = monitorInfo.Monitor.Left,
-					top = monitorInfo.Monitor.Top,
-					width = (monitorInfo.Monitor.Right - monitorInfo.Monitor.Left),
-					height = (monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top)
+					Left = monitorInfo.Monitor.Left,
+					Top = monitorInfo.Monitor.Top,
+					RealWidth = monitorInfo.Monitor.Right - monitorInfo.Monitor.Left,
+					RealHeight = monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top,
+					SizeReduction = _config.Model.readResolutionReduce
 				};
 			}
 		}
@@ -94,17 +97,17 @@ namespace HueScreenAmbience
 			for (var i = 0; i < _zones.Length; ++i)
 			{
 				var col = i % _config.Model.zoneColumns;
-				var xMin = (ScreenInfo.width / _config.Model.zoneColumns) * col;
+				var xMin = (ScreenInfo.Width / (double)_config.Model.zoneColumns) * col;
 				//If we are in the last column just set the bottom right to screen width so we dont get weird rounding where edge is not included
 				var xMax = col == _config.Model.zoneColumns - 1
-					? ScreenInfo.width
-					: (ScreenInfo.width / _config.Model.zoneColumns) * (col + 1);
-				var yMin = (ScreenInfo.height / _config.Model.zoneRows) * row;
+					? ScreenInfo.Width
+					: (ScreenInfo.Width / (double)_config.Model.zoneColumns) * (col + 1);
+				var yMin = (ScreenInfo.Height / (double)_config.Model.zoneRows) * row;
 				//If we are in the last row just set the bottom right to screen height so we dont get weird rounding where edge is not included
 				var yMax = row == _config.Model.zoneRows - 1
-					? ScreenInfo.height
-					: (ScreenInfo.height / _config.Model.zoneRows) * (row + 1);
-				_zones[i] = new PixelZone(row, col, xMin, xMax, yMin, yMax);
+					? ScreenInfo.Height
+					: (ScreenInfo.Height / (double)_config.Model.zoneRows) * (row + 1);
+				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax));
 				if (col == _config.Model.zoneColumns - 1)
 					row += 1;
 			}
@@ -119,7 +122,7 @@ namespace HueScreenAmbience
 				var r = new Random();
 
 				Point p = Point.Empty;
-				if (_config.Model.pixelCount >= ScreenInfo.width * ScreenInfo.height)
+				if (_config.Model.pixelCount >= ScreenInfo.Width * ScreenInfo.Height)
 					throw new Exception("More pixels to read than screen has");
 				//Get a distinct list of points until we have the needed pixel count
 				do
@@ -127,7 +130,7 @@ namespace HueScreenAmbience
 					var newPixels = new List<ReadPixel>();
 					for (var i = 0; i < _config.Model.pixelCount; ++i)
 					{
-						p = new Point(r.Next(0, ScreenInfo.width), r.Next(0, ScreenInfo.height));
+						p = new Point(r.Next(0, ScreenInfo.Width), r.Next(0, ScreenInfo.Height));
 						var zone = _zones.First(x => x.IsPointInZone(p));
 						newPixels.Add(new ReadPixel(zone, p));
 					}
@@ -151,25 +154,36 @@ namespace HueScreenAmbience
 		public void ReadScreenLoop()
 		{
 			IsRunning = true;
-			Color lastColor = Color.FromArgb(255, 255, 255);
+			Bitmap bmp = null;
 			do
 			{
 				try
 				{
 					var start = DateTime.UtcNow;
 					//var t2 = DateTime.UtcNow;
-					Color avg = new Color();
 					foreach (var zone in _zones)
 					{
 						zone.Count = 0;
 						zone.Totals[0] = 0;
 						zone.Totals[1] = 0;
 						zone.Totals[2] = 0;
+						zone.ResetAverages();
 					}
-					using var bmp = CaptureScreen.GetDesktopImage(ScreenInfo.width, ScreenInfo.height);
+					bmp = CaptureScreen.GetDesktopImage(ScreenInfo.RealWidth, ScreenInfo.RealHeight);
 
 					if (bmp == null)
 						continue;
+
+					//Reducing the resolution of the desktop capture takes time but it saves a lot of time on reading the image
+					if (_config.Model.readResolutionReduce > 1.0f)
+					{
+						var oldBmp = bmp;
+						bmp = CaptureScreen.ResizeImage(oldBmp, ScreenInfo.Width, ScreenInfo.Height);
+						oldBmp.Dispose();
+					}
+
+					//using (var fi = System.IO.File.OpenWrite("i.png"))
+					//	bmp.Save(fi, ImageFormat.Png);
 
 					BitmapData srcData = bmp.LockBits(
 					new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height),
@@ -178,7 +192,6 @@ namespace HueScreenAmbience
 
 					unsafe
 					{
-
 						//var t1 = DateTime.UtcNow;
 						//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
 
@@ -189,7 +202,7 @@ namespace HueScreenAmbience
 						lock (_lockPixelsObj)
 						{
 							//If we are set to 0 just read the full screen
-							//At above 1080p this will be slower than using an actual number
+							//This is reccomended if reducing the resolution as it is fast enough and produces better results
 							if (_config.Model.pixelCount == 0 || _pixelsToRead.Length == 0)
 							{
 								totalSize = srcData.Width * srcData.Height;
@@ -197,8 +210,8 @@ namespace HueScreenAmbience
 								int currentZone = 0;
 								var zone = _zones[currentZone];
 								int zoneRow = 0;
-								int x = 0;
-								int y = 0;
+								int xIter = 0;
+								int yIter = 0;
 								for (var i = 0; i < totalSize * 4; i += 4)
 								{
 									//index is our power of 4 padded index in the bitmap.
@@ -206,28 +219,34 @@ namespace HueScreenAmbience
 									zone.Totals[1] += p[i + 1]; //g
 									zone.Totals[0] += p[i + 2]; //r
 									zone.Count++;
-									if (!oneZone)
+
+									if (!oneZone && currentZone != _zones.Length-1)
 									{
-										//If the new x is greater than the screen width
-										// reset the x and advance the y to the next row
-										if (++x > srcData.Width)
+										//If x is greater than zone width
+										if (++xIter >= zone.Width)
 										{
-											y++;
-											x = 0;
-										}
-										//If we are on a new row check if our y is greater than our current zone boundry and if it is advance to the next zone row
-										if (x == 0)
-										{
-											if (y > _zones[currentZone].BottomRight.Y)
+											xIter = 0;
+											//If we are on the last column for this row
+											if (zone.Column == _config.Model.zoneColumns - 1)
 											{
-												currentZone = ++zoneRow * _config.Model.zoneColumns;
-												zone = _zones[currentZone];
+												//If our y is greater than this rows height
+												// reset y and advance us to the next row
+												if (++yIter >= zone.Height)
+												{
+													yIter = 0;
+													currentZone = ++zoneRow * _config.Model.zoneColumns;
+													zone = _zones[currentZone];
+												}
+												//Else reset us back to the start of the current row
+												else
+												{
+													currentZone = zoneRow * _config.Model.zoneColumns;
+													zone = _zones[currentZone];
+												}
 											}
-										}
-										//Else if the current x is greater than our current zone boundry advance to the next zone column
-										else if (x > _zones[currentZone].BottomRight.X)
-										{
-											zone = _zones[++currentZone];
+											//Else move to the next column
+											else
+												zone = _zones[++currentZone];
 										}
 									}
 								}
@@ -237,6 +256,9 @@ namespace HueScreenAmbience
 								int pixIndex = 0;
 								for (var i = 0; i < totalSize; ++i)
 								{
+									//y * stride gives us the offset for the scanline we are in on the bitmap (ex. line 352 * 1080 = 380160 bits)
+									//x * 4 gives us our power of 4 for column
+									//ex. total offset for coord 960x540 on a 1080p image is is (540 * 1080) + 960 * 4 = 587040 bits
 									pixIndex = (_pixelsToRead[i].Pixel.Y * srcData.Stride) + _pixelsToRead[i].Pixel.X * 4;
 									_pixelsToRead[i].Zone.Totals[0] += p[pixIndex + 2];
 									_pixelsToRead[i].Zone.Totals[1] += p[pixIndex + 1];
@@ -248,38 +270,15 @@ namespace HueScreenAmbience
 
 						//t2 = DateTime.UtcNow;
 						//Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
-
-						//Total colors are averaged
-						int avgR = _zones.Sum(x => x.AvgR) / _zones.Length;
-						int avgG = _zones.Sum(x => x.AvgG) / _zones.Length;
-						int avgB = _zones.Sum(x => x.AvgB) / _zones.Length;
-						//If the last colors set are close enough to the current color keep the current color.
-						//This is to prevent a lot of color jittering that can happen otherwise.
-						if (lastColor.R >= avgR - _thres && lastColor.R <= avgR + _thres)
-							avgR = lastColor.R;
-						if (lastColor.G >= avgG - _thres && lastColor.G <= avgG + _thres)
-							avgG = lastColor.G;
-						if (lastColor.B >= avgB - _thres && lastColor.B <= avgB + _thres)
-							avgB = lastColor.B;
-						avg = Color.FromArgb(255, avgR, avgG, avgB);
 					}
-					if (avg != lastColor)
-						Task.Run(() => _core.ChangeLightColor(avg));
-					if (_config.Model.dumpPngs)
-					{
-						int f = _frame;
-						var tempZones = new PixelZone[_zones.Length];
-						for (var i = 0; i < tempZones.Length; ++i)
-						{
-							tempZones[i] = PixelZone.Clone(_zones[i]);
-						}
-						Task.Run(() =>
-						{
-							_imageDumper.DumpZonesToImage(tempZones, ScreenInfo.width, ScreenInfo.height, $"{f.ToString().PadLeft(5, '0')}.png");
-						});
-					}
-					lastColor = avg;
 					bmp.UnlockBits(srcData);
+					int f = _frame;
+					var tempZones = new PixelZone[_zones.Length];
+					for (var i = 0; i < tempZones.Length; ++i)
+					{
+						tempZones[i] = PixelZone.Clone(_zones[i]);
+					}
+					Task.Run(() => _zoneProcesser.PostRead(tempZones, ScreenInfo.Width, ScreenInfo.Height, f));
 					//var t3 = DateTime.UtcNow;
 					//Console.WriteLine($"Average Calc Time: {(t3 - t2).TotalMilliseconds}");
 					//GC.Collect();
@@ -296,7 +295,14 @@ namespace HueScreenAmbience
 				catch (Exception ex)
 				{
 					Console.WriteLine(ex);
+					Task.Run(() => _logger.WriteLog(ex.ToString()));
 					StopScreenLoop();
+				}
+				finally
+				{
+					if (bmp != null)
+						bmp.Dispose();
+					bmp = null;
 				}
 			} while (IsRunning);
 		}
@@ -308,10 +314,19 @@ namespace HueScreenAmbience
 
 		public class ScreenDimensions
 		{
-			public int left;
-			public int top;
-			public int width;
-			public int height;
+			public int Left;
+			public int Top;
+			public int RealWidth;
+			public int RealHeight;
+			public float SizeReduction;
+			public int Width
+			{
+				get => SizeReduction == 0 ? RealWidth : (int)Math.Floor(RealWidth / SizeReduction);
+			}
+			public int Height
+			{
+				get => SizeReduction == 0 ? RealHeight : (int)Math.Floor(RealHeight / SizeReduction);
+			}
 		}
 
 		[Serializable, StructLayout(LayoutKind.Sequential)]
