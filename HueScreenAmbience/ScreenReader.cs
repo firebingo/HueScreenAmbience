@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using HueScreenAmbience.DXGICaptureScreen;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -34,7 +35,8 @@ namespace HueScreenAmbience
 		private Core _core;
 		private ZoneProcessor _zoneProcesser;
 		private FileLogger _logger;
-		private int _frame;
+		private DxCapture _dxCapture;
+		private long _frame;
 		public bool IsRunning { get; private set; } = false;
 		public double AverageDt
 		{
@@ -48,12 +50,13 @@ namespace HueScreenAmbience
 		}
 		private readonly double[] _averageValues = new double[20];
 		private int _averageIter = 0;
-		private int _frameRate = 7;
+		private int _frameRate = 24;
 
 		private readonly object _lockPixelsObj = new object();
 
 		public void Start()
 		{
+			_frameRate = _config.Model.screenReadFrameRate;
 			GetScreenInfo();
 			SetupPixelZones();
 			_pixelsToRead = new ReadPixel[0];
@@ -146,12 +149,12 @@ namespace HueScreenAmbience
 			GC.Collect();
 		}
 
-		public void InitScreenLoop(int frameRate)
+		public void InitScreenLoop()
 		{
-			_frameRate = frameRate;
+			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _logger);
 		}
 
-		public void ReadScreenLoop()
+		public void ReadScreenLoopDx()
 		{
 			IsRunning = true;
 			Bitmap bmp = null;
@@ -160,7 +163,7 @@ namespace HueScreenAmbience
 				try
 				{
 					var start = DateTime.UtcNow;
-					//var t2 = DateTime.UtcNow;
+					//Reset zones
 					foreach (var zone in _zones)
 					{
 						zone.Count = 0;
@@ -169,8 +172,9 @@ namespace HueScreenAmbience
 						zone.Totals[2] = 0;
 						zone.ResetAverages();
 					}
-					bmp = CaptureScreen.GetDesktopImage(ScreenInfo.RealWidth, ScreenInfo.RealHeight);
 
+					bmp = _dxCapture.GetFrame();
+					//If the bitmap is null that usually means the desktop has not been updated
 					if (bmp == null)
 						continue;
 
@@ -182,7 +186,7 @@ namespace HueScreenAmbience
 						oldBmp.Dispose();
 					}
 
-					//using (var fi = System.IO.File.OpenWrite("i.png"))
+					//using (var fi = System.IO.File.OpenWrite($"Images/i{_frame.ToString().PadLeft(5, '0')}.png"))
 					//	bmp.Save(fi, ImageFormat.Png);
 
 					BitmapData srcData = bmp.LockBits(
@@ -220,7 +224,7 @@ namespace HueScreenAmbience
 									zone.Totals[0] += p[i + 2]; //r
 									zone.Count++;
 
-									if (!oneZone && currentZone != _zones.Length-1)
+									if (!oneZone && currentZone != _zones.Length - 1)
 									{
 										//If x is greater than zone width
 										if (++xIter >= zone.Width)
@@ -272,17 +276,14 @@ namespace HueScreenAmbience
 						//Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
 					}
 					bmp.UnlockBits(srcData);
-					int f = _frame;
+					long f = _frame;
 					var tempZones = new PixelZone[_zones.Length];
 					for (var i = 0; i < tempZones.Length; ++i)
 					{
 						tempZones[i] = PixelZone.Clone(_zones[i]);
 					}
 					Task.Run(() => _zoneProcesser.PostRead(tempZones, ScreenInfo.Width, ScreenInfo.Height, f));
-					//var t3 = DateTime.UtcNow;
-					//Console.WriteLine($"Average Calc Time: {(t3 - t2).TotalMilliseconds}");
-					//GC.Collect();
-					//Console.WriteLine($"GC Time:           {(DateTime.UtcNow - t3).TotalMilliseconds}");
+
 					var dt = DateTime.UtcNow - start;
 					if (++_averageIter >= _averageValues.Length)
 						_averageIter = 0;
@@ -291,6 +292,9 @@ namespace HueScreenAmbience
 					//Console.WriteLine($"AverageDt:         {AverageDt}");
 					//Console.WriteLine("---------------------------------------");
 					_frame++;
+
+					if (dt.TotalMilliseconds < 1000 / _frameRate)
+						Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
 				}
 				catch (Exception ex)
 				{
@@ -300,8 +304,7 @@ namespace HueScreenAmbience
 				}
 				finally
 				{
-					if (bmp != null)
-						bmp.Dispose();
+					bmp?.Dispose();
 					bmp = null;
 				}
 			} while (IsRunning);
@@ -310,6 +313,7 @@ namespace HueScreenAmbience
 		public void StopScreenLoop()
 		{
 			IsRunning = false;
+			_dxCapture.Dispose();
 		}
 
 		public class ScreenDimensions

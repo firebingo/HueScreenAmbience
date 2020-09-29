@@ -22,7 +22,7 @@ namespace HueScreenAmbience
 		private const string _appName = "HUEScreenAmbience";
 
 		public bool IsConnectedToBridge { get; private set; } = false;
-		public readonly int FrameRate = 7;
+		private int _frameRate = 8;
 		private Config _config;
 		private InputHandler _input;
 		private ScreenReader _screen;
@@ -34,6 +34,7 @@ namespace HueScreenAmbience
 
 		public void Start()
 		{
+			_frameRate = _config.Model.hueSettings.updateFrameRate;
 			_lastColor = Color.FromArgb(255, 255, 255);
 			_colorChangeThreshold = _config.Model.hueSettings.colorChangeThreshold;
 			Task.Run(() => AutoConnectAttempt());
@@ -48,19 +49,19 @@ namespace HueScreenAmbience
 
 		private async Task<bool> AutoConnectAttempt()
 		{
-			if (string.IsNullOrWhiteSpace(_config.Model.appKey) || string.IsNullOrWhiteSpace(_config.Model.ip))
+			if (string.IsNullOrWhiteSpace(_config.Model.hueSettings.appKey) || string.IsNullOrWhiteSpace(_config.Model.hueSettings.ip))
 				return Task.FromResult<bool>(false).Result;
 
 			Console.WriteLine("Attempting auto-connect");
-			_client = new LocalHueClient(_config.Model.ip);
-			_client.Initialize(_config.Model.appKey);
+			_client = new LocalHueClient(_config.Model.hueSettings.ip);
+			_client.Initialize(_config.Model.hueSettings.appKey);
 			IsConnectedToBridge = true;
 
-			if (!string.IsNullOrWhiteSpace(_config.Model.roomId))
+			if (!string.IsNullOrWhiteSpace(_config.Model.hueSettings.roomId))
 			{
 				var Groups = await _client.GetGroupsAsync();
 				if (Groups != null && Groups.Count != 0)
-					UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.roomId);
+					UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.hueSettings.roomId);
 			}
 
 			_input.ResetConsole();
@@ -114,8 +115,8 @@ namespace HueScreenAmbience
 								var appKey = await _client.RegisterAsync(_appName, deviceName);
 								_client.Initialize(appKey);
 								IsConnectedToBridge = true;
-								_config.Model.ip = _useBridge.IpAddress;
-								_config.Model.appKey = appKey;
+								_config.Model.hueSettings.ip = _useBridge.IpAddress;
+								_config.Model.hueSettings.appKey = appKey;
 								_config.SaveConfig();
 							}
 							catch (Exception ex)
@@ -169,7 +170,7 @@ namespace HueScreenAmbience
 						continue;
 					validInput = true;
 					UseRoom = Groups.ElementAt(readInt-1);
-					_config.Model.roomId = UseRoom.Id;
+					_config.Model.hueSettings.roomId = UseRoom.Id;
 					_config.SaveConfig();
 				}
 			} while (!validInput);
@@ -229,13 +230,13 @@ namespace HueScreenAmbience
 				var command = new LightCommand
 				{
 					On = true,
-					TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)
+					TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / _frameRate)
 				};
 				command.TurnOn();
 				await _client.SendCommandAsync(command, UseRoom.Lights);
 			}
-			_screen.InitScreenLoop(FrameRate);
-			_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoop));
+			_screen.InitScreenLoop();
+			_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoopDx));
 			_screenLoopThread.Name = "Screen Loop Thread";
 			_screenLoopThread.Start();
 			_input.ResetConsole();
@@ -253,7 +254,7 @@ namespace HueScreenAmbience
 				var command = new LightCommand
 				{
 					On = false,
-					TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)
+					TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / _frameRate)
 				};
 				command.TurnOff();
 				await _client.SendCommandAsync(command, UseRoom.Lights);
@@ -267,7 +268,7 @@ namespace HueScreenAmbience
 				return;
 			var dt = DateTime.UtcNow - _lastHueChangeTime;
 			//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
-			if (dt.TotalMilliseconds < 1000 / FrameRate)
+			if (dt.TotalMilliseconds < 1000 / _frameRate)
 				return;
 
 			//If the last colors set are close enough to the current color keep the current color.
@@ -288,7 +289,7 @@ namespace HueScreenAmbience
 
 			var command = new LightCommand
 			{
-				TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / FrameRate)
+				TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / _frameRate)
 			};
 			command.SetColor(new RGBColor(Helpers.ColorToHex(c)));
 			_sendingCommand = true;

@@ -55,19 +55,18 @@ namespace HueScreenAmbience
 			_config.zoneColumns = Math.Max(1, _config.zoneColumns);
 			_config.zoneRows = Math.Max(1, _config.zoneRows);
 			_config.readResolutionReduce = Math.Clamp(_config.readResolutionReduce, 1.0f, 10.0f);
+			_config.screenReadFrameRate = Math.Max(1, _config.screenReadFrameRate);
 		}
 	}
 
 	[Serializable]
 	public class ConfigModel
 	{
-		public string appKey;
-		public string ip;
-		public string roomId;
 		public HueSettings hueSettings = new HueSettings();
 		public int zoneColumns = 1;
 		public int zoneRows = 1;
-		public int pixelCount = 150000;
+		public int screenReadFrameRate = 24;
+		public int pixelCount = 0;
 		public bool dumpPngs = false;
 		public string imageDumpLocation = "Images";
 		public bool intrinsicsEnabled;
@@ -76,6 +75,10 @@ namespace HueScreenAmbience
 
 	public class HueSettings
 	{
+		public string appKey;
+		public string ip;
+		public string roomId;
+		public int updateFrameRate = 8;
 		public bool turnLightOnIfOff = true;
 		public bool shutLightOffOnStop = true;
 		public float colorMultiplier = 1.0f;

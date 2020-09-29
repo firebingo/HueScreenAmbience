@@ -58,13 +58,17 @@ namespace HueScreenAmbience
 			return null;
 		}
 
-		public MagickImage CreateImageFromZones(PixelZone[] zones, int width, int height)
+		public MagickImage CreateImageFromZones(PixelZone[] zones, int width, int height, MemoryStream memStream = null)
 		{
 			try
 			{
 				//var start = DateTime.UtcNow;
-				using var memStream = new MemoryStream();
-				using var binaryWriter = new BinaryWriter(memStream);
+				var memStreamExists = false;
+				if (memStream == null)
+					memStream = new MemoryStream();
+				else
+					memStreamExists = true;
+				using var binaryWriter = new BinaryWriter(memStream, Encoding.Default, memStreamExists);
 
 				ConcurrentDictionary<int, byte[]> bytes = new ConcurrentDictionary<int, byte[]>();
 				Parallel.For(0, height, y =>
@@ -113,6 +117,9 @@ namespace HueScreenAmbience
 				var image = new MagickImage(memStream, settings);
 
 				//Console.WriteLine($"Image Build Time: {(DateTime.UtcNow - t1).TotalMilliseconds}");
+
+				if (!memStreamExists)
+					memStream.Dispose();
 
 				return image;
 			}
