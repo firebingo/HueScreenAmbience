@@ -2,12 +2,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HueScreenAmbience
+namespace HueScreenAmbience.Imaging
 {
 	public class ImageHandler
 	{
@@ -20,14 +21,27 @@ namespace HueScreenAmbience
 			_logger = logger;
 		}
 
-		public MagickImage CreateSmallImageFromZones(PixelZone[] zones)
+		public Bitmap ResizeBitmapImage(Bitmap bmp, int width, int height)
+		{
+			Bitmap result = new Bitmap(width, height);
+			using (Graphics g = Graphics.FromImage(result))
+			{
+				g.DrawImage(bmp, 0, 0, width, height);
+			}
+
+			return result;
+		}
+
+		public MagickImage CreateSmallImageFromZones(PixelZone[] zones, int columns, int rows, MemoryStream memStream)
 		{
 			try
 			{
-				using var memStream = new MemoryStream();
-				using var binaryWriter = new BinaryWriter(memStream);
-				var columns = zones.OrderByDescending(x => x.Column).First().Column + 1;
-				var rows = zones.OrderByDescending(x => x.Row).First().Row + 1;
+				var memStreamExists = false;
+				if (memStream == null)
+					memStream = new MemoryStream();
+				else
+					memStreamExists = true;
+				using var binaryWriter = new BinaryWriter(memStream, Encoding.Default, memStreamExists);
 
 				for (var i = 0; i < zones.Length; ++i)
 				{
@@ -47,6 +61,9 @@ namespace HueScreenAmbience
 					Compression = CompressionMethod.NoCompression
 				};
 				var image = new MagickImage(memStream, settings);
+
+				if (!memStreamExists)
+					memStream.Dispose();
 
 				return image;
 			}
@@ -129,6 +146,22 @@ namespace HueScreenAmbience
 			}
 
 			return null;
+		}
+
+		public MagickImage ResizeImage(MagickImage image, int width, int height, FilterType filter = FilterType.Point, double sigma = 0.5)
+		{
+			var newImage = new MagickImage(image)
+			{
+				FilterType = filter
+			};
+			var geo = new MagickGeometry(width, height)
+			{
+				IgnoreAspectRatio = true,
+				FillArea = true
+			};
+			newImage.SetArtifact("filter:sigma", sigma.ToString());
+			newImage.Resize(geo);
+			return newImage;
 		}
 
 		public void DumpZonesToImage(PixelZone[] zones, int width, int height, string imageName)

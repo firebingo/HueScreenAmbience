@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using HueScreenAmbience.DXGICaptureScreen;
+using HueScreenAmbience.Hue;
+using HueScreenAmbience.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HueScreenAmbience
@@ -12,6 +15,7 @@ namespace HueScreenAmbience
 		private Config _config = null;
 		private ScreenReader _screen = null;
 		private ZoneProcessor _zoneProcesser = null;
+		private HueCore _hueClient = null;
 		private IServiceProvider _map = null;
 
 		static void Main(string[] args)
@@ -29,20 +33,21 @@ namespace HueScreenAmbience
 
 				_input.InstallServices(_map);
 				Thread inputThread = new Thread(new ThreadStart(_input.HandleInput));
-				inputThread.Name = "Input Thread";
-				inputThread.Start();
+				inputThread.Name = "Input Thread";		
 				
 				_core.InstallServices(_map);
 				Thread coreThread = new Thread(new ThreadStart(_core.Start));
-				coreThread.Name = "Core Thread";
-				coreThread.Start();
+				coreThread.Name = "Core Thread";		
 
 				_screen.InstallServices(_map);
 				Thread screenThread = new Thread(new ThreadStart(_screen.Start));
 				screenThread.Name = "Screen Reader Thread";
-				screenThread.Start();
-
+				_hueClient.InstallServices(_map);
 				_zoneProcesser.InstallServices(_map);
+
+				inputThread.Start();
+				coreThread.Start();
+				screenThread.Start();
 
 				//Delay until application quit
 				await Task.Delay(-1);
@@ -61,6 +66,7 @@ namespace HueScreenAmbience
 			_core = new Core();
 			_screen = new ScreenReader();
 			_zoneProcesser = new ZoneProcessor();
+			_hueClient = new HueCore();
 
 			var services = new ServiceCollection()
 				.AddScoped<ImageHandler>()
@@ -68,6 +74,7 @@ namespace HueScreenAmbience
 				.AddSingleton(_config)
 				.AddSingleton(_input)
 				.AddSingleton(_core)
+				.AddSingleton(_hueClient)
 				.AddSingleton(_screen)
 				.AddSingleton(_zoneProcesser);
 			var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);

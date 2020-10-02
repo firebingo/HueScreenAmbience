@@ -1,43 +1,29 @@
-﻿using Q42.HueApi;
-using Q42.HueApi.Interfaces;
-using Q42.HueApi.Models.Bridge;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Q42.HueApi.Models.Groups;
 using System.Threading;
 using System.Drawing;
-using Q42.HueApi.ColorConverters.HSB;
-using Q42.HueApi.ColorConverters;
+using System.Reflection.Metadata.Ecma335;
+using HueScreenAmbience.Hue;
+using System.Runtime.CompilerServices;
+using HueScreenAmbience.DXGICaptureScreen;
 
 namespace HueScreenAmbience
 {
 	public class Core
 	{
-		private ILocalHueClient _client = null;
-		private LocatedBridge _useBridge = null;
-		public Group UseRoom { get; private set; } = null;
-		private const string _appName = "HUEScreenAmbience";
-
-		public bool IsConnectedToBridge { get; private set; } = false;
-		private int _frameRate = 8;
 		private Config _config;
 		private InputHandler _input;
 		private ScreenReader _screen;
 		private Thread _screenLoopThread;
-		private DateTime _lastHueChangeTime;
-		private bool _sendingCommand;
-		private Color _lastColor;
-		private byte _colorChangeThreshold = 15;
+		private HueCore _hueClient;
 
 		public void Start()
 		{
-			_frameRate = _config.Model.hueSettings.updateFrameRate;
-			_lastColor = Color.FromArgb(255, 255, 255);
-			_colorChangeThreshold = _config.Model.hueSettings.colorChangeThreshold;
-			Task.Run(() => AutoConnectAttempt());
+			_hueClient.Start();
+			Task.Run(() => Connect());
 		}
 
 		public void InstallServices(IServiceProvider map)
@@ -45,37 +31,22 @@ namespace HueScreenAmbience
 			_config = map.GetService(typeof(Config)) as Config;
 			_input = map.GetService(typeof(InputHandler)) as InputHandler;
 			_screen = map.GetService(typeof(ScreenReader)) as ScreenReader;
+			_hueClient = map.GetService(typeof(HueCore)) as HueCore;
 		}
 
-		private async Task<bool> AutoConnectAttempt()
+		public async Task Connect()
 		{
-			if (string.IsNullOrWhiteSpace(_config.Model.hueSettings.appKey) || string.IsNullOrWhiteSpace(_config.Model.hueSettings.ip))
-				return Task.FromResult<bool>(false).Result;
-
-			Console.WriteLine("Attempting auto-connect");
-			_client = new LocalHueClient(_config.Model.hueSettings.ip);
-			_client.Initialize(_config.Model.hueSettings.appKey);
-			IsConnectedToBridge = true;
-
-			if (!string.IsNullOrWhiteSpace(_config.Model.hueSettings.roomId))
-			{
-				var Groups = await _client.GetGroupsAsync();
-				if (Groups != null && Groups.Count != 0)
-					UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.hueSettings.roomId);
-			}
-
+			await _hueClient.AutoConnectAttempt();
 			_input.ResetConsole();
-			return Task.FromResult<bool>(true).Result;
 		}
 
 		public async Task<bool> ConnectToBridge()
 		{
 			try
 			{
-				IBridgeLocator locator = new HttpBridgeLocator();
-				IEnumerable<LocatedBridge> bridgeIPs = await locator.LocateBridgesAsync(TimeSpan.FromSeconds(5));
+				var bridgeIPs = await _hueClient.GetBridges();
 				if (bridgeIPs == null || bridgeIPs.Count() == 0)
-					return Task.FromResult<bool>(false).Result;
+					return false;
 
 				var bridges = bridgeIPs.ToList();
 
@@ -99,7 +70,7 @@ namespace HueScreenAmbience
 						if (readInt > bridges.Count || readInt < 1)
 							continue;
 						validInput = true;
-						_useBridge = bridges[readInt - 1];
+						_hueClient.SetBridge(bridges[readInt - 1]);
 						bool nameValid = false;
 						do
 						{
@@ -111,13 +82,10 @@ namespace HueScreenAmbience
 								if (deviceName == string.Empty || deviceName.Length > 19 || deviceName.Contains(" "))
 									continue;
 								nameValid = true;
-								_client = new LocalHueClient(_useBridge.IpAddress);
-								var appKey = await _client.RegisterAsync(_appName, deviceName);
-								_client.Initialize(appKey);
-								IsConnectedToBridge = true;
-								_config.Model.hueSettings.ip = _useBridge.IpAddress;
-								_config.Model.hueSettings.appKey = appKey;
-								_config.SaveConfig();
+								if(_config.Model.hueSettings.hueType == HueType.Basic)
+									await _hueClient.RegisterBridge(deviceName);
+								else
+									await _hueClient.RegisterBridgeEntertainment(deviceName);
 							}
 							catch (Exception ex)
 							{
@@ -130,26 +98,52 @@ namespace HueScreenAmbience
 				}
 				while (!validInput);
 
-				return Task.FromResult<bool>(true).Result;
+				return true;
 			}
 			catch
 			{
-				return Task.FromResult<bool>(true).Result;
+				return true;
 			}
+		}
+		public async Task<bool> SelectHue()
+		{
+			var oldSetting = _config.Model.hueSettings.hueType;
+			bool validInput = false;
+			do
+			{
+				Console.Clear();
+				Console.WriteLine($"Options:");
+				Console.WriteLine($"0 - Basic");
+				Console.WriteLine($"1 - Entertainment");
+				var read = Console.ReadLine();
+				if (int.TryParse(read, out var readInt))
+				{
+					if (readInt != 0 && readInt != 1)
+						continue;
+					validInput = true;
+					_config.Model.hueSettings.hueType = (HueType)readInt;
+					_config.SaveConfig();
+				}
+			} while (!validInput);
+
+			if(_hueClient.IsConnectedToBridge && oldSetting != _config.Model.hueSettings.hueType)
+				await ConnectToBridge();
+
+			return true;
 		}
 
 		public async Task<bool> SelectRoom()
 		{
-			if (!IsConnectedToBridge)
-				return Task.FromResult<bool>(false).Result;
+			if (!_hueClient.IsConnectedToBridge)
+				return false;
 
-			var Groups = await _client.GetGroupsAsync();
+			var groups = await _hueClient.GetGroups();
 
-			if (Groups?.Count == 0)
+			if (!groups?.Any() ?? true)
 			{
 				Console.WriteLine("No rooms defined on bridge. Please use another HUE app to define a room.");
 				Console.ReadLine();
-				return Task.FromResult<bool>(false).Result;
+				return false;
 			}
 
 			bool validInput = false;
@@ -158,7 +152,7 @@ namespace HueScreenAmbience
 				Console.Clear();
 				Console.WriteLine($"Found Rooms:");
 				var i = 1;
-				foreach (var r in Groups)
+				foreach (var r in groups)
 				{
 					Console.WriteLine($"{i++}: Name: {r.Name}");
 				}
@@ -166,16 +160,51 @@ namespace HueScreenAmbience
 				var read = Console.ReadLine();
 				if (Int32.TryParse(read, out var readInt))
 				{
-					if (readInt > Groups.Count || readInt < 1)
+					if (readInt > groups.Count() || readInt < 1)
 						continue;
 					validInput = true;
-					UseRoom = Groups.ElementAt(readInt-1);
-					_config.Model.hueSettings.roomId = UseRoom.Id;
-					_config.SaveConfig();
+					_hueClient.SetRoom(groups.ElementAt(readInt - 1));
 				}
 			} while (!validInput);
 
-			return Task.FromResult<bool>(true).Result;
+			return true;
+		}
+
+		public async Task<bool> SelectEntertainmentGroup()
+		{
+			if (!_hueClient.IsConnectedToBridge)
+				return false;
+
+			var groups = await _hueClient.GetEntertainmentGroups();
+
+			if (!groups?.Any() ?? true)
+			{
+				Console.WriteLine("No entertainment groups defined on bridge. Please use another HUE app to define a group.");
+				Console.ReadLine();
+				return false;
+			}
+
+			bool validInput = false;
+			do
+			{
+				Console.Clear();
+				Console.WriteLine($"Found Entertainment Groups:");
+				var i = 1;
+				foreach (var r in groups)
+				{
+					Console.WriteLine($"{i++}: Name: {r.Name}");
+				}
+				Console.WriteLine("Input a group(#) to connect to: ");
+				var read = Console.ReadLine();
+				if (int.TryParse(read, out var readInt))
+				{
+					if (readInt > groups.Count() || readInt < 1)
+						continue;
+					validInput = true;
+					_hueClient.SetRoom(groups.ElementAt(readInt - 1));
+				}
+			} while (!validInput);
+			return true;
 		}
 
 		public void ChangePixelCount()
@@ -191,7 +220,7 @@ namespace HueScreenAmbience
 				Console.WriteLine($"Max: {Math.Min(screenPixelCount, 1000000)}");
 				Console.WriteLine("Input new pixel count:");
 				var read = Console.ReadLine();
-				if (Int32.TryParse(read, out var readInt))
+				if (int.TryParse(read, out var readInt))
 				{
 					if (readInt > screenPixelCount || readInt > 1000000)
 						continue;
@@ -207,17 +236,46 @@ namespace HueScreenAmbience
 
 		public void SelectMonitor()
 		{
-			var valid = false;
+			var validInput = false;
+			var displays = DxEnumerate.GetMonitors();
+
+			if (!displays?.Any() ?? true)
+			{
+				Console.WriteLine("No monitors found.");
+				Console.ReadLine();
+				return;
+			}
+
 			do
 			{
-
+				Console.Clear();
+				Console.WriteLine($"Found monitors:");
+				foreach (var display in displays)
+				{
+					Console.WriteLine($"{display.OutputId}: Name: {display.Name}, Info: {display.Width}x{display.Height}x{display.RefreshRate} Format: {display.Format}");
+				}
+				Console.WriteLine("Input a display(#) to connect to: ");
+				var read = Console.ReadLine();
+				if (int.TryParse(read, out var readInt))
+				{
+					if (readInt > displays.Count() || readInt < 0)
+						continue;
+					
+					var display = displays.FirstOrDefault(x => x.OutputId == readInt);
+					if(display == null)
+						continue;
+					validInput = true;
+					_config.Model.monitorId = display.OutputId;
+					_config.SaveConfig();
+					_screen.Start();
+				}
 			}
-			while (!valid);
+			while (!validInput);
 		}
 
 		public async Task StartScreenReading()
 		{
-			if (!IsConnectedToBridge || UseRoom == null)
+			if (!_hueClient.IsConnectedToBridge || _hueClient.UseRoom == null)
 			{
 				Console.Clear();
 				Console.WriteLine("Either not connected to a bridge or room has not been selected");
@@ -225,23 +283,16 @@ namespace HueScreenAmbience
 				_input.ResetConsole();
 				return;
 			}
-			if (_config.Model.hueSettings.turnLightOnIfOff)
-			{
-				var command = new LightCommand
-				{
-					On = true,
-					TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / _frameRate)
-				};
-				command.TurnOn();
-				await _client.SendCommandAsync(command, UseRoom.Lights);
-			}
+
+			await _hueClient.OnStartReading();
+
 			_screen.InitScreenLoop();
 			_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoopDx));
 			_screenLoopThread.Name = "Screen Loop Thread";
 			_screenLoopThread.Start();
 			_input.ResetConsole();
 		}
-		
+
 		public async Task StopScreenReading()
 		{
 			if (_screenLoopThread != null && _screenLoopThread.IsAlive)
@@ -249,60 +300,10 @@ namespace HueScreenAmbience
 				_screen.StopScreenLoop();
 				_screenLoopThread = null;
 			}
-			if (_config.Model.hueSettings.shutLightOffOnStop)
-			{
-				var command = new LightCommand
-				{
-					On = false,
-					TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / _frameRate)
-				};
-				command.TurnOff();
-				await _client.SendCommandAsync(command, UseRoom.Lights);
-			}
+
+			await _hueClient.OnStopReading();
+
 			_input.ResetConsole();
-		}
-
-		public async Task ChangeLightColor(Color c)
-		{
-			if (_sendingCommand)
-				return;
-			var dt = DateTime.UtcNow - _lastHueChangeTime;
-			//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
-			if (dt.TotalMilliseconds < 1000 / _frameRate)
-				return;
-
-			//If the last colors set are close enough to the current color keep the current color.
-			//This is to prevent a lot of color jittering that can happen otherwise.
-			var r = (byte)Math.Floor(c.R * _config.Model.hueSettings.colorMultiplier);
-			var g = (byte)Math.Floor(c.G * _config.Model.hueSettings.colorMultiplier);
-			var b = (byte)Math.Floor(c.B * _config.Model.hueSettings.colorMultiplier);
-			if (_lastColor.R >= c.R - _colorChangeThreshold && _lastColor.R <= c.R + _colorChangeThreshold)
-				r = _lastColor.R;
-			if (_lastColor.G >= c.G - _colorChangeThreshold && _lastColor.G <= c.G + _colorChangeThreshold)
-				g = _lastColor.G;
-			if (_lastColor.B >= c.B - _colorChangeThreshold && _lastColor.B <= c.B + _colorChangeThreshold)
-				b = _lastColor.B;
-			c = Color.FromArgb(255, r, g, b);
-			if (c == _lastColor)
-				return;
-			_lastColor = c;
-
-			var command = new LightCommand
-			{
-				TransitionTime = new TimeSpan(0, 0, 0, 0, 1000 / _frameRate)
-			};
-			command.SetColor(new RGBColor(Helpers.ColorToHex(c)));
-			_sendingCommand = true;
-			try
-			{
-				await _client.SendCommandAsync(command, UseRoom.Lights);
-			}
-			catch
-			{
-
-			}
-			_lastHueChangeTime = DateTime.UtcNow;
-			_sendingCommand = false;
 		}
 	}
 }

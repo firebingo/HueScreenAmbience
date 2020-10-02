@@ -1,4 +1,6 @@
-﻿using System;
+﻿using HueScreenAmbience.Hue;
+using Q42.HueApi.Interfaces;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,11 +11,15 @@ namespace HueScreenAmbience
 		public bool isRunning = false;
 		private bool _isReady = false;
 		private Core _core;
+		private Config _config;
+		private HueCore _hueClient;
 		private ScreenReader _screen;
 
 		public void InstallServices(IServiceProvider map)
 		{
 			_core = map.GetService(typeof(Core)) as Core;
+			_config = map.GetService(typeof(Config)) as Config;
+			_hueClient = map.GetService(typeof(HueCore)) as HueCore;
 			_screen = map.GetService(typeof(ScreenReader)) as ScreenReader;
 		}
 
@@ -51,13 +57,17 @@ namespace HueScreenAmbience
 						Console.WriteLine("-quit - Exits the application.");
 						Console.WriteLine("--------------------------------");
 						Console.WriteLine("-r - Select room for effect.");
+						Console.WriteLine("-t - Change hue type.");
 						Console.WriteLine("-p - Change pixel sample count.");
+						Console.WriteLine("-m - Select monitor.");
 						Console.WriteLine("-s - Starts the lighting.");
 						Console.WriteLine("-e - Stops the lighting.");
 						break;
 					//Connect to hue bridge
 					case "-connect":
 					case "-c":
+						if(CheckRunning())
+							break;
 						Console.WriteLine("Searching");
 						await _core.ConnectToBridge();
 						ResetConsole();
@@ -77,6 +87,7 @@ namespace HueScreenAmbience
 					case "-quit":
 					case "-q":
 						Console.WriteLine("Closing");
+						_ = _core.StopScreenReading();
 						Thread.Sleep(2000);
 						Environment.Exit(0);
 						isRunning = false;
@@ -84,13 +95,37 @@ namespace HueScreenAmbience
 					//Select a room
 					case "-room":
 					case "-r":
-						await _core.SelectRoom();
+						if (CheckRunning())
+							break;
+						if (_config.Model.hueSettings.hueType == HueType.Basic)
+							await _core.SelectRoom();
+						else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
+							await _core.SelectEntertainmentGroup();
+						ResetConsole();
+						break;
+					//Select hue type
+					case "-hue":
+					case "-t":
+						if (CheckRunning())
+							break;
+						await _core.SelectHue();
 						ResetConsole();
 						break;
 					//Change pixel count
 					case "-pixels":
 					case "-p":
+						if (CheckRunning())
+							break;
 						_core.ChangePixelCount();
+						ResetConsole();
+						break;
+					//Change monitor
+					case "-display":
+					case "-monitor":
+					case "-m":
+						if (CheckRunning())
+							break;
+						_core.SelectMonitor();
 						ResetConsole();
 						break;
 					default:
@@ -101,6 +136,18 @@ namespace HueScreenAmbience
 			while (isRunning);
 		}
 
+		private bool CheckRunning()
+		{
+			if (_screen.IsRunning)
+			{
+				Console.WriteLine("Stop running before changing settings");
+				Console.ReadLine();
+				ResetConsole();
+				return true;
+			}
+			return false;
+		}
+
 		public void ResetConsole()
 		{
 			Console.Clear();
@@ -109,10 +156,12 @@ namespace HueScreenAmbience
 				Console.WriteLine("Loading...");
 			else
 			{
-				if (_core.IsConnectedToBridge)
+				if (_hueClient.IsConnectedToBridge)
 					Console.WriteLine("Connected to Bridge");
-				if (_core.UseRoom != null)
-					Console.WriteLine($"Using room: {_core.UseRoom.Name}");
+				if (_hueClient.UseRoom != null)
+					Console.WriteLine($"Using room: {_hueClient.UseRoom.Name}");
+				if(_screen.Screen != null)
+					Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate}");
 				Console.WriteLine("Use -h for help");
 				if (_screen.IsRunning)
 					Console.WriteLine($"Lighting is running");

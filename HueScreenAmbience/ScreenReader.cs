@@ -1,39 +1,26 @@
 ﻿using HueScreenAmbience.DXGICaptureScreen;
-using Newtonsoft.Json;
+using HueScreenAmbience.Imaging;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics.X86;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Serialization;
 
 namespace HueScreenAmbience
 {
 	class ScreenReader
 	{
-		private const Int32 MONITOR_DEFAULTTOPRIMERTY = 0x00000001;
-		private const Int32 MONITOR_DEFAULTTONEAREST = 0x00000002;
-		[DllImport("user32.dll")]
-		private static extern IntPtr MonitorFromWindow(IntPtr handle, Int32 flags);
-		[DllImport("user32.dll")]
-		private static extern Boolean GetMonitorInfo(IntPtr hMonitor, MonitorInfo lpmi);
-
 		private ReadPixel[] _pixelsToRead = null;
 		private PixelZone[] _zones = null;
-		private MonitorInfo _screen = null;
 		public bool Ready { get; private set; }
+		public DxEnumeratedDisplay Screen { get; private set; }
 		public ScreenDimensions ScreenInfo { get; private set; }
 		private Config _config;
 		private Core _core;
 		private ZoneProcessor _zoneProcesser;
+		private ImageHandler _imageHandler;
 		private FileLogger _logger;
 		private DxCapture _dxCapture;
 		private long _frame;
@@ -68,27 +55,29 @@ namespace HueScreenAmbience
 			_config = _map.GetService(typeof(Config)) as Config;
 			_core = _map.GetService(typeof(Core)) as Core;
 			_zoneProcesser = _map.GetService(typeof(ZoneProcessor)) as ZoneProcessor;
+			_imageHandler = _map.GetService(typeof(ImageHandler)) as ImageHandler;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
 		}
 
 		public void GetScreenInfo()
 		{
-			var desk = PlatformInvokeUSER32.GetDesktopWindow();
-			var monitor = MonitorFromWindow(desk, MONITOR_DEFAULTTOPRIMERTY);
-			if (monitor != IntPtr.Zero)
+			var monitor = DxEnumerate.GetMonitor(_config.Model.monitorId);
+			if (monitor == null)
 			{
-				var monitorInfo = new MonitorInfo();
-				GetMonitorInfo(monitor, monitorInfo);
-				_screen = monitorInfo;
-				ScreenInfo = new ScreenDimensions
-				{
-					Left = monitorInfo.Monitor.Left,
-					Top = monitorInfo.Monitor.Top,
-					RealWidth = monitorInfo.Monitor.Right - monitorInfo.Monitor.Left,
-					RealHeight = monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top,
-					SizeReduction = _config.Model.readResolutionReduce
-				};
+				Console.WriteLine($"Monitor {_config.Model.monitorId} not found, press enter to fallback to primary");
+				Console.ReadLine();
+				_config.Model.monitorId = 0;
+				_config.SaveConfig();
+				monitor = DxEnumerate.GetMonitor(0);
 			}
+
+			Screen = monitor ?? throw new Exception("No primary monitor");
+			ScreenInfo = new ScreenDimensions
+			{
+				RealWidth = monitor.Width,
+				RealHeight = monitor.Height,
+				SizeReduction = _config.Model.readResolutionReduce
+			};
 		}
 
 		public void SetupPixelZones()
@@ -151,7 +140,7 @@ namespace HueScreenAmbience
 
 		public void InitScreenLoop()
 		{
-			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _logger);
+			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, Screen.OutputId, _logger);
 		}
 
 		public void ReadScreenLoopDx()
@@ -182,12 +171,12 @@ namespace HueScreenAmbience
 					if (_config.Model.readResolutionReduce > 1.0f)
 					{
 						var oldBmp = bmp;
-						bmp = CaptureScreen.ResizeImage(oldBmp, ScreenInfo.Width, ScreenInfo.Height);
+						bmp = _imageHandler.ResizeBitmapImage(oldBmp, ScreenInfo.Width, ScreenInfo.Height);
 						oldBmp.Dispose();
 					}
 
-					//using (var fi = System.IO.File.OpenWrite($"Images/i{_frame.ToString().PadLeft(5, '0')}.png"))
-					//	bmp.Save(fi, ImageFormat.Png);
+					using (var fi = System.IO.File.OpenWrite($"Images/i{_frame.ToString().PadLeft(5, '0')}.png"))
+						bmp.Save(fi, ImageFormat.Png);
 
 					BitmapData srcData = bmp.LockBits(
 					new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height),
@@ -224,7 +213,8 @@ namespace HueScreenAmbience
 									zone.Totals[0] += p[i + 2]; //r
 									zone.Count++;
 
-									if (!oneZone && currentZone != _zones.Length - 1)
+									//If we only have one row we do want to process this for the last zone still
+									if (!oneZone && (_config.Model.zoneRows == 1 || currentZone != _zones.Length - 1))
 									{
 										//If x is greater than zone width
 										if (++xIter >= zone.Width)
@@ -235,7 +225,8 @@ namespace HueScreenAmbience
 											{
 												//If our y is greater than this rows height
 												// reset y and advance us to the next row
-												if (++yIter >= zone.Height)
+												//Dont do this check if we only have one row
+												if (_config.Model.zoneRows != 1 &&  ++yIter >= zone.Height)
 												{
 													yIter = 0;
 													currentZone = ++zoneRow * _config.Model.zoneColumns;
@@ -318,8 +309,6 @@ namespace HueScreenAmbience
 
 		public class ScreenDimensions
 		{
-			public int Left;
-			public int Top;
 			public int RealWidth;
 			public int RealHeight;
 			public float SizeReduction;
@@ -331,33 +320,6 @@ namespace HueScreenAmbience
 			{
 				get => SizeReduction == 0 ? RealHeight : (int)Math.Floor(RealHeight / SizeReduction);
 			}
-		}
-
-		[Serializable, StructLayout(LayoutKind.Sequential)]
-		private struct Rectangle
-		{
-			public Int32 Left;
-			public Int32 Top;
-			public Int32 Right;
-			public Int32 Bottom;
-
-
-			public Rectangle(Int32 left, Int32 top, Int32 right, Int32 bottom)
-			{
-				this.Left = left;
-				this.Top = top;
-				this.Right = right;
-				this.Bottom = bottom;
-			}
-		}
-
-		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-		private sealed class MonitorInfo
-		{
-			public Int32 Size = Marshal.SizeOf(typeof(MonitorInfo));
-			public Rectangle Monitor;
-			public Rectangle Work;
-			public Int32 Flags;
 		}
 	}
 }

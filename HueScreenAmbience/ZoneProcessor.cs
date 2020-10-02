@@ -1,4 +1,6 @@
-﻿using ImageMagick;
+﻿using HueScreenAmbience.Hue;
+using HueScreenAmbience.Imaging;
+using ImageMagick;
 using System;
 using System.Drawing;
 using System.IO;
@@ -10,16 +12,16 @@ namespace HueScreenAmbience
 	public class ZoneProcessor
 	{
 		private bool _processingFrame;
-		private MemoryStream _imageMemStream;
+		private MemoryStream _smallImageMemStream;
 		private Config _config;
-		private Core _core;
+		private HueCore _hueClient;
 		private ImageHandler _imageHandler;
 		private FileLogger _logger;
 
 		public void InstallServices(IServiceProvider _map)
 		{
 			_config = _map.GetService(typeof(Config)) as Config;
-			_core = _map.GetService(typeof(Core)) as Core;
+			_hueClient = _map.GetService(typeof(HueCore)) as HueCore;
 			_imageHandler = _map.GetService(typeof(ImageHandler)) as ImageHandler;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
 		}
@@ -30,9 +32,12 @@ namespace HueScreenAmbience
 				return;
 			_processingFrame = true;
 
+			var columns = zones.OrderByDescending(x => x.Column).First().Column + 1;
+			var rows = zones.OrderByDescending(x => x.Row).First().Row + 1;
+
 			//Pre allocate the memory stream for images since it will be the same size every time
-			if (_imageMemStream == null)
-				_imageMemStream = new MemoryStream(width * height * 3);
+			if (_smallImageMemStream == null)
+				_smallImageMemStream = new MemoryStream(columns * rows);
 
 			try
 			{
@@ -52,8 +57,19 @@ namespace HueScreenAmbience
 				//	smallImage.Write(writeStream, MagickFormat.Png);
 				//}
 
-				using var image = _imageHandler.CreateImageFromZones(zones, width, height, _imageMemStream);
+				//time = DateTime.UtcNow;
+				//using var image = _imageHandler.CreateImageFromZones(zones, width, height, _imageMemStream);
 				//Console.WriteLine($"PostRead CreateImageFromZones Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
+				time = DateTime.UtcNow;
+				using var image = _imageHandler.CreateSmallImageFromZones(zones, columns, rows, _smallImageMemStream);
+				//Console.WriteLine($"PostRead CreateSmallImageFromZones Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
+				time = DateTime.UtcNow;
+				using var blurimage = _imageHandler.ResizeImage(image,
+					(int)Math.Floor(columns * _config.Model.zoneProcessSettings.resizeScale),
+					(int)Math.Floor(rows * _config.Model.zoneProcessSettings.resizeScale),
+					_config.Model.zoneProcessSettings.resizeFilter,
+					_config.Model.zoneProcessSettings.resizeSigma);
+				//Console.WriteLine($"PostRead ResizeImage Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
 				if (image == null)
 				{
@@ -62,11 +78,23 @@ namespace HueScreenAmbience
 				}
 
 				time = DateTime.UtcNow;
-				int avgR = zones.Sum(x => x.AvgR) / zones.Length;
-				int avgG = zones.Sum(x => x.AvgG) / zones.Length;
-				int avgB = zones.Sum(x => x.AvgB) / zones.Length;
-				var avg = Color.FromArgb(255, avgR, avgG, avgB);
-				Task.Run(() => _core.ChangeLightColor(avg));
+				if (_config.Model.hueSettings.hueType == HueType.Basic)
+				{
+					int avgR = zones.Sum(x => x.AvgR) / zones.Length;
+					int avgG = zones.Sum(x => x.AvgG) / zones.Length;
+					int avgB = zones.Sum(x => x.AvgB) / zones.Length;
+					var avg = Color.FromArgb(255, avgR, avgG, avgB);
+					Task.Run(() => _hueClient.ChangeLightColorBasic(avg));
+				}
+				else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
+				{
+					var hueImage = new MagickImage(blurimage);
+					Task.Run(async () =>
+					{
+						await _hueClient.UpdateEntertainmentGroupFromImage(hueImage);
+						hueImage.Dispose();
+					});
+				}
 				//Console.WriteLine($"PostRead ChangeLightColor Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
 				if (_config.Model.dumpPngs)
@@ -76,7 +104,8 @@ namespace HueScreenAmbience
 						time = DateTime.UtcNow;
 						var path = Path.Combine(_config.Model.imageDumpLocation, $"{frame.ToString().PadLeft(6, '0')}.png");
 						using var writeStream = File.OpenWrite(path);
-						image.Write(writeStream, MagickFormat.Png);
+						using var resizeImage = _imageHandler.ResizeImage(image, width, height);
+						blurimage.Write(writeStream, MagickFormat.Png);
 						//Console.WriteLine($"PostRead writeStream Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 					}
 					catch (Exception ex)
@@ -93,7 +122,7 @@ namespace HueScreenAmbience
 			}
 			finally
 			{
-				_imageMemStream.Seek(0, SeekOrigin.Begin);
+				_smallImageMemStream.Seek(0, SeekOrigin.Begin);
 				_processingFrame = false;
 			}
 		}
