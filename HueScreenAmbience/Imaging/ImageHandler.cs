@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -30,6 +31,12 @@ namespace HueScreenAmbience.Imaging
 			}
 
 			return result;
+		}
+
+		public Bitmap CropBitmapRect(Bitmap bmp, Rectangle rect)
+		{
+			PixelFormat format = bmp.PixelFormat;
+			return bmp.Clone(rect, format);
 		}
 
 		public MagickImage CreateSmallImageFromZones(PixelZone[] zones, int columns, int rows, MemoryStream memStream)

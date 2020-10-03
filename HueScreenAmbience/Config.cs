@@ -80,6 +80,7 @@ namespace HueScreenAmbience
 		public string imageDumpLocation = "Images";
 		public bool intrinsicsEnabled;
 		public float readResolutionReduce = 2.0f;
+		public System.Drawing.Rectangle? bitmapRect = null;
 	}
 
 	public class HueSettings

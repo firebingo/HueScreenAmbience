@@ -167,6 +167,13 @@ namespace HueScreenAmbience
 					if (bmp == null)
 						continue;
 
+					if(_config.Model.bitmapRect.HasValue)
+					{
+						var oldBmp = bmp;
+						bmp = _imageHandler.CropBitmapRect(oldBmp, _config.Model.bitmapRect.Value);
+						oldBmp.Dispose();
+					}
+
 					//Reducing the resolution of the desktop capture takes time but it saves a lot of time on reading the image
 					if (_config.Model.readResolutionReduce > 1.0f)
 					{
@@ -175,8 +182,8 @@ namespace HueScreenAmbience
 						oldBmp.Dispose();
 					}
 
-					using (var fi = System.IO.File.OpenWrite($"Images/i{_frame.ToString().PadLeft(5, '0')}.png"))
-						bmp.Save(fi, ImageFormat.Png);
+					//using (var fi = System.IO.File.OpenWrite($"Images/i{_frame.ToString().PadLeft(5, '0')}.png"))
+					//	bmp.Save(fi, ImageFormat.Png);
 
 					BitmapData srcData = bmp.LockBits(
 					new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height),
