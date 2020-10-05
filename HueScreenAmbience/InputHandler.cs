@@ -59,6 +59,7 @@ namespace HueScreenAmbience
 						Console.WriteLine("-r - Select room for effect.");
 						Console.WriteLine("-t - Change hue type.");
 						Console.WriteLine("-p - Change pixel sample count.");
+						Console.WriteLine("-a - Select graphics adapter.");
 						Console.WriteLine("-m - Select monitor.");
 						Console.WriteLine("-s - Starts the lighting.");
 						Console.WriteLine("-e - Stops the lighting.");
@@ -126,6 +127,16 @@ namespace HueScreenAmbience
 						if (CheckRunning())
 							break;
 						_core.SelectMonitor();
+						ResetConsole();
+						break;
+					case "-adapter":
+					case "-a":
+						if (CheckRunning())
+							break;
+						var oldAda = _config.Model.adapterId;
+						_core.SelectAdapter();
+						if (oldAda != _config.Model.adapterId)
+							_core.SelectMonitor();
 						ResetConsole();
 						break;
 					default:

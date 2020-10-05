@@ -73,6 +73,7 @@ namespace HueScreenAmbience
 		public HueSettings hueSettings = new HueSettings();
 		public ZoneProcessSettings zoneProcessSettings = new ZoneProcessSettings();
 		public RGBDeviceSettings rgbDeviceSettings = new RGBDeviceSettings();
+		public int adapterId = 0;
 		public int monitorId = 0;
 		public int zoneColumns = 1;
 		public int zoneRows = 1;

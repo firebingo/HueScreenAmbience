@@ -234,6 +234,44 @@ namespace HueScreenAmbience
 			while (!valid);
 		}
 
+		public void SelectAdapter()
+		{
+			var validInput = false;
+			var adapters = DxEnumerate.GetAdapters();
+			if (!adapters?.Any() ?? true)
+			{
+				Console.WriteLine("No adapters found.");
+				Console.ReadLine();
+				return;
+			}
+
+			do
+			{
+				Console.Clear();
+				Console.WriteLine($"Found adapters:");
+				foreach (var adapter in adapters)
+				{
+					Console.WriteLine($"{adapter.AdapterId}: Name: {adapter.Name}");
+				}
+				Console.WriteLine("Input a adapter(#) to connect to: ");
+				var read = Console.ReadLine();
+				if (int.TryParse(read, out var readInt))
+				{
+					if (readInt > adapters.Count() || readInt < 0)
+						continue;
+
+					var adapter = adapters.FirstOrDefault(x => x.AdapterId == readInt);
+					if (adapter == null)
+						continue;
+					validInput = true;
+					_config.Model.adapterId = adapter.AdapterId;
+					_config.SaveConfig();
+					_screen.Start();
+				}
+			}
+			while (!validInput);
+		}
+
 		public void SelectMonitor()
 		{
 			var validInput = false;

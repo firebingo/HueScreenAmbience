@@ -10,7 +10,6 @@ namespace HueScreenAmbience.DXGICaptureScreen
 {
 	public class DxCapture : IDisposable
 	{
-		private readonly int _numAdapter = 0;
 		private readonly int _width = 0;
 		private readonly int _height = 0;
 		private readonly Factory1 _factory;
@@ -22,7 +21,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		private readonly Texture2D _screenTexture;
 		private readonly FileLogger _logger;
 
-		public DxCapture(int width, int height, int monitor, FileLogger logger)
+		public DxCapture(int width, int height, int adapter, int monitor, FileLogger logger)
 		{
 			try
 			{
@@ -31,7 +30,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				_height = height;
 
 				_factory = new Factory1();
-				_adapter = _factory.GetAdapter1(_numAdapter);
+				_adapter = _factory.GetAdapter1(adapter);
 				_device = new SharpDX.Direct3D11.Device(_adapter);
 
 				_output = _adapter.GetOutput(monitor);

@@ -63,23 +63,31 @@ namespace HueScreenAmbience
 
 		public void GetScreenInfo()
 		{
-			var monitor = DxEnumerate.GetMonitor(_config.Model.monitorId);
-			if (monitor == null)
+			try
 			{
-				Console.WriteLine($"Monitor {_config.Model.monitorId} not found, press enter to fallback to primary");
-				Console.ReadLine();
-				_config.Model.monitorId = 0;
-				_config.SaveConfig();
-				monitor = DxEnumerate.GetMonitor(0);
-			}
+				var monitor = DxEnumerate.GetMonitor(_config.Model.adapterId, _config.Model.monitorId);
+				if (monitor == null)
+				{
+					Console.WriteLine($"Monitor {_config.Model.monitorId} not found, press enter to fallback to primary");
+					Console.ReadLine();
+					_config.Model.monitorId = 0;
+					_config.SaveConfig();
+					monitor = DxEnumerate.GetMonitor(_config.Model.adapterId, 0);
+				}
 
-			Screen = monitor ?? throw new Exception("No primary monitor");
-			ScreenInfo = new ScreenDimensions
+				Screen = monitor ?? throw new Exception("No primary monitor");
+				ScreenInfo = new ScreenDimensions
+				{
+					RealWidth = monitor.Width,
+					RealHeight = monitor.Height,
+					SizeReduction = _config.Model.readResolutionReduce
+				};
+			}
+			catch(Exception ex)
 			{
-				RealWidth = monitor.Width,
-				RealHeight = monitor.Height,
-				SizeReduction = _config.Model.readResolutionReduce
-			};
+				Console.WriteLine(ex);
+				Task.Run(() => _logger.WriteLog(ex.ToString()));
+			}
 		}
 
 		public void SetupPixelZones()
@@ -142,7 +150,7 @@ namespace HueScreenAmbience
 
 		public void InitScreenLoop()
 		{
-			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, Screen.OutputId, _logger);
+			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.adapterId, Screen.OutputId, _logger);
 			if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
 			{
 				_rgbLighter = new RGBLighter(_logger, _config, _imageHandler);

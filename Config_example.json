@@ -22,6 +22,7 @@
     "useMice": true,  //Whether to display on connected rgb mice or not
     "colorMultiplier": 1.0 //Multiply values sent to rgb device by this 0.0-2.0
   },
+  "adapterId": 0, //The id of the graphics adapter to use.
   "monitorId": 0, //The id of the monitor to read.
   "zoneColumns": 6, //How many columns to split image into. If you are using a keyboard for lighting generally higher values are better.
   "zoneRows": 2, //how many rows to split image into. If you are using a keyboard for lighting generally higher values are better.
