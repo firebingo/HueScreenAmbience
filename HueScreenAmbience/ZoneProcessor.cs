@@ -1,5 +1,6 @@
 ﻿using HueScreenAmbience.Hue;
 using HueScreenAmbience.Imaging;
+using HueScreenAmbience.RGB;
 using ImageMagick;
 using System;
 using System.Drawing;
@@ -26,7 +27,7 @@ namespace HueScreenAmbience
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
 		}
 
-		public void PostRead(PixelZone[] zones, int width, int height, long frame)
+		public void PostRead(RGBLighter rgbLighter, PixelZone[] zones, int width, int height, long frame)
 		{
 			if (_processingFrame)
 				return;
@@ -77,25 +78,37 @@ namespace HueScreenAmbience
 					return;
 				}
 
+				int avgR = zones.Sum(x => x.AvgR) / zones.Length;
+				int avgG = zones.Sum(x => x.AvgG) / zones.Length;
+				int avgB = zones.Sum(x => x.AvgB) / zones.Length;
+				var avgColor = Color.FromArgb(255, avgR, avgG, avgB);
+
 				time = DateTime.UtcNow;
 				if (_config.Model.hueSettings.hueType == HueType.Basic)
 				{
-					int avgR = zones.Sum(x => x.AvgR) / zones.Length;
-					int avgG = zones.Sum(x => x.AvgG) / zones.Length;
-					int avgB = zones.Sum(x => x.AvgB) / zones.Length;
-					var avg = Color.FromArgb(255, avgR, avgG, avgB);
-					Task.Run(() => _hueClient.ChangeLightColorBasic(avg));
+					
+					Task.Run(() => _hueClient.ChangeLightColorBasic(avgColor));
 				}
 				else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
 				{
 					var hueImage = new MagickImage(blurimage);
-					Task.Run(async () =>
+					Task.Run(() =>
 					{
-						await _hueClient.UpdateEntertainmentGroupFromImage(hueImage);
+						_hueClient.UpdateEntertainmentGroupFromImage(hueImage);
 						hueImage.Dispose();
 					});
 				}
 				//Console.WriteLine($"PostRead ChangeLightColor Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
+
+				if (_config.Model.rgbDeviceSettings.useKeyboards)
+				{
+					var rgbImage = new MagickImage(blurimage);
+					Task.Run(() =>
+					{
+						rgbLighter.UpdateFromImage(avgColor, rgbImage, frame);
+						rgbImage.Dispose();
+					});
+				}
 
 				if (_config.Model.dumpPngs)
 				{

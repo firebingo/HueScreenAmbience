@@ -70,7 +70,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					Name = output.Description.DeviceName.ToString(),
 					Width = duplicatedOutput.Description.ModeDescription.Width,
 					Height = duplicatedOutput.Description.ModeDescription.Height,
-					RefreshRate = duplicatedOutput.Description.ModeDescription.RefreshRate.Denominator / duplicatedOutput.Description.ModeDescription.RefreshRate.Numerator,
+					RefreshRate = duplicatedOutput.Description.ModeDescription.RefreshRate.Numerator / duplicatedOutput.Description.ModeDescription.RefreshRate.Denominator,
 					Format = duplicatedOutput.Description.ModeDescription.Format.ToString()
 				};
 			}

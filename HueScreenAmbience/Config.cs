@@ -52,7 +52,8 @@ namespace HueScreenAmbience
 
 		private void ValidateConfig()
 		{
-			_config.hueSettings.colorMultiplier = Math.Clamp(_config.hueSettings.colorMultiplier, 0.0f, 1.0f);
+			_config.hueSettings.colorMultiplier = Math.Clamp(_config.hueSettings.colorMultiplier, 0.0f, 2.0f);
+			_config.rgbDeviceSettings.colorMultiplier = Math.Clamp(_config.rgbDeviceSettings.colorMultiplier, 0.0f, 2.0f);
 			_config.zoneColumns = Math.Max(1, _config.zoneColumns);
 			_config.zoneRows = Math.Max(1, _config.zoneRows);
 			_config.readResolutionReduce = Math.Clamp(_config.readResolutionReduce, 1.0f, 10.0f);
@@ -71,6 +72,7 @@ namespace HueScreenAmbience
 	{
 		public HueSettings hueSettings = new HueSettings();
 		public ZoneProcessSettings zoneProcessSettings = new ZoneProcessSettings();
+		public RGBDeviceSettings rgbDeviceSettings = new RGBDeviceSettings();
 		public int monitorId = 0;
 		public int zoneColumns = 1;
 		public int zoneRows = 1;
@@ -103,5 +105,12 @@ namespace HueScreenAmbience
 		public float resizeScale = 16.0f;
 		public float resizeSigma = 0.35f;
 		public FilterType resizeFilter = FilterType.Gaussian;
+	}
+
+	public class RGBDeviceSettings
+	{
+		public bool useKeyboards = false;
+		public bool useMice = false;
+		public float colorMultiplier = 1.0f;
 	}
 }

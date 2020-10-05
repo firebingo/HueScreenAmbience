@@ -240,16 +240,19 @@ namespace HueScreenAmbience.Hue
 
 			//If the last colors set are close enough to the current color keep the current color.
 			//This is to prevent a lot of color jittering that can happen otherwise.
-			var r = (byte)Math.Floor(c.R * _config.Model.hueSettings.colorMultiplier);
-			var g = (byte)Math.Floor(c.G * _config.Model.hueSettings.colorMultiplier);
-			var b = (byte)Math.Floor(c.B * _config.Model.hueSettings.colorMultiplier);
+			var r = Math.Floor(c.R * _config.Model.hueSettings.colorMultiplier);
+			var g = Math.Floor(c.G * _config.Model.hueSettings.colorMultiplier);
+			var b = Math.Floor(c.B * _config.Model.hueSettings.colorMultiplier);
+			r = Math.Clamp(r, 0, 255);
+			g = Math.Clamp(g, 0, 255);
+			b = Math.Clamp(b, 0, 255);
 			if (_lastColor.R >= c.R - _colorChangeThreshold && _lastColor.R <= c.R + _colorChangeThreshold)
 				r = _lastColor.R;
 			if (_lastColor.G >= c.G - _colorChangeThreshold && _lastColor.G <= c.G + _colorChangeThreshold)
 				g = _lastColor.G;
 			if (_lastColor.B >= c.B - _colorChangeThreshold && _lastColor.B <= c.B + _colorChangeThreshold)
 				b = _lastColor.B;
-			c = Color.FromArgb(255, r, g, b);
+			c = Color.FromArgb(255, (byte)r, (byte)g, (byte)b);
 			if (c == _lastColor)
 				return;
 			_lastColor = c;
@@ -272,7 +275,7 @@ namespace HueScreenAmbience.Hue
 			_sendingCommand = false;
 		}
 
-		public async Task UpdateEntertainmentGroupFromImage(MagickImage image)
+		public void UpdateEntertainmentGroupFromImage(MagickImage image)
 		{
 			try
 			{
@@ -283,15 +286,15 @@ namespace HueScreenAmbience.Hue
 					return;
 
 				var start = DateTime.UtcNow;
-				var pixels = image.GetPixels();
+				using var pixels = image.GetPixelsUnsafe();
 				foreach (var light in _streamBaseLayer)
 				{
 					var (x, y) = MapLightLocationToImage(light.LightLocation, image.Width, image.Height);
 					var color = pixels[x, y].ToColor();
-					var r = (byte)Math.Floor(color.R * _config.Model.hueSettings.colorMultiplier);
-					var g = (byte)Math.Floor(color.G * _config.Model.hueSettings.colorMultiplier);
-					var b = (byte)Math.Floor(color.B * _config.Model.hueSettings.colorMultiplier);
-					var c = Color.FromArgb(255, r, g, b);
+					var r = Math.Floor(color.R * _config.Model.hueSettings.colorMultiplier);
+					var g = Math.Floor(color.G * _config.Model.hueSettings.colorMultiplier);
+					var b = Math.Floor(color.B * _config.Model.hueSettings.colorMultiplier);
+					var c = Color.FromArgb(255, (byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
 					light.SetState(_cancelToken, new RGBColor(Helpers.ColorToHex(c)), 1.0);
 				}
 
@@ -305,7 +308,6 @@ namespace HueScreenAmbience.Hue
 			}
 			_lastHueChangeTime = DateTime.UtcNow;
 			_sendingCommand = false;
-			await Task.Delay(0);
 		}
 
 		private (int x, int y) MapLightLocationToImage(LightLocation location, int width, int height)

@@ -1,5 +1,6 @@
 ﻿using HueScreenAmbience.DXGICaptureScreen;
 using HueScreenAmbience.Imaging;
+using HueScreenAmbience.RGB;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -21,6 +22,7 @@ namespace HueScreenAmbience
 		private Core _core;
 		private ZoneProcessor _zoneProcesser;
 		private ImageHandler _imageHandler;
+		private RGBLighter _rgbLighter;
 		private FileLogger _logger;
 		private DxCapture _dxCapture;
 		private long _frame;
@@ -141,6 +143,11 @@ namespace HueScreenAmbience
 		public void InitScreenLoop()
 		{
 			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, Screen.OutputId, _logger);
+			if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
+			{
+				_rgbLighter = new RGBLighter(_logger, _config, _imageHandler);
+				_rgbLighter.Start();
+			}
 		}
 
 		public void ReadScreenLoopDx()
@@ -280,7 +287,7 @@ namespace HueScreenAmbience
 					{
 						tempZones[i] = PixelZone.Clone(_zones[i]);
 					}
-					Task.Run(() => _zoneProcesser.PostRead(tempZones, ScreenInfo.Width, ScreenInfo.Height, f));
+					Task.Run(() => _zoneProcesser.PostRead(_rgbLighter, tempZones, ScreenInfo.Width, ScreenInfo.Height, f));
 
 					var dt = DateTime.UtcNow - start;
 					if (++_averageIter >= _averageValues.Length)
@@ -312,6 +319,8 @@ namespace HueScreenAmbience
 		{
 			IsRunning = false;
 			_dxCapture.Dispose();
+			_rgbLighter?.Stop();
+			//_rgbLighter?.Dispose();
 		}
 
 		public class ScreenDimensions

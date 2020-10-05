@@ -16,6 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="HidSharp" Version="2.1.0" />
     <PackageReference Include="Magick.NET-Q8-x64" Version="7.22.0" />
     <PackageReference Include="Magick.NET.Core" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.8" />
@@ -23,8 +24,32 @@
     <PackageReference Include="Q42.HueApi" Version="3.15.7" />
     <PackageReference Include="Q42.HueApi.ColorConverters" Version="3.14.0" />
     <PackageReference Include="Q42.HueApi.Entertainment" Version="3.15.0" />
+    <PackageReference Include="RGB.NET.Resources.Corsair" Version="0.3.0.355" />
+    <PackageReference Include="RGB.NET.Resources.Logitech" Version="0.3.0" />
+    <PackageReference Include="RGB.NET.Resources.Razer" Version="0.3.2.4" />
     <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
     <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RGB.NET.Brushes">
+      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Brushes.dll</HintPath>
+    </Reference>
+    <Reference Include="RGB.NET.Core">
+      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="RGB.NET.Devices.Corsair">
+      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Devices.Corsair.dll</HintPath>
+    </Reference>
+    <Reference Include="RGB.NET.Devices.Logitech">
+      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Devices.Logitech.dll</HintPath>
+    </Reference>
+    <Reference Include="RGB.NET.Devices.Razer">
+      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Devices.Razer.dll</HintPath>
+    </Reference>
+    <Reference Include="RGB.NET.Groups">
+      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Groups.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

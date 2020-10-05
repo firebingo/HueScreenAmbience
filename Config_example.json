@@ -1,20 +1,35 @@
 {
   "hueSettings": {
-	"appKey": "", //set when connecting to bridge
-	"ip": "", //set when connecting to bridge
-	"roomId": "", //set when connecting to bridge
-    "updateFrameRate": 7, //HUE can only handle so many updates at once. anything above 8 is unreliable.
+    "appKey": "", //set when connecting to bridge
+    "entertainmentKey": "", //set when connecting to bridge
+    "ip": "", //set when connecting to bridge
+    "roomId": "", //set when connecting to bridge
+    "groupId": "", //set when connecting to bridge
+    "hueType": 0, //0 = basic, 1 = entertainment. basic just sets all lights in a room/group and uses roomId. entertainment uses Hue entertainment groups and groupId setting.
+    "updateFrameRate": 8, //HUE can only handle so many updates at once. anything above 8 is unreliable for basic. for Entertainment ~25 and below is fine.
     "turnLightOnIfOff": true, //If lights are off when reading started turn them on.
     "shutLightOffOnStop": true, //When reading is stopped turn lights off.
-    "colorMultiplier": 1.0, //Multiply values sent to lights by this 0.0-1.0
+    "colorMultiplier": 1.0, //Multiply values sent to lights by this 0.0-2.0
     "colorChangeThreshold": 15 //a byte value (0-255) that if next color is within this range dont change colors. helps reduce flickering.
   },
-  "zoneColumns": 6, //How many columns to split image into
-  "zoneRows": 2, //how many rows to split image into
+  "zoneProcessSettings": {
+    "resizeScale": 16.0, //What to scale zone image by. Generally more zones means use a lower value to keep efficiency. ex 6x2 zones -> 96x32 image.
+    "resizeSigma": 0.50, //The sigma to use for the gaussian resize. Higher values means more blur. More zones generally means to use a larger value. 0.4-0.6 is a good range.
+    "resizeFilter": 8 //8 is a gaussian resize filter. Reccomended to keep set as is. Although any imagemagick FilterType enum value will work if you know them.
+  },
+  "rgbDeviceSettings": {
+    "useKeyboards": true, //Whether to display on connected rgb keyboards or not
+    "useMice": true,  //Whether to display on connected rgb mice or not
+    "colorMultiplier": 1.0 //Multiply values sent to rgb device by this 0.0-2.0
+  },
+  "monitorId": 0, //The id of the monitor to read.
+  "zoneColumns": 6, //How many columns to split image into. If you are using a keyboard for lighting generally higher values are better.
+  "zoneRows": 2, //how many rows to split image into. If you are using a keyboard for lighting generally higher values are better.
   "screenReadFrameRate": 24, //Max rate screen can be read. In practice this can be up to around 30-35 fps.
   "pixelCount": 0, //How many pixels to read of screen. 0 with readResolutionReduce set is recommended as it is faster to do this way and produces more accurate results.
   "dumpPngs": false, //Dump processed image zones into a image.
   "imageDumpLocation": "", //Path to dump images in
   "intrinsicsEnabled": false, //currently does nothing
-  "readResolutionReduce": 2.0 //Reduce captured screen image size (ex. 2.0 is res * 0.5, 1920x1080->960x540). Adjust value based on screen resolution. getting image size to around 720p or lower is recommended.
+  "readResolutionReduce": 2.0, //Reduce captured screen image size (ex. 2.0 is res * 0.5, 1920x1080->960x540). Adjust value based on screen resolution. getting image size to around 720p or lower is recommended.
+  "bitmapRect": null //A rect to cut out of the captured screen for use. format is "topLeftX, topLeftY, width, height".
 }
