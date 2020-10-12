@@ -25,6 +25,7 @@ namespace HueScreenAmbience
 		private RGBLighter _rgbLighter;
 		private FileLogger _logger;
 		private DxCapture _dxCapture;
+		private DateTime _lastPostReadTime;
 		private long _frame;
 		public bool IsRunning { get; private set; } = false;
 		public double AverageDt
@@ -167,6 +168,27 @@ namespace HueScreenAmbience
 				try
 				{
 					var start = DateTime.UtcNow;
+					bmp = _dxCapture.GetFrame();
+					//If the bitmap is null that usually means the desktop has not been updated
+					if (bmp == null)
+					{
+						//If we havnt got a new frame in 2 seconds because the desktop hasnt updated send a update with the last zones anyways.
+						// If this isint done hue will eventually disconnect us because we didnt send any updates.
+						if((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
+						{
+							long rf = _frame;
+							var tempRZones = new PixelZone[_zones.Length];
+							for (var i = 0; i < tempRZones.Length; ++i)
+							{
+								tempRZones[i] = PixelZone.Clone(_zones[i]);
+							}
+							_lastPostReadTime = DateTime.UtcNow;
+							Task.Run(() => _zoneProcesser.PostRead(_rgbLighter, tempRZones, ScreenInfo.Width, ScreenInfo.Height, rf));
+							_frame++;
+						}
+						continue;
+					}
+
 					//Reset zones
 					foreach (var zone in _zones)
 					{
@@ -177,12 +199,7 @@ namespace HueScreenAmbience
 						zone.ResetAverages();
 					}
 
-					bmp = _dxCapture.GetFrame();
-					//If the bitmap is null that usually means the desktop has not been updated
-					if (bmp == null)
-						continue;
-
-					if(_config.Model.bitmapRect.HasValue)
+					if (_config.Model.bitmapRect.HasValue)
 					{
 						var oldBmp = bmp;
 						bmp = _imageHandler.CropBitmapRect(oldBmp, _config.Model.bitmapRect.Value);
@@ -295,6 +312,7 @@ namespace HueScreenAmbience
 					{
 						tempZones[i] = PixelZone.Clone(_zones[i]);
 					}
+					_lastPostReadTime = DateTime.UtcNow;
 					Task.Run(() => _zoneProcesser.PostRead(_rgbLighter, tempZones, ScreenInfo.Width, ScreenInfo.Height, f));
 
 					var dt = DateTime.UtcNow - start;

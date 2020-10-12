@@ -83,11 +83,11 @@ namespace HueScreenAmbience.Hue
 			{
 				_streamClient = new StreamingHueClient(_config.Model.hueSettings.ip, _config.Model.hueSettings.appKey, _config.Model.hueSettings.entertainmentKey);
 				IsConnectedToBridge = true;
-				if (!string.IsNullOrWhiteSpace(_config.Model.hueSettings.groupId))
+				if (!string.IsNullOrWhiteSpace(_config.Model.hueSettings.roomId))
 				{
 					var Groups = await _streamClient.LocalHueClient.GetEntertainmentGroups();
 					if (Groups != null && Groups.Count != 0)
-						UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.hueSettings.groupId);
+						UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.hueSettings.roomId);
 				}
 			}
 		}
@@ -240,12 +240,14 @@ namespace HueScreenAmbience.Hue
 
 			//If the last colors set are close enough to the current color keep the current color.
 			//This is to prevent a lot of color jittering that can happen otherwise.
+			var min = _config.Model.hueSettings.minColorValue;
+			var max = _config.Model.hueSettings.maxColorValue;
 			var r = Math.Floor(c.R * _config.Model.hueSettings.colorMultiplier);
 			var g = Math.Floor(c.G * _config.Model.hueSettings.colorMultiplier);
 			var b = Math.Floor(c.B * _config.Model.hueSettings.colorMultiplier);
-			r = Math.Clamp(r, 0, 255);
-			g = Math.Clamp(g, 0, 255);
-			b = Math.Clamp(b, 0, 255);
+			r = Math.Clamp(r, min, max);
+			g = Math.Clamp(g, min, max);
+			b = Math.Clamp(b, min, max);
 			if (_lastColor.R >= c.R - _colorChangeThreshold && _lastColor.R <= c.R + _colorChangeThreshold)
 				r = _lastColor.R;
 			if (_lastColor.G >= c.G - _colorChangeThreshold && _lastColor.G <= c.G + _colorChangeThreshold)
@@ -291,10 +293,12 @@ namespace HueScreenAmbience.Hue
 				{
 					var (x, y) = MapLightLocationToImage(light.LightLocation, image.Width, image.Height);
 					var color = pixels[x, y].ToColor();
+					var min = _config.Model.hueSettings.minColorValue;
+					var max = _config.Model.hueSettings.maxColorValue;
 					var r = Math.Floor(color.R * _config.Model.hueSettings.colorMultiplier);
 					var g = Math.Floor(color.G * _config.Model.hueSettings.colorMultiplier);
 					var b = Math.Floor(color.B * _config.Model.hueSettings.colorMultiplier);
-					var c = Color.FromArgb(255, (byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
+					var c = Color.FromArgb(255, (byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
 					light.SetState(_cancelToken, new RGBColor(Helpers.ColorToHex(c)), 1.0);
 				}
 

@@ -92,11 +92,12 @@ namespace HueScreenAmbience
 		public string entertainmentKey;
 		public string ip;
 		public string roomId;
-		public string groupId;
 		public HueType hueType = HueType.Basic;
 		public int updateFrameRate = 8;
 		public bool turnLightOnIfOff = true;
 		public bool shutLightOffOnStop = true;
+		public byte maxColorValue = 255;
+		public byte minColorValue = 0;
 		public float colorMultiplier = 1.0f;
 		public byte colorChangeThreshold = 15;
 	}
