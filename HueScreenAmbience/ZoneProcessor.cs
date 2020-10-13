@@ -84,19 +84,21 @@ namespace HueScreenAmbience
 				var avgColor = Color.FromArgb(255, avgR, avgG, avgB);
 
 				time = DateTime.UtcNow;
-				if (_config.Model.hueSettings.hueType == HueType.Basic)
+				if (_config.Model.hueSettings.useHue)
 				{
-					
-					Task.Run(() => _hueClient.ChangeLightColorBasic(avgColor));
-				}
-				else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
-				{
-					var hueImage = new MagickImage(blurimage);
-					Task.Run(() =>
+					if (_config.Model.hueSettings.hueType == HueType.Basic)
 					{
-						_hueClient.UpdateEntertainmentGroupFromImage(hueImage);
-						hueImage.Dispose();
-					});
+						Task.Run(() => _hueClient.ChangeLightColorBasic(avgColor));
+					}
+					else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
+					{
+						var hueImage = new MagickImage(blurimage);
+						Task.Run(() =>
+						{
+							_hueClient.UpdateEntertainmentGroupFromImage(hueImage);
+							hueImage.Dispose();
+						});
+					}
 				}
 				//Console.WriteLine($"PostRead ChangeLightColor Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 

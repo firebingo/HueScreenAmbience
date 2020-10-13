@@ -82,7 +82,7 @@ namespace HueScreenAmbience
 								if (deviceName == string.Empty || deviceName.Length > 19 || deviceName.Contains(" "))
 									continue;
 								nameValid = true;
-								if(_config.Model.hueSettings.hueType == HueType.Basic)
+								if (_config.Model.hueSettings.hueType == HueType.Basic)
 									await _hueClient.RegisterBridge(deviceName);
 								else
 									await _hueClient.RegisterBridgeEntertainment(deviceName);
@@ -126,7 +126,7 @@ namespace HueScreenAmbience
 				}
 			} while (!validInput);
 
-			if(_hueClient.IsConnectedToBridge && oldSetting != _config.Model.hueSettings.hueType)
+			if (_hueClient.IsConnectedToBridge && oldSetting != _config.Model.hueSettings.hueType)
 				await ConnectToBridge();
 
 			return true;
@@ -298,9 +298,9 @@ namespace HueScreenAmbience
 				{
 					if (readInt > displays.Count() || readInt < 0)
 						continue;
-					
+
 					var display = displays.FirstOrDefault(x => x.OutputId == readInt);
-					if(display == null)
+					if (display == null)
 						continue;
 					validInput = true;
 					_config.Model.monitorId = display.OutputId;
@@ -313,16 +313,19 @@ namespace HueScreenAmbience
 
 		public async Task StartScreenReading()
 		{
-			if (!_hueClient.IsConnectedToBridge || _hueClient.UseRoom == null)
+			if (_config.Model.hueSettings.useHue)
 			{
-				Console.Clear();
-				Console.WriteLine("Either not connected to a bridge or room has not been selected");
-				Console.ReadLine();
-				_input.ResetConsole();
-				return;
-			}
+				if (!_hueClient.IsConnectedToBridge || _hueClient.UseRoom == null)
+				{
+					Console.Clear();
+					Console.WriteLine("Either not connected to a bridge or room has not been selected");
+					Console.ReadLine();
+					_input.ResetConsole();
+					return;
+				}
 
-			await _hueClient.OnStartReading();
+				await _hueClient.OnStartReading();
+			}
 
 			_screen.InitScreenLoop();
 			_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoopDx));

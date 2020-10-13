@@ -88,6 +88,7 @@ namespace HueScreenAmbience
 
 	public class HueSettings
 	{
+		public bool useHue = true;
 		public string appKey;
 		public string entertainmentKey;
 		public string ip;
