@@ -1,16 +1,19 @@
 {
   "hueSettings": {
+	"useHue": true, //Whether to use hue lighting or not
     "appKey": "", //set when connecting to bridge
     "entertainmentKey": "", //set when connecting to bridge
     "ip": "", //set when connecting to bridge
     "roomId": "", //set when connecting to bridge
-    "groupId": "", //set when connecting to bridge
     "hueType": 0, //0 = basic, 1 = entertainment. basic just sets all lights in a room/group and uses roomId. entertainment uses Hue entertainment groups and groupId setting.
     "updateFrameRate": 8, //HUE can only handle so many updates at once. anything above 8 is unreliable for basic. for Entertainment ~25 and below is fine.
     "turnLightOnIfOff": true, //If lights are off when reading started turn them on.
     "shutLightOffOnStop": true, //When reading is stopped turn lights off.
+	"maxColorValue": 255, //A byte value (0-255) to clamp color value max to.
+    "minColorValue": 0, //A byte value (0-255) to clamp color value min to.
     "colorMultiplier": 1.0, //Multiply values sent to lights by this 0.0-2.0
-    "colorChangeThreshold": 15 //a byte value (0-255) that if next color is within this range dont change colors. helps reduce flickering.
+    "colorChangeThreshold": 15 //a byte value (0-255) that if next color is within this range dont change colors. can help reduce flickering.
+	"blendLastColorAmount": 0.6 //A value to blend the current color by the last color. This reduces response time a bit to give smoother color changes. 0.6 is a good value to start. (0.0-1.0)
   },
   "zoneProcessSettings": {
     "resizeScale": 16.0, //What to scale zone image by. Generally more zones means use a lower value to keep efficiency. ex 6x2 zones -> 96x32 image.

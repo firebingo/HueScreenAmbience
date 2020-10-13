@@ -53,6 +53,8 @@ namespace HueScreenAmbience
 		private void ValidateConfig()
 		{
 			_config.hueSettings.colorMultiplier = Math.Clamp(_config.hueSettings.colorMultiplier, 0.0f, 2.0f);
+			_config.hueSettings.blendLastColorAmount = Math.Clamp(_config.hueSettings.blendLastColorAmount, 0.0f, 1.0f);
+			_config.hueSettings.updateFrameRate = Math.Clamp(_config.hueSettings.updateFrameRate, 1, 24);
 			_config.rgbDeviceSettings.colorMultiplier = Math.Clamp(_config.rgbDeviceSettings.colorMultiplier, 0.0f, 2.0f);
 			_config.zoneColumns = Math.Max(1, _config.zoneColumns);
 			_config.zoneRows = Math.Max(1, _config.zoneRows);
@@ -101,12 +103,13 @@ namespace HueScreenAmbience
 		public byte minColorValue = 0;
 		public float colorMultiplier = 1.0f;
 		public byte colorChangeThreshold = 15;
+		public float blendLastColorAmount = 0.4f;
 	}
 
 	public class ZoneProcessSettings
 	{
 		public float resizeScale = 16.0f;
-		public float resizeSigma = 0.35f;
+		public float resizeSigma = 0.45f;
 		public FilterType resizeFilter = FilterType.Gaussian;
 	}
 

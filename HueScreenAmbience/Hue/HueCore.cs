@@ -283,8 +283,7 @@ namespace HueScreenAmbience.Hue
 			{
 				if (_sendingCommand || _cancelToken.IsCancellationRequested)
 					return;
-				var dt = DateTime.UtcNow - _lastHueChangeTime;
-				if (dt.TotalMilliseconds < _frameTimeSpan.TotalMilliseconds)
+				if ((DateTime.UtcNow - _lastHueChangeTime).TotalMilliseconds < _frameTimeSpan.TotalMilliseconds)
 					return;
 
 				var start = DateTime.UtcNow;
@@ -298,7 +297,21 @@ namespace HueScreenAmbience.Hue
 					var r = Math.Floor(color.R * _config.Model.hueSettings.colorMultiplier);
 					var g = Math.Floor(color.G * _config.Model.hueSettings.colorMultiplier);
 					var b = Math.Floor(color.B * _config.Model.hueSettings.colorMultiplier);
+					var blendAmount = 1.0f - _config.Model.hueSettings.blendLastColorAmount;
+					if (blendAmount != 0.0f)
+					{
+						r = Math.Sqrt((1 - blendAmount) * Math.Pow(_lastColor.R, 2) + blendAmount * Math.Pow(r, 2));
+						g = Math.Sqrt((1 - blendAmount) * Math.Pow(_lastColor.G, 2) + blendAmount * Math.Pow(g, 2));
+						b = Math.Sqrt((1 - blendAmount) * Math.Pow(_lastColor.B, 2) + blendAmount * Math.Pow(b, 2));
+					}
+					if (_lastColor.R >= r - _colorChangeThreshold && _lastColor.R <= r + _colorChangeThreshold)
+						r = _lastColor.R;
+					if (_lastColor.G >= g - _colorChangeThreshold && _lastColor.G <= g + _colorChangeThreshold)
+						g = _lastColor.G;
+					if (_lastColor.B >= b - _colorChangeThreshold && _lastColor.B <= b + _colorChangeThreshold)
+						b = _lastColor.B;
 					var c = Color.FromArgb(255, (byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
+					_lastColor = c;
 					light.SetState(_cancelToken, new RGBColor(Helpers.ColorToHex(c)), 1.0);
 				}
 
