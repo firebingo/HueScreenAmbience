@@ -118,5 +118,6 @@ namespace HueScreenAmbience
 		public bool useKeyboards = false;
 		public bool useMice = false;
 		public float colorMultiplier = 1.0f;
+		public int keyboardResReduce = 4;
 	}
 }

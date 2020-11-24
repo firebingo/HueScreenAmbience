@@ -9,8 +9,8 @@ using System.Linq;
 using RGB.NET.Devices.Razer;
 using RGB.NET.Devices.Logitech;
 using HueScreenAmbience.Imaging;
-using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 
 namespace HueScreenAmbience.RGB
 {
@@ -20,8 +20,8 @@ namespace HueScreenAmbience.RGB
 		private readonly FileLogger _logger;
 		private readonly Config _config;
 		private readonly ImageHandler _imageHandler;
+		private MemoryStream imageByteStream;
 		private bool _started = false;
-		private List<byte[]> byteBuffer;
 
 		public RGBLighter(FileLogger logger, Config config, ImageHandler imageHandler)
 		{
@@ -38,8 +38,7 @@ namespace HueScreenAmbience.RGB
 			{
 				if (!_started)
 				{
-					byteBuffer?.Clear();
-					byteBuffer = new List<byte[]>();
+					imageByteStream = new MemoryStream();
 					LoadDevices();
 					_started = true;
 				}
@@ -68,7 +67,7 @@ namespace HueScreenAmbience.RGB
 		private void LoadDevices()
 		{
 			RGBDeviceType deviceMask = RGBDeviceType.None;
-			if(_config.Model.rgbDeviceSettings.useKeyboards)
+			if (_config.Model.rgbDeviceSettings.useKeyboards)
 				deviceMask |= RGBDeviceType.Keyboard;
 			if (_config.Model.rgbDeviceSettings.useMice)
 				deviceMask |= RGBDeviceType.Mouse;
@@ -93,20 +92,27 @@ namespace HueScreenAmbience.RGB
 			try
 			{
 				var start = DateTime.UtcNow;
-				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Keyboard))
+				var red = _config.Model.rgbDeviceSettings.keyboardResReduce;
+				unsafe
 				{
-					using var resizeImage = _imageHandler.ResizeImage(image, (int)device.DeviceRectangle.Size.Width, (int)device.DeviceRectangle.Size.Height);
-					unsafe
+					int* colors = stackalloc int[] { 0, 0, 0 };
+					//byte[] bytes;
+					foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Keyboard))
 					{
-						//I hate how much this makes the GC work but its faster than getting/reading the pixels and there isint really an alternative.
-						var bytes = resizeImage.ToByteArray(MagickFormat.Rgb);
-						byteBuffer.Add(bytes);
-						int* colors = stackalloc int[] { 0, 0, 0 };
+						imageByteStream.Seek(0, SeekOrigin.Begin);
+						//I am sampling the image by half the given dimensions because the rgb.net layouts width/height are not physical key dimensions and I dont need the extra accuracy here.
+						// It is better to reduce the footprint created by doing this to try and help the gc.
+						using var resizeImage = _imageHandler.ResizeImage(image, (int)device.DeviceRectangle.Size.Width / red, (int)device.DeviceRectangle.Size.Height / red);
+						resizeImage.Write(imageByteStream);
+
 						int count = 0;
 						var sampleX = 0;
 						var sampleY = 0;
 						var pixIndex = 0;
 						var stride = resizeImage.Width * 3;
+						var r = 0;
+						var g = 0;
+						var b = 0;
 						//Get the colors for the whole size of the key so we can average the whole key instead of just sampling its center.
 						foreach (var key in device)
 						{
@@ -114,31 +120,32 @@ namespace HueScreenAmbience.RGB
 							colors[1] = 0;
 							colors[2] = 0;
 							count = 0;
-							for (var y = 0; y < key.LedRectangle.Size.Height; ++y)
+							for (var y = 0; y < key.LedRectangle.Size.Height / red; ++y)
 							{
-								for (var x = 0; x < key.LedRectangle.Size.Width; ++x)
+								for (var x = 0; x < key.LedRectangle.Size.Width / red; ++x)
 								{
-									sampleX = (int)Math.Floor(key.LedRectangle.Location.X + x);
-									sampleY = (int)Math.Floor(key.LedRectangle.Location.Y + y);
+									sampleX = (int)Math.Floor(key.LedRectangle.Location.X / red + x);
+									sampleY = (int)Math.Floor(key.LedRectangle.Location.Y / red + y);
 									pixIndex = (sampleY * stride) + sampleX * 3;
-									colors[0] += bytes[pixIndex];
-									colors[1] += bytes[pixIndex + 1];
-									colors[2] += bytes[pixIndex + 2];
+									imageByteStream.Seek(pixIndex, SeekOrigin.Begin);
+									colors[0] += imageByteStream.ReadByte();
+									colors[1] += imageByteStream.ReadByte();
+									colors[2] += imageByteStream.ReadByte();
 									count++;
 								}
 							}
 
-							var r = (int)Math.Floor((colors[0] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
-							var g = (int)Math.Floor((colors[1] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
-							var b = (int)Math.Floor((colors[2] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
+							r = (int)Math.Floor((colors[0] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
+							g = (int)Math.Floor((colors[1] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
+							b = (int)Math.Floor((colors[2] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
 							key.Color = new Color(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
 						}
 					}
 				}
-				foreach(var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Mouse))
+				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Mouse))
 				{
 					var color = new Color(averageColor.R, averageColor.G, averageColor.B);
-					foreach(var led in device)
+					foreach (var led in device)
 					{
 						led.Color = color;
 					}
@@ -146,14 +153,6 @@ namespace HueScreenAmbience.RGB
 				//Console.WriteLine($"Keyboard calc time: {(DateTime.UtcNow - start).TotalMilliseconds}");
 
 				_surface.Update();
-
-				//Im keeping a list of byte[] so that I can control the amount of gc that needs to happen from constantly converting images to byte buffers.
-				// Id rather keep the little extra memory overhead than doing gen 2 gcs constantly.
-				if (frame % 120 == 0)
-				{
-					byteBuffer.Clear();
-					GC.Collect();
-				}
 			}
 			catch (Exception ex)
 			{
@@ -199,10 +198,10 @@ namespace HueScreenAmbience.RGB
 				}
 			}
 
+			imageByteStream?.Dispose();
+			imageByteStream = null;
 			_surface.Exception -= Surface_Exception;
 			_surface?.Dispose();
-			byteBuffer?.Clear();
-			byteBuffer = null;
 			_started = false;
 		}
 	}
