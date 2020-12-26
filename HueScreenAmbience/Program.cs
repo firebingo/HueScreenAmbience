@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using HueScreenAmbience.DXGICaptureScreen;
 using HueScreenAmbience.Hue;
-using HueScreenAmbience.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HueScreenAmbience
@@ -69,7 +67,6 @@ namespace HueScreenAmbience
 			_hueClient = new HueCore();
 
 			var services = new ServiceCollection()
-				.AddScoped<ImageHandler>()
 				.AddScoped<FileLogger>()
 				.AddSingleton(_config)
 				.AddSingleton(_input)

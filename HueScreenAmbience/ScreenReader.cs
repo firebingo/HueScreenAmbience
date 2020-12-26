@@ -1,10 +1,9 @@
 ﻿using HueScreenAmbience.DXGICaptureScreen;
-using HueScreenAmbience.Imaging;
 using HueScreenAmbience.RGB;
+using BitmapZoneProcessor;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,9 +18,7 @@ namespace HueScreenAmbience
 		public DxEnumeratedDisplay Screen { get; private set; }
 		public ScreenDimensions ScreenInfo { get; private set; }
 		private Config _config;
-		private Core _core;
 		private ZoneProcessor _zoneProcesser;
-		private ImageHandler _imageHandler;
 		private RGBLighter _rgbLighter;
 		private FileLogger _logger;
 		private DxCapture _dxCapture;
@@ -49,16 +46,14 @@ namespace HueScreenAmbience
 			_frameRate = _config.Model.screenReadFrameRate;
 			GetScreenInfo();
 			SetupPixelZones();
-			_pixelsToRead = new ReadPixel[0];
+			_pixelsToRead = Array.Empty<ReadPixel>();
 			PreparePixelsToGet();
 		}
 
 		public void InstallServices(IServiceProvider _map)
 		{
 			_config = _map.GetService(typeof(Config)) as Config;
-			_core = _map.GetService(typeof(Core)) as Core;
 			_zoneProcesser = _map.GetService(typeof(ZoneProcessor)) as ZoneProcessor;
-			_imageHandler = _map.GetService(typeof(ImageHandler)) as ImageHandler;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
 		}
 
@@ -154,7 +149,7 @@ namespace HueScreenAmbience
 			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.adapterId, Screen.OutputId, _logger);
 			if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
 			{
-				_rgbLighter = new RGBLighter(_logger, _config, _imageHandler);
+				_rgbLighter = new RGBLighter(_logger, _config);
 				_rgbLighter.Start();
 			}
 		}
@@ -169,6 +164,7 @@ namespace HueScreenAmbience
 				{
 					var start = DateTime.UtcNow;
 					bmp = _dxCapture.GetFrame();
+					//Console.WriteLine($"Capture Time:        {(DateTime.UtcNow - start).TotalMilliseconds}");
 					//If the bitmap is null that usually means the desktop has not been updated
 					if (bmp == null)
 					{
@@ -189,123 +185,9 @@ namespace HueScreenAmbience
 						continue;
 					}
 
-					//Reset zones
-					foreach (var zone in _zones)
-					{
-						zone.Count = 0;
-						zone.Totals[0] = 0;
-						zone.Totals[1] = 0;
-						zone.Totals[2] = 0;
-						zone.ResetAverages();
-					}
+					BitmapProcessor.ReadBitmap(ScreenInfo.Width, ScreenInfo.Height, _config.Model.readResolutionReduce, _config.Model.zoneRows, _config.Model.zoneColumns, _config.Model.pixelCount, _pixelsToRead, ref bmp, ref _zones, _config.Model.bitmapRect);
 
-					if (_config.Model.bitmapRect.HasValue)
-					{
-						var oldBmp = bmp;
-						bmp = _imageHandler.CropBitmapRect(oldBmp, _config.Model.bitmapRect.Value);
-						oldBmp.Dispose();
-					}
-
-					//Reducing the resolution of the desktop capture takes time but it saves a lot of time on reading the image
-					if (_config.Model.readResolutionReduce > 1.0f)
-					{
-						var oldBmp = bmp;
-						bmp = _imageHandler.ResizeBitmapImage(oldBmp, ScreenInfo.Width, ScreenInfo.Height);
-						oldBmp.Dispose();
-					}
-
-					//using (var fi = System.IO.File.OpenWrite($"Images/i{_frame.ToString().PadLeft(5, '0')}.png"))
-					//	bmp.Save(fi, ImageFormat.Png);
-
-					BitmapData srcData = bmp.LockBits(
-					new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height),
-					ImageLockMode.ReadOnly,
-					PixelFormat.Format32bppArgb);
-
-					unsafe
-					{
-						//var t1 = DateTime.UtcNow;
-						//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
-
-						var totalSize = _pixelsToRead.Length;
-
-						byte* p = (byte*)(void*)srcData.Scan0;
-						//Colors in are bitmap format are 32bpp so 4 bytes for each color in RGBA format
-						lock (_lockPixelsObj)
-						{
-							//If we are set to 0 just read the full screen
-							//This is reccomended if reducing the resolution as it is fast enough and produces better results
-							if (_config.Model.pixelCount == 0 || _pixelsToRead.Length == 0)
-							{
-								totalSize = srcData.Width * srcData.Height;
-								bool oneZone = !(_zones.Length > 1);
-								int currentZone = 0;
-								var zone = _zones[currentZone];
-								int zoneRow = 0;
-								int xIter = 0;
-								int yIter = 0;
-								for (var i = 0; i < totalSize * 4; i += 4)
-								{
-									//index is our power of 4 padded index in the bitmap.
-									zone.Totals[2] += p[i]; //b
-									zone.Totals[1] += p[i + 1]; //g
-									zone.Totals[0] += p[i + 2]; //r
-									zone.Count++;
-
-									//If we only have one row we do want to process this for the last zone still
-									if (!oneZone && (_config.Model.zoneRows == 1 || currentZone != _zones.Length - 1))
-									{
-										//If x is greater than zone width
-										if (++xIter >= zone.Width)
-										{
-											xIter = 0;
-											//If we are on the last column for this row
-											if (zone.Column == _config.Model.zoneColumns - 1)
-											{
-												//If our y is greater than this rows height
-												// reset y and advance us to the next row
-												//Dont do this check if we only have one row
-												if (_config.Model.zoneRows != 1 &&  ++yIter >= zone.Height)
-												{
-													yIter = 0;
-													currentZone = ++zoneRow * _config.Model.zoneColumns;
-													zone = _zones[currentZone];
-												}
-												//Else reset us back to the start of the current row
-												else
-												{
-													currentZone = zoneRow * _config.Model.zoneColumns;
-													zone = _zones[currentZone];
-												}
-											}
-											//Else move to the next column
-											else
-												zone = _zones[++currentZone];
-										}
-									}
-								}
-							}
-							else
-							{
-								int pixIndex = 0;
-								for (var i = 0; i < totalSize; ++i)
-								{
-									//y * stride gives us the offset for the scanline we are in on the bitmap (ex. line 352 * 1080 = 380160 bits)
-									//x * 4 gives us our power of 4 for column
-									//ex. total offset for coord 960x540 on a 1080p image is is (540 * 1080) + 960 * 4 = 587040 bits
-									pixIndex = (_pixelsToRead[i].Pixel.Y * srcData.Stride) + _pixelsToRead[i].Pixel.X * 4;
-									_pixelsToRead[i].Zone.Totals[0] += p[pixIndex + 2];
-									_pixelsToRead[i].Zone.Totals[1] += p[pixIndex + 1];
-									_pixelsToRead[i].Zone.Totals[2] += p[pixIndex];
-									_pixelsToRead[i].Zone.Count++;
-								}
-							}
-						}
-
-						//t2 = DateTime.UtcNow;
-						//Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
-					}
-					bmp.UnlockBits(srcData);
+					//Console.WriteLine($"Read Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 					long f = _frame;
 					var tempZones = new PixelZone[_zones.Length];
 					for (var i = 0; i < tempZones.Length; ++i)

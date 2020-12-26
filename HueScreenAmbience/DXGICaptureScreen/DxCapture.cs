@@ -113,6 +113,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			_output1?.Dispose();
 			_duplicatedOutput?.Dispose();
 			_screenTexture?.Dispose();
+			GC.SuppressFinalize(this);
 		}
 	}
 }

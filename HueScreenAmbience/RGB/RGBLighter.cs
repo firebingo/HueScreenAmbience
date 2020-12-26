@@ -8,9 +8,8 @@ using ImageMagick;
 using System.Linq;
 using RGB.NET.Devices.Razer;
 using RGB.NET.Devices.Logitech;
-using HueScreenAmbience.Imaging;
-using System.Collections.Generic;
 using System.IO;
+using BitmapZoneProcessor;
 
 namespace HueScreenAmbience.RGB
 {
@@ -19,15 +18,13 @@ namespace HueScreenAmbience.RGB
 		private readonly RGBSurface _surface;
 		private readonly FileLogger _logger;
 		private readonly Config _config;
-		private readonly ImageHandler _imageHandler;
 		private MemoryStream imageByteStream;
 		private bool _started = false;
 
-		public RGBLighter(FileLogger logger, Config config, ImageHandler imageHandler)
+		public RGBLighter(FileLogger logger, Config config)
 		{
 			_logger = logger;
 			_config = config;
-			_imageHandler = imageHandler;
 			_surface = RGBSurface.Instance;
 			_surface.Exception += Surface_Exception;
 		}
@@ -102,7 +99,7 @@ namespace HueScreenAmbience.RGB
 						imageByteStream.Seek(0, SeekOrigin.Begin);
 						//I am sampling the image by half the given dimensions because the rgb.net layouts width/height are not physical key dimensions and I dont need the extra accuracy here.
 						// It is better to reduce the footprint created by doing this to try and help the gc.
-						using var resizeImage = _imageHandler.ResizeImage(image, (int)device.DeviceRectangle.Size.Width / red, (int)device.DeviceRectangle.Size.Height / red);
+						using var resizeImage = ImageHandler.ResizeImage(image, (int)device.DeviceRectangle.Size.Width / red, (int)device.DeviceRectangle.Size.Height / red);
 						resizeImage.Write(imageByteStream);
 
 						int count = 0;
@@ -203,6 +200,7 @@ namespace HueScreenAmbience.RGB
 			_surface.Exception -= Surface_Exception;
 			_surface?.Dispose();
 			_started = false;
+			GC.SuppressFinalize(this);
 		}
 	}
 }

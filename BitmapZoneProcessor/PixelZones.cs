@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
 
-namespace HueScreenAmbience
+namespace BitmapZoneProcessor
 {
 	public class PixelZone
 	{

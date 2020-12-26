@@ -44,8 +44,8 @@ namespace HueScreenAmbience
 		{
 			try
 			{
-				var bridgeIPs = await _hueClient.GetBridges();
-				if (bridgeIPs == null || bridgeIPs.Count() == 0)
+				var bridgeIPs = await HueCore.GetBridges();
+				if (!bridgeIPs?.Any() ?? false)
 					return false;
 
 				var bridges = bridgeIPs.ToList();
@@ -65,7 +65,7 @@ namespace HueScreenAmbience
 					Console.WriteLine("Input a bridge(#) to connect to: ");
 					var read = Console.ReadLine();
 					var readInt = -1;
-					if (Int32.TryParse(read, out readInt))
+					if (int.TryParse(read, out readInt))
 					{
 						if (readInt > bridges.Count || readInt < 1)
 							continue;
@@ -257,7 +257,7 @@ namespace HueScreenAmbience
 				var read = Console.ReadLine();
 				if (int.TryParse(read, out var readInt))
 				{
-					if (readInt > adapters.Count() || readInt < 0)
+					if (readInt > adapters.Count || readInt < 0)
 						continue;
 
 					var adapter = adapters.FirstOrDefault(x => x.AdapterId == readInt);
@@ -296,7 +296,7 @@ namespace HueScreenAmbience
 				var read = Console.ReadLine();
 				if (int.TryParse(read, out var readInt))
 				{
-					if (readInt > displays.Count() || readInt < 0)
+					if (readInt > displays.Count || readInt < 0)
 						continue;
 
 					var display = displays.FirstOrDefault(x => x.OutputId == readInt);

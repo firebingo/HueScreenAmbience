@@ -92,7 +92,7 @@ namespace HueScreenAmbience.Hue
 			}
 		}
 
-		public async Task<IEnumerable<LocatedBridge>> GetBridges()
+		public static async Task<IEnumerable<LocatedBridge>> GetBridges()
 		{
 			IBridgeLocator locator = new HttpBridgeLocator();
 			return await locator.LocateBridgesAsync(TimeSpan.FromSeconds(5));
@@ -290,7 +290,7 @@ namespace HueScreenAmbience.Hue
 				using var pixels = image.GetPixelsUnsafe();
 				foreach (var light in _streamBaseLayer)
 				{
-					var (x, y) = MapLightLocationToImage(light.LightLocation, image.Width, image.Height);
+					var (x, y) = HueCore.MapLightLocationToImage(light.LightLocation, image.Width, image.Height);
 					var color = pixels[x, y].ToColor();
 					var min = _config.Model.hueSettings.minColorValue;
 					var max = _config.Model.hueSettings.maxColorValue;
@@ -327,7 +327,7 @@ namespace HueScreenAmbience.Hue
 			_sendingCommand = false;
 		}
 
-		private (int x, int y) MapLightLocationToImage(LightLocation location, int width, int height)
+		private static (int x, int y) MapLightLocationToImage(LightLocation location, int width, int height)
 		{
 			var x = (int)Math.Floor((location.X - -1.0) / 2 * (width));
 			var y = (int)Math.Floor((location.Y - -1.0) / 2 * (height));

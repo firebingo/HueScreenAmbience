@@ -1,5 +1,5 @@
-﻿using HueScreenAmbience.Hue;
-using HueScreenAmbience.Imaging;
+﻿using BitmapZoneProcessor;
+using HueScreenAmbience.Hue;
 using HueScreenAmbience.RGB;
 using ImageMagick;
 using System;
@@ -16,14 +16,12 @@ namespace HueScreenAmbience
 		private MemoryStream _smallImageMemStream;
 		private Config _config;
 		private HueCore _hueClient;
-		private ImageHandler _imageHandler;
 		private FileLogger _logger;
 
 		public void InstallServices(IServiceProvider _map)
 		{
 			_config = _map.GetService(typeof(Config)) as Config;
 			_hueClient = _map.GetService(typeof(HueCore)) as HueCore;
-			_imageHandler = _map.GetService(typeof(ImageHandler)) as ImageHandler;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
 		}
 
@@ -33,6 +31,7 @@ namespace HueScreenAmbience
 				return;
 			_processingFrame = true;
 
+			(MagickImage image, MagickImage blurImage) images = (null, null);
 			var columns = zones.OrderByDescending(x => x.Column).First().Column + 1;
 			var rows = zones.OrderByDescending(x => x.Row).First().Row + 1;
 
@@ -51,28 +50,17 @@ namespace HueScreenAmbience
 				}
 
 				//This is for debug purpose so I can just dump out the zones as pixels
-				//using (var smallImage = _imageHandler.CreateSmallImageFromZones(zones))
+				//using (var smallImage = ImageHandler.CreateSmallImageFromZones(zones, columns, rows))
 				//{
 				//	var path = Path.Combine(_config.Model.imageDumpLocation, $"{frame.ToString().PadLeft(6, '0')}_small.png");
 				//	using var writeStream = File.OpenWrite(path);
 				//	smallImage.Write(writeStream, MagickFormat.Png);
 				//}
 
-				//time = DateTime.UtcNow;
-				//using var image = _imageHandler.CreateImageFromZones(zones, width, height, _imageMemStream);
-				//Console.WriteLine($"PostRead CreateImageFromZones Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 				time = DateTime.UtcNow;
-				using var image = _imageHandler.CreateSmallImageFromZones(zones, columns, rows, _smallImageMemStream);
-				//Console.WriteLine($"PostRead CreateSmallImageFromZones Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
-				time = DateTime.UtcNow;
-				using var blurimage = _imageHandler.ResizeImage(image,
-					(int)Math.Floor(columns * _config.Model.zoneProcessSettings.resizeScale),
-					(int)Math.Floor(rows * _config.Model.zoneProcessSettings.resizeScale),
-					_config.Model.zoneProcessSettings.resizeFilter,
-					_config.Model.zoneProcessSettings.resizeSigma);
-				//Console.WriteLine($"PostRead ResizeImage Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
+				images = BitmapProcessor.PreparePostBitmap(zones, columns, rows, _config.Model.zoneProcessSettings.resizeScale, _config.Model.zoneProcessSettings.resizeFilter, _config.Model.zoneProcessSettings.resizeSigma, _smallImageMemStream);
 
-				if (image == null)
+				if (images.image == null)
 				{
 					Console.WriteLine($"f:{frame} Image is null. Check log");
 					return;
@@ -92,7 +80,7 @@ namespace HueScreenAmbience
 					}
 					else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
 					{
-						var hueImage = new MagickImage(blurimage);
+						var hueImage = new MagickImage(images.blurImage);
 						Task.Run(() =>
 						{
 							_hueClient.UpdateEntertainmentGroupFromImage(hueImage);
@@ -104,7 +92,7 @@ namespace HueScreenAmbience
 
 				if (_config.Model.rgbDeviceSettings.useKeyboards)
 				{
-					var rgbImage = new MagickImage(blurimage);
+					var rgbImage = new MagickImage(images.blurImage);
 					Task.Run(() =>
 					{
 						rgbLighter.UpdateFromImage(avgColor, rgbImage, frame);
@@ -119,8 +107,8 @@ namespace HueScreenAmbience
 						time = DateTime.UtcNow;
 						var path = Path.Combine(_config.Model.imageDumpLocation, $"{frame.ToString().PadLeft(6, '0')}.png");
 						using var writeStream = File.OpenWrite(path);
-						using var resizeImage = _imageHandler.ResizeImage(image, width, height);
-						blurimage.Write(writeStream, MagickFormat.Png);
+						using var resizeImage = ImageHandler.ResizeImage(images.image, width, height);
+						images.blurImage.Write(writeStream, MagickFormat.Png);
 						//Console.WriteLine($"PostRead writeStream Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 					}
 					catch (Exception ex)
@@ -139,6 +127,10 @@ namespace HueScreenAmbience
 			{
 				_smallImageMemStream.Seek(0, SeekOrigin.Begin);
 				_processingFrame = false;
+				if (images.image != null)
+					images.image.Dispose();
+				if (images.blurImage != null)
+					images.blurImage.Dispose();
 			}
 		}
 	}
