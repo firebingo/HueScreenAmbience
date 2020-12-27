@@ -5,7 +5,9 @@ VisualStudioVersion = 16.0.30406.217
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HueScreenAmbience", "HueScreenAmbience\HueScreenAmbience.csproj", "{37281E69-9542-454C-B17A-1E91C86D2C67}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitmapZoneProcessor", "BitmapZoneProcessor\BitmapZoneProcessor.csproj", "{DDEF947A-2DCB-4515-8A6E-4A3A218A3195}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BitmapZoneProcessor", "BitmapZoneProcessor\BitmapZoneProcessor.csproj", "{DDEF947A-2DCB-4515-8A6E-4A3A218A3195}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VideoFrameProcessor", "VideoFrameProcessor\VideoFrameProcessor.csproj", "{BDDB6574-E189-479D-A2D7-B02E9550F775}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +28,13 @@ Global
 		{DDEF947A-2DCB-4515-8A6E-4A3A218A3195}.Debug|x64.Build.0 = Debug|x64
 		{DDEF947A-2DCB-4515-8A6E-4A3A218A3195}.Release|Any CPU.ActiveCfg = Release|x64
 		{DDEF947A-2DCB-4515-8A6E-4A3A218A3195}.Release|x64.ActiveCfg = Release|x64
+		{DDEF947A-2DCB-4515-8A6E-4A3A218A3195}.Release|x64.Build.0 = Release|x64
+		{BDDB6574-E189-479D-A2D7-B02E9550F775}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{BDDB6574-E189-479D-A2D7-B02E9550F775}.Debug|x64.ActiveCfg = Debug|x64
+		{BDDB6574-E189-479D-A2D7-B02E9550F775}.Debug|x64.Build.0 = Debug|x64
+		{BDDB6574-E189-479D-A2D7-B02E9550F775}.Release|Any CPU.ActiveCfg = Release|x64
+		{BDDB6574-E189-479D-A2D7-B02E9550F775}.Release|x64.ActiveCfg = Release|x64
+		{BDDB6574-E189-479D-A2D7-B02E9550F775}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

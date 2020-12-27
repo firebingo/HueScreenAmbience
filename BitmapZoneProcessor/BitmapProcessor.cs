@@ -8,7 +8,7 @@ namespace BitmapZoneProcessor
 {
 	public static class BitmapProcessor
 	{
-		public static void ReadBitmap(int screenWidth, int screenHeight, float readResolutionReduce, int zoneRows, int zoneColumns, int pixelCount, ReadPixel[] readPixels, ref Bitmap bmp, ref PixelZone[] zones, Rectangle? bitmapRect = null)
+		public static void ReadBitmap(int width, int height, float readResolutionReduce, int zoneRows, int zoneColumns, int pixelCount, ReadPixel[] readPixels, ref Bitmap bmp, ref PixelZone[] zones, Rectangle? bitmapRect = null)
 		{
 			//Reset zones
 			foreach (var zone in zones)
@@ -32,7 +32,7 @@ namespace BitmapZoneProcessor
 			if (readResolutionReduce > 1.0f)
 			{
 				var oldBmp = bmp;
-				bmp = ImageHandler.ResizeBitmapImage(oldBmp, screenWidth, screenHeight);
+				bmp = ImageHandler.ResizeBitmapImage(oldBmp, width, height);
 				oldBmp.Dispose();
 			}
 			//Console.WriteLine($"Resize Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
@@ -129,16 +129,34 @@ namespace BitmapZoneProcessor
 			bmp.UnlockBits(srcData);
 		}
 
-		public static (MagickImage image, MagickImage blurImage) PreparePostBitmap(PixelZone[] zones, int columns, int rows, float resizeScale, FilterType resizeFilter, float resizeSigma, MemoryStream smallImageMemStream)
+		public static (MagickImage image, MagickImage blurImage) PreparePostBitmap(PixelZone[] zones, int columns, int rows, float resizeScale, FilterType resizeFilter, float resizeSigma, MemoryStream smallImageMemStream = null)
 		{
-			var image = ImageHandler.CreateSmallImageFromZones(zones, columns, rows, smallImageMemStream);
-			var blurImage = ImageHandler.ResizeImage(image,
-				(int)Math.Floor(columns * resizeScale),
-				(int)Math.Floor(rows * resizeScale),
-				resizeFilter,
-				resizeSigma);
+			var memStreamExists = true;
+			try
+			{
+				if (smallImageMemStream == null)
+				{
+					smallImageMemStream = new MemoryStream(columns * rows);
+					memStreamExists = false;
+				}
+				var image = ImageHandler.CreateSmallImageFromZones(zones, columns, rows, smallImageMemStream);
+				var blurImage = ImageHandler.ResizeImage(image,
+					(int)Math.Floor(columns * resizeScale),
+					(int)Math.Floor(rows * resizeScale),
+					resizeFilter,
+					resizeSigma);
 
-			return (image, blurImage);
+				return (image, blurImage);
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				if (!memStreamExists)
+					smallImageMemStream?.Dispose();
+			}
 		}
 	}
 }
