@@ -1,5 +1,6 @@
 ﻿using BitmapZoneProcessor;
 using HueScreenAmbience.Hue;
+using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.RGB;
 using ImageMagick;
 using System;
@@ -17,15 +18,19 @@ namespace HueScreenAmbience
 		private Config _config;
 		private HueCore _hueClient;
 		private FileLogger _logger;
+		private RGBLighter _rgbLighter;
+		private StripLighter _stripLighter;
 
 		public void InstallServices(IServiceProvider _map)
 		{
 			_config = _map.GetService(typeof(Config)) as Config;
 			_hueClient = _map.GetService(typeof(HueCore)) as HueCore;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
+			_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
+			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
 
-		public void PostRead(RGBLighter rgbLighter, PixelZone[] zones, int width, int height, long frame)
+		public void PostRead(PixelZone[] zones, int width, int height, long frame)
 		{
 			if (_processingFrame)
 				return;
@@ -90,13 +95,23 @@ namespace HueScreenAmbience
 				}
 				//Console.WriteLine($"PostRead ChangeLightColor Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
-				if (_config.Model.rgbDeviceSettings.useKeyboards)
+				if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
 				{
 					var rgbImage = new MagickImage(images.blurImage);
 					Task.Run(() =>
 					{
-						rgbLighter.UpdateFromImage(avgColor, rgbImage, frame);
+						_rgbLighter.UpdateFromImage(avgColor, rgbImage);
 						rgbImage.Dispose();
+					});
+				}
+
+				if(_config.Model.lightStripSettings.useLightStrip)
+				{
+					var stripImage = new MagickImage(images.blurImage);
+					Task.Run(() =>
+					{
+						_stripLighter.UpdateFromImage(stripImage, frame);
+						stripImage.Dispose();
 					});
 				}
 

@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using HueScreenAmbience.Hue;
+using HueScreenAmbience.LightStrip;
+using HueScreenAmbience.RGB;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HueScreenAmbience
@@ -14,9 +16,11 @@ namespace HueScreenAmbience
 		private ScreenReader _screen = null;
 		private ZoneProcessor _zoneProcesser = null;
 		private HueCore _hueClient = null;
+		private RGBLighter _rgbLighter = null;
+		private StripLighter _stripLighter = null;
 		private IServiceProvider _map = null;
 
-		static void Main(string[] args)
+		static void Main()
 		{
 			new HueScreenAmbience().Run().GetAwaiter().GetResult();
 		}
@@ -42,6 +46,8 @@ namespace HueScreenAmbience
 				screenThread.Name = "Screen Reader Thread";
 				_hueClient.InstallServices(_map);
 				_zoneProcesser.InstallServices(_map);
+				_rgbLighter.InstallServices(_map);
+				_stripLighter.InstallServices(_map);
 
 				inputThread.Start();
 				coreThread.Start();
@@ -65,6 +71,8 @@ namespace HueScreenAmbience
 			_screen = new ScreenReader();
 			_zoneProcesser = new ZoneProcessor();
 			_hueClient = new HueCore();
+			_rgbLighter = new RGBLighter();
+			_stripLighter = new StripLighter();
 
 			var services = new ServiceCollection()
 				.AddScoped<FileLogger>()
@@ -73,7 +81,9 @@ namespace HueScreenAmbience
 				.AddSingleton(_core)
 				.AddSingleton(_hueClient)
 				.AddSingleton(_screen)
-				.AddSingleton(_zoneProcesser);
+				.AddSingleton(_zoneProcesser)
+				.AddSingleton(_rgbLighter)
+				.AddSingleton(_stripLighter);
 			var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
 			return provider;
 		}

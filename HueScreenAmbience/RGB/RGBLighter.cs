@@ -16,29 +16,36 @@ namespace HueScreenAmbience.RGB
 	public class RGBLighter : IDisposable
 	{
 		private readonly RGBSurface _surface;
-		private readonly FileLogger _logger;
-		private readonly Config _config;
+		private FileLogger _logger;
+		private Config _config;
 		private MemoryStream imageByteStream;
+		private DateTime _lastChangeTime;
+		private TimeSpan _frameTimeSpan;
 		private bool _started = false;
 
-		public RGBLighter(FileLogger logger, Config config)
+		public RGBLighter()
 		{
-			_logger = logger;
-			_config = config;
 			_surface = RGBSurface.Instance;
 			_surface.Exception += Surface_Exception;
+		}
+
+		public void InstallServices(IServiceProvider _map)
+		{
+			_config = _map.GetService(typeof(Config)) as Config;
+			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
 		}
 
 		public void Start()
 		{
 			try
 			{
-				if (!_started)
-				{
-					imageByteStream = new MemoryStream();
-					LoadDevices();
-					_started = true;
-				}
+				if (_started)
+					return;
+
+				_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.rgbDeviceSettings.updateFrameRate);
+				imageByteStream = new MemoryStream();
+				LoadDevices();
+				_started = true;
 			}
 			catch (Exception ex)
 			{
@@ -48,17 +55,30 @@ namespace HueScreenAmbience.RGB
 
 		public void Stop()
 		{
-			//This is the best I can do because rgb.net doesn't let me fully release the surface and let it be able to be created again.
-			foreach (var device in _surface.Devices)
+			try
 			{
-				var group = new ListLedGroup(device)
+				if (!_started)
+					return;
+
+				//This is the best I can do because rgb.net doesn't let me fully release the surface and let it be able to be created again.
+				if (_surface?.Devices != null)
 				{
-					Brush = new SolidColorBrush(RGBConsts.White)
-				};
-				_surface.Update();
-				group.Detach();
+					foreach (var device in _surface.Devices)
+					{
+						var group = new ListLedGroup(device)
+						{
+							Brush = new SolidColorBrush(RGBConsts.White)
+						};
+						_surface.Update();
+						group.Detach();
+					}
+				}
+				_started = false;
 			}
-			_started = false;
+			catch (Exception ex)
+			{
+				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+			}
 		}
 
 		private void LoadDevices()
@@ -84,10 +104,13 @@ namespace HueScreenAmbience.RGB
 			}
 		}
 
-		public void UpdateFromImage(System.Drawing.Color averageColor, MagickImage image, long frame)
+		public void UpdateFromImage(System.Drawing.Color averageColor, MagickImage image)
 		{
 			try
 			{
+				if ((DateTime.UtcNow - _lastChangeTime).TotalMilliseconds < _frameTimeSpan.TotalMilliseconds)
+					return;
+
 				var start = DateTime.UtcNow;
 				var red = _config.Model.rgbDeviceSettings.keyboardResReduce;
 				unsafe
@@ -150,6 +173,7 @@ namespace HueScreenAmbience.RGB
 				//Console.WriteLine($"Keyboard calc time: {(DateTime.UtcNow - start).TotalMilliseconds}");
 
 				_surface.Update();
+				_lastChangeTime = DateTime.UtcNow;
 			}
 			catch (Exception ex)
 			{

@@ -1,9 +1,10 @@
-﻿using ImageMagick;
-using System;
+﻿using System;
 using System.IO;
+using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
-namespace VideoFrameProcessor
+namespace LightStripClient
 {
 	public class Config
 	{
@@ -56,21 +57,31 @@ namespace VideoFrameProcessor
 
 		private void ValidateConfig()
 		{
-			_config.ZoneColumns = Math.Max(1, _config.ZoneColumns);
-			_config.ZoneRows = Math.Max(1, _config.ZoneRows);
-			_config.ReadResolutionReduce = Math.Clamp(_config.ReadResolutionReduce, 1.0f, 10.0f);
+			_config.ReceivePort = Math.Clamp(_config.ReceivePort, 1, 65535);
+			if(_config.RemoteAddress != null && !IPAddress.TryParse(_config.RemoteAddress, out _))
+				_config.RemoteAddress = null;
+			_ = _config.RemoteAddressIp;
 		}
 	}
 
 	public class ConfigModel
 	{
-		public int FrameConcurrency { get; set; } = 16;
-		public int BufferSize { get; set; } = 32768;
-		public int ZoneColumns { get; set; } = 1;
-		public int ZoneRows { get; set; } = 1;
-		public float ResizeScale { get; set; } = 16.0f;
-		public float ResizeSigma { get; set; } = 0.45f;
-		public FilterType ResizeFilter { get; set; } = FilterType.Gaussian;
-		public float ReadResolutionReduce { get; set; } = 2.0f;
+		private IPAddress? _remoteAddressIp = null;
+		[JsonIgnore]
+		public IPAddress? RemoteAddressIp
+		{
+			get
+			{
+				if (RemoteAddress == null)
+					return null;
+				if (_remoteAddressIp == null)
+					_remoteAddressIp = IPAddress.Parse(RemoteAddress);
+				return _remoteAddressIp;
+			}
+		}
+		public string? RemoteAddress = null;
+		public int ReceivePort { get; set; } = 9250;
+		public int ReceiveTimeout { get; set; } = 20000;
+		public int LightCount { get; set; } = 0;
 	}
 }

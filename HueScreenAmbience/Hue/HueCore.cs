@@ -30,12 +30,12 @@ namespace HueScreenAmbience.Hue
 		private bool _sendingCommand;
 		private Color _lastColor;
 		private byte _colorChangeThreshold = 15;
-		private int _frameRate = 8;
 		private TimeSpan _frameTimeSpan;
 		private StreamingGroup _streamGroup;
 		private EntertainmentLayer _streamBaseLayer;
 		private CancellationTokenSource _cancelSource;
 		private CancellationToken _cancelToken;
+		private Dictionary<Byte, Color> _lastLightColors;
 
 		private Config _config;
 		private FileLogger _logger;
@@ -48,10 +48,13 @@ namespace HueScreenAmbience.Hue
 
 		public void Start()
 		{
-			_frameRate = _config.Model.hueSettings.updateFrameRate;
-			_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _frameRate);
+			_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.hueSettings.updateFrameRate);
 			_lastColor = Color.FromArgb(255, 255, 255);
 			_colorChangeThreshold = _config.Model.hueSettings.colorChangeThreshold;
+			if (_lastLightColors != null)
+				_lastLightColors.Clear();
+			else
+				_lastLightColors = new Dictionary<byte, Color>();
 			Task.Run(() => AutoConnectAttempt());
 		}
 
@@ -286,32 +289,34 @@ namespace HueScreenAmbience.Hue
 				if ((DateTime.UtcNow - _lastHueChangeTime).TotalMilliseconds < _frameTimeSpan.TotalMilliseconds)
 					return;
 
+				_sendingCommand = true;
 				var start = DateTime.UtcNow;
 				using var pixels = image.GetPixelsUnsafe();
 				foreach (var light in _streamBaseLayer)
 				{
-					var (x, y) = HueCore.MapLightLocationToImage(light.LightLocation, image.Width, image.Height);
+					var (x, y) = MapLightLocationToImage(light.LightLocation, image.Width, image.Height);
 					var color = pixels[x, y].ToColor();
 					var min = _config.Model.hueSettings.minColorValue;
 					var max = _config.Model.hueSettings.maxColorValue;
 					var r = Math.Floor(color.R * _config.Model.hueSettings.colorMultiplier);
 					var g = Math.Floor(color.G * _config.Model.hueSettings.colorMultiplier);
 					var b = Math.Floor(color.B * _config.Model.hueSettings.colorMultiplier);
+					var lastColor = _lastLightColors[light.Id];
 					var blendAmount = 1.0f - _config.Model.hueSettings.blendLastColorAmount;
 					if (blendAmount != 0.0f)
 					{
-						r = Math.Sqrt((1 - blendAmount) * Math.Pow(_lastColor.R, 2) + blendAmount * Math.Pow(r, 2));
-						g = Math.Sqrt((1 - blendAmount) * Math.Pow(_lastColor.G, 2) + blendAmount * Math.Pow(g, 2));
-						b = Math.Sqrt((1 - blendAmount) * Math.Pow(_lastColor.B, 2) + blendAmount * Math.Pow(b, 2));
+						r = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.R, 2) + blendAmount * Math.Pow(r, 2));
+						g = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.G, 2) + blendAmount * Math.Pow(g, 2));
+						b = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.B, 2) + blendAmount * Math.Pow(b, 2));
 					}
-					if (_lastColor.R >= r - _colorChangeThreshold && _lastColor.R <= r + _colorChangeThreshold)
-						r = _lastColor.R;
-					if (_lastColor.G >= g - _colorChangeThreshold && _lastColor.G <= g + _colorChangeThreshold)
-						g = _lastColor.G;
-					if (_lastColor.B >= b - _colorChangeThreshold && _lastColor.B <= b + _colorChangeThreshold)
-						b = _lastColor.B;
+					if (lastColor.R >= r - _colorChangeThreshold && lastColor.R <= r + _colorChangeThreshold)
+						r = lastColor.R;
+					if (lastColor.G >= g - _colorChangeThreshold && lastColor.G <= g + _colorChangeThreshold)
+						g = lastColor.G;
+					if (lastColor.B >= b - _colorChangeThreshold && lastColor.B <= b + _colorChangeThreshold)
+						b = lastColor.B;
 					var c = Color.FromArgb(255, (byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
-					_lastColor = c;
+					_lastLightColors[light.Id] = c;
 					light.SetState(_cancelToken, new RGBColor(Helpers.ColorToHex(c)), 1.0);
 				}
 

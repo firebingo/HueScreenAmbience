@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using HueScreenAmbience.LightStrip;
 
 namespace HueScreenAmbience
 {
@@ -20,6 +21,7 @@ namespace HueScreenAmbience
 		private Config _config;
 		private ZoneProcessor _zoneProcesser;
 		private RGBLighter _rgbLighter;
+		private StripLighter _stripLighter;
 		private FileLogger _logger;
 		private DxCapture _dxCapture;
 		private DateTime _lastPostReadTime;
@@ -55,6 +57,8 @@ namespace HueScreenAmbience
 			_config = _map.GetService(typeof(Config)) as Config;
 			_zoneProcesser = _map.GetService(typeof(ZoneProcessor)) as ZoneProcessor;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
+			_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
+			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
 
 		public void GetScreenInfo()
@@ -148,10 +152,9 @@ namespace HueScreenAmbience
 		{
 			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.adapterId, Screen.OutputId, _logger);
 			if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
-			{
-				_rgbLighter = new RGBLighter(_logger, _config);
 				_rgbLighter.Start();
-			}
+			if(_config.Model.lightStripSettings.useLightStrip)
+				_stripLighter.Start();
 		}
 
 		public void ReadScreenLoopDx()
@@ -179,7 +182,7 @@ namespace HueScreenAmbience
 								tempRZones[i] = PixelZone.Clone(_zones[i]);
 							}
 							_lastPostReadTime = DateTime.UtcNow;
-							Task.Run(() => _zoneProcesser.PostRead(_rgbLighter, tempRZones, ScreenInfo.Width, ScreenInfo.Height, rf));
+							Task.Run(() => _zoneProcesser.PostRead(tempRZones, ScreenInfo.Width, ScreenInfo.Height, rf));
 							_frame++;
 						}
 						continue;
@@ -195,7 +198,7 @@ namespace HueScreenAmbience
 						tempZones[i] = PixelZone.Clone(_zones[i]);
 					}
 					_lastPostReadTime = DateTime.UtcNow;
-					Task.Run(() => _zoneProcesser.PostRead(_rgbLighter, tempZones, ScreenInfo.Width, ScreenInfo.Height, f));
+					Task.Run(() => _zoneProcesser.PostRead(tempZones, ScreenInfo.Width, ScreenInfo.Height, f));
 
 					var dt = DateTime.UtcNow - start;
 					if (++_averageIter >= _averageValues.Length)
@@ -228,7 +231,7 @@ namespace HueScreenAmbience
 			IsRunning = false;
 			_dxCapture.Dispose();
 			_rgbLighter?.Stop();
-			//_rgbLighter?.Dispose();
+			_stripLighter?.Stop();
 		}
 
 		public class ScreenDimensions
