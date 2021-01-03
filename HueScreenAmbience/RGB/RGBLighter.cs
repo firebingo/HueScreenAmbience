@@ -22,6 +22,7 @@ namespace HueScreenAmbience.RGB
 		private DateTime _lastChangeTime;
 		private TimeSpan _frameTimeSpan;
 		private bool _started = false;
+		private byte _colorChangeThreshold = 5;
 
 		public RGBLighter()
 		{
@@ -43,6 +44,7 @@ namespace HueScreenAmbience.RGB
 					return;
 
 				_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.rgbDeviceSettings.updateFrameRate);
+				_colorChangeThreshold = _config.Model.rgbDeviceSettings.colorChangeThreshold;
 				imageByteStream = new MemoryStream();
 				LoadDevices();
 				_started = true;
@@ -158,7 +160,17 @@ namespace HueScreenAmbience.RGB
 							r = (int)Math.Floor((colors[0] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
 							g = (int)Math.Floor((colors[1] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
 							b = (int)Math.Floor((colors[2] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
-							key.Color = new Color(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
+							var lastColorR = key.Color.R * 255;
+							var lastColorG = key.Color.G * 255;
+							var lastColorB = key.Color.B * 255;
+							//Only set the key color if it has changed enough.
+							//This is to hopefully slow down the amount of allocations needed for the RGB.Net Color.
+							if (!(lastColorR >= r - _colorChangeThreshold && lastColorR <= r + _colorChangeThreshold &&
+								lastColorG >= g - _colorChangeThreshold && lastColorG <= g + _colorChangeThreshold &&
+								lastColorB >= b - _colorChangeThreshold && lastColorB <= b + _colorChangeThreshold))
+							{
+								key.Color = new Color(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
+							}
 						}
 					}
 				}

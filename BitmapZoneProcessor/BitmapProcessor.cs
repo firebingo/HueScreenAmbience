@@ -14,9 +14,9 @@ namespace BitmapZoneProcessor
 			foreach (var zone in zones)
 			{
 				zone.Count = 0;
-				zone.Totals[0] = 0;
-				zone.Totals[1] = 0;
-				zone.Totals[2] = 0;
+				zone.TotalR = 0;
+				zone.TotalG = 0;
+				zone.TotalB = 0;
 				zone.ResetAverages();
 			}
 
@@ -69,9 +69,9 @@ namespace BitmapZoneProcessor
 					for (var i = 0; i < totalSize * 4; i += 4)
 					{
 						//index is our power of 4 padded index in the bitmap.
-						zone.Totals[2] += p[i]; //b
-						zone.Totals[1] += p[i + 1]; //g
-						zone.Totals[0] += p[i + 2]; //r
+						zone.TotalB += p[i]; //b
+						zone.TotalG += p[i + 1]; //g
+						zone.TotalR += p[i + 2]; //r
 						zone.Count++;
 
 						//If we only have one row we do want to process this for the last zone still
@@ -116,9 +116,9 @@ namespace BitmapZoneProcessor
 						//x * 4 gives us our power of 4 for column
 						//ex. total offset for coord 960x540 on a 1080p image is is (540 * 1080) + 960 * 4 = 587040 bits
 						pixIndex = (readPixels[i].Pixel.Y * srcData.Stride) + readPixels[i].Pixel.X * 4;
-						readPixels[i].Zone.Totals[0] += p[pixIndex + 2];
-						readPixels[i].Zone.Totals[1] += p[pixIndex + 1];
-						readPixels[i].Zone.Totals[2] += p[pixIndex];
+						readPixels[i].Zone.TotalR += p[pixIndex + 2];
+						readPixels[i].Zone.TotalG += p[pixIndex + 1];
+						readPixels[i].Zone.TotalB += p[pixIndex];
 						readPixels[i].Zone.Count++;
 					}
 				}

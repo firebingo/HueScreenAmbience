@@ -176,13 +176,8 @@ namespace HueScreenAmbience
 						if((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
 						{
 							long rf = _frame;
-							var tempRZones = new PixelZone[_zones.Length];
-							for (var i = 0; i < tempRZones.Length; ++i)
-							{
-								tempRZones[i] = PixelZone.Clone(_zones[i]);
-							}
 							_lastPostReadTime = DateTime.UtcNow;
-							Task.Run(() => _zoneProcesser.PostRead(tempRZones, ScreenInfo.Width, ScreenInfo.Height, rf));
+							_zoneProcesser.PostRead(_zones, ScreenInfo.Width, ScreenInfo.Height, rf);
 							_frame++;
 						}
 						continue;
@@ -192,13 +187,8 @@ namespace HueScreenAmbience
 
 					//Console.WriteLine($"Read Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 					long f = _frame;
-					var tempZones = new PixelZone[_zones.Length];
-					for (var i = 0; i < tempZones.Length; ++i)
-					{
-						tempZones[i] = PixelZone.Clone(_zones[i]);
-					}
 					_lastPostReadTime = DateTime.UtcNow;
-					Task.Run(() => _zoneProcesser.PostRead(tempZones, ScreenInfo.Width, ScreenInfo.Height, f));
+					_zoneProcesser.PostRead(_zones, ScreenInfo.Width, ScreenInfo.Height, f);
 
 					var dt = DateTime.UtcNow - start;
 					if (++_averageIter >= _averageValues.Length)

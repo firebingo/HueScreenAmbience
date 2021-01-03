@@ -12,12 +12,15 @@ namespace BitmapZoneProcessor
 		public readonly int Row;
 		public readonly int Column;
 		public int Count;
-		public readonly long[] Totals;
+		public long TotalR;
+		public long TotalG;
+		public long TotalB;
+		//public readonly long[] Totals;
 		public byte AvgR { get; private set; }
 		public byte AvgG { get; private set; }
 		public byte AvgB { get; private set; }
 
-		public PixelZone(Point topLeft, Point bottomRight, int row, int column, int count, long[] totals)
+		public PixelZone(Point topLeft, Point bottomRight, int row, int column, int count, long totalR, long totalG, long totalB)
 		{
 			TopLeft = topLeft;
 			BottomRight = bottomRight;
@@ -26,7 +29,9 @@ namespace BitmapZoneProcessor
 			Row = row;
 			Column = column;
 			Count = count;
-			Totals = totals;
+			TotalR = totalR;
+			TotalG = totalG;
+			TotalB = totalB;
 		}
 
 		public PixelZone(int row, int column, int xMin, int xMax, int yMin, int yMax)
@@ -37,7 +42,6 @@ namespace BitmapZoneProcessor
 			BottomRight = new Point(xMax, yMax);
 			Width = BottomRight.X - TopLeft.X;
 			Height = BottomRight.Y - TopLeft.Y;
-			Totals = new long[] { 0, 0, 0 };
 			Count = 0;
 		}
 
@@ -50,9 +54,9 @@ namespace BitmapZoneProcessor
 
 		public void CalculateAverages()
 		{
-			AvgR = (byte)(Totals[0] / Count);
-			AvgG = (byte)(Totals[1] / Count);
-			AvgB = (byte)(Totals[2] / Count);
+			AvgR = (byte)(TotalR / Count);
+			AvgG = (byte)(TotalG / Count);
+			AvgB = (byte)(TotalB / Count);
 		}
 
 		public bool IsCoordInZone(int x, int y)
@@ -73,8 +77,7 @@ namespace BitmapZoneProcessor
 		{
 			var topLeft = new Point(source.TopLeft.X, source.TopLeft.Y);
 			var bottomRight = new Point(source.BottomRight.X, source.BottomRight.Y);
-			var totals = new long[] { source.Totals[0], source.Totals[1], source.Totals[2] };
-			return new PixelZone(topLeft, bottomRight, source.Row, source.Column, source.Count, totals);
+			return new PixelZone(topLeft, bottomRight, source.Row, source.Column, source.Count, source.TotalR, source.TotalG, source.TotalB);
 		}
 	}
 

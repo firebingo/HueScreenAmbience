@@ -135,6 +135,7 @@ namespace HueScreenAmbience
 		public bool useKeyboards = false;
 		public bool useMice = false;
 		public float colorMultiplier = 1.0f;
+		public byte colorChangeThreshold = 5;
 		public int keyboardResReduce = 4;
 		public int updateFrameRate = 60;
 	}
@@ -168,7 +169,6 @@ namespace HueScreenAmbience
 		}
 		public int remotePort = 9250;
 		public float colorMultiplier = 1.0f;
-		public byte colorChangeThreshold = 15;
 		public float blendLastColorAmount = 0.4f;
 		public int updateFrameRate = 24;
 		public List<SimplePointF> lights = new List<SimplePointF>();

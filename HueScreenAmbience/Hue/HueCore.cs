@@ -280,7 +280,7 @@ namespace HueScreenAmbience.Hue
 			_sendingCommand = false;
 		}
 
-		public void UpdateEntertainmentGroupFromImage(MagickImage image)
+		public void UpdateEntertainmentGroupFromImage(IUnsafePixelCollection<byte> pixels, int width, int height)
 		{
 			try
 			{
@@ -291,32 +291,43 @@ namespace HueScreenAmbience.Hue
 
 				_sendingCommand = true;
 				var start = DateTime.UtcNow;
-				using var pixels = image.GetPixelsUnsafe();
+				var (x, y) = (0, 0);
+				Color c;
+				IPixel<byte> pix;
 				foreach (var light in _streamBaseLayer)
 				{
-					var (x, y) = MapLightLocationToImage(light.LightLocation, image.Width, image.Height);
-					var color = pixels[x, y].ToColor();
+					(x, y) = MapLightLocationToImage(light.LightLocation, width, height);
+					pix = pixels[x, y];
 					var min = _config.Model.hueSettings.minColorValue;
 					var max = _config.Model.hueSettings.maxColorValue;
-					var r = Math.Floor(color.R * _config.Model.hueSettings.colorMultiplier);
-					var g = Math.Floor(color.G * _config.Model.hueSettings.colorMultiplier);
-					var b = Math.Floor(color.B * _config.Model.hueSettings.colorMultiplier);
-					var lastColor = _lastLightColors[light.Id];
-					var blendAmount = 1.0f - _config.Model.hueSettings.blendLastColorAmount;
-					if (blendAmount != 0.0f)
+					var r = Math.Floor(pix.GetChannel(0) * _config.Model.hueSettings.colorMultiplier);
+					var g = Math.Floor(pix.GetChannel(1) * _config.Model.hueSettings.colorMultiplier);
+					var b = Math.Floor(pix.GetChannel(2) * _config.Model.hueSettings.colorMultiplier);
+					if (_lastLightColors.ContainsKey(light.Id))
 					{
-						r = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.R, 2) + blendAmount * Math.Pow(r, 2));
-						g = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.G, 2) + blendAmount * Math.Pow(g, 2));
-						b = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.B, 2) + blendAmount * Math.Pow(b, 2));
+						var lastColor = _lastLightColors[light.Id];
+						var blendAmount = 1.0f - _config.Model.hueSettings.blendLastColorAmount;
+						if (blendAmount != 0.0f)
+						{
+							r = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.R, 2) + blendAmount * Math.Pow(r, 2));
+							g = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.G, 2) + blendAmount * Math.Pow(g, 2));
+							b = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.B, 2) + blendAmount * Math.Pow(b, 2));
+						}
+						if (lastColor.R >= r - _colorChangeThreshold && lastColor.R <= r + _colorChangeThreshold)
+							r = lastColor.R;
+						if (lastColor.G >= g - _colorChangeThreshold && lastColor.G <= g + _colorChangeThreshold)
+							g = lastColor.G;
+						if (lastColor.B >= b - _colorChangeThreshold && lastColor.B <= b + _colorChangeThreshold)
+							b = lastColor.B;
+						c = Color.FromArgb(255, (byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
+						_lastLightColors[light.Id] = c;
 					}
-					if (lastColor.R >= r - _colorChangeThreshold && lastColor.R <= r + _colorChangeThreshold)
-						r = lastColor.R;
-					if (lastColor.G >= g - _colorChangeThreshold && lastColor.G <= g + _colorChangeThreshold)
-						g = lastColor.G;
-					if (lastColor.B >= b - _colorChangeThreshold && lastColor.B <= b + _colorChangeThreshold)
-						b = lastColor.B;
-					var c = Color.FromArgb(255, (byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
-					_lastLightColors[light.Id] = c;
+					else
+					{
+						c = Color.FromArgb(255, (byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
+						_lastLightColors.Add(light.Id, c);
+					}
+					
 					light.SetState(_cancelToken, new RGBColor(Helpers.ColorToHex(c)), 1.0);
 				}
 
@@ -334,8 +345,11 @@ namespace HueScreenAmbience.Hue
 
 		private static (int x, int y) MapLightLocationToImage(LightLocation location, int width, int height)
 		{
+			//Hue gives coordinates relative to center of room where -1 is far left and 1 is far right etc.
+			// So we need to remap it to 0-1 range then get value relative to image.
+			// Y also needs to be flipped as front of room is 1 which should correspond to 0 in the image
 			var x = (int)Math.Floor((location.X - -1.0) / 2 * (width));
-			var y = (int)Math.Floor((location.Y - -1.0) / 2 * (height));
+			var y = (int)Math.Floor((1.0 - (location.Y - -1.0) / 2) * (height));
 			return (x, y);
 		}
 	}

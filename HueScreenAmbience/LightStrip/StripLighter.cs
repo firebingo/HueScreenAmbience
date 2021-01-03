@@ -157,7 +157,7 @@ namespace HueScreenAmbience.LightStrip
 			_updating = false;
 		}
 
-		public void UpdateFromImage(MagickImage image, long frame)
+		public void UpdateFromImage(IUnsafePixelCollection<byte> pixels, int width, int height, long frame)
 		{
 			try
 			{
@@ -173,29 +173,29 @@ namespace HueScreenAmbience.LightStrip
 
 				_updating = true;
 				SerializeLightMetadata(frame);
-				using var pixels = image.GetPixelsUnsafe();
+				var (x, y) = (0, 0);
+				IPixel<byte> pix;
 				foreach (var light in _lights)
 				{
-					var (x, y) = (0, 0);
-					if (light.CacheLocation.HasValue && image.Width == light.Width && image.Height == light.Height)
+					if (light.CacheLocation.HasValue && width == light.Width && height == light.Height)
 					{
 						(x, y) = (light.CacheLocation.Value.X, light.CacheLocation.Value.Y);
 					}
 					else
 					{
-						(x, y) = MapLightLocationToImage(light.Location, image.Width, image.Height);
-						light.Width = image.Width;
-						light.Height = image.Height;
+						(x, y) = MapLightLocationToImage(light.Location, width, height);
+						light.Width = width;
+						light.Height = height;
 						light.CacheLocation = new Point(x, y);
 					}
 
-					var color = pixels[x, y].ToColor();
-					var r = Math.Floor(color.R * _config.Model.hueSettings.colorMultiplier);
-					var g = Math.Floor(color.G * _config.Model.hueSettings.colorMultiplier);
-					var b = Math.Floor(color.B * _config.Model.hueSettings.colorMultiplier);
+					pix = pixels[x, y];
+					var r = Math.Floor(pix.GetChannel(0) * _config.Model.lightStripSettings.colorMultiplier);
+					var g = Math.Floor(pix.GetChannel(1) * _config.Model.lightStripSettings.colorMultiplier);
+					var b = Math.Floor(pix.GetChannel(2) * _config.Model.lightStripSettings.colorMultiplier);
 					if (light.LastColor.HasValue)
 					{
-						var blendAmount = 1.0f - _config.Model.hueSettings.blendLastColorAmount;
+						var blendAmount = 1.0f - _config.Model.lightStripSettings.blendLastColorAmount;
 						if (blendAmount != 0.0f)
 						{
 							r = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.R, 2) + blendAmount * Math.Pow(r, 2));
@@ -203,7 +203,7 @@ namespace HueScreenAmbience.LightStrip
 							b = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.B, 2) + blendAmount * Math.Pow(b, 2));
 						}
 					}
-					light.Color = Color.FromArgb(255, color.R, color.G, color.B);
+					light.Color = Color.FromArgb(255, pix.GetChannel(0), pix.GetChannel(1), pix.GetChannel(2));
 					light.LastColor = light.Color;
 					SerializeLightColor(light.Color);
 				}
@@ -218,6 +218,8 @@ namespace HueScreenAmbience.LightStrip
 				}
 				_currentStream = 0;
 				_lastChangeTime = DateTime.UtcNow;
+
+				//Console.WriteLine($"StripLighter UpdateFromImage Time: {(_lastChangeTime - start).TotalMilliseconds}");
 			}
 			catch (Exception ex)
 			{
@@ -229,8 +231,8 @@ namespace HueScreenAmbience.LightStrip
 
 		private static (int x, int y) MapLightLocationToImage(PointF location, int width, int height)
 		{
-			var x = (int)Math.Floor((location.X - -1.0) / 2 * (width));
-			var y = (int)Math.Floor((location.Y - -1.0) / 2 * (height));
+			var x = (int)Math.Floor(location.X * width);
+			var y = (int)Math.Floor(location.Y* height);
 			return (x, y);
 		}
 

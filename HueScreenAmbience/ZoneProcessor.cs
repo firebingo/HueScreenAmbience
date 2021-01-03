@@ -77,7 +77,36 @@ namespace HueScreenAmbience
 				var avgColor = Color.FromArgb(255, avgR, avgG, avgB);
 
 				time = DateTime.UtcNow;
-				if (_config.Model.hueSettings.useHue)
+
+				//This is a little spaghet but if hue and a light strip are enabled we can have them use the same
+				// image since they dont modify it instead of creating 2 images and getting a byte array of it twice.
+				if(_config.Model.hueSettings.useHue && _config.Model.lightStripSettings.useLightStrip)
+				{
+					var lightImage = new MagickImage(images.blurImage);
+
+					if (_config.Model.hueSettings.hueType == HueType.Basic)
+					{
+						Task.Run(() => _hueClient.ChangeLightColorBasic(avgColor));
+
+						Task.Run(() =>
+						{
+							using var pixels = lightImage.GetPixelsUnsafe();
+							_stripLighter.UpdateFromImage(pixels, lightImage.Width, lightImage.Height, frame);
+							lightImage.Dispose();
+						});
+					}
+					else if(_config.Model.hueSettings.hueType == HueType.Entertainment)
+					{
+						Task.Run(() =>
+						{
+							using var pixels = lightImage.GetPixelsUnsafe();
+							_stripLighter.UpdateFromImage(pixels, lightImage.Width, lightImage.Height, frame);
+							_hueClient.UpdateEntertainmentGroupFromImage(pixels, lightImage.Width, lightImage.Height);
+							lightImage.Dispose();
+						});
+					}
+				}
+				else if(_config.Model.hueSettings.useHue)
 				{
 					if (_config.Model.hueSettings.hueType == HueType.Basic)
 					{
@@ -88,11 +117,23 @@ namespace HueScreenAmbience
 						var hueImage = new MagickImage(images.blurImage);
 						Task.Run(() =>
 						{
-							_hueClient.UpdateEntertainmentGroupFromImage(hueImage);
+							using var pixels = hueImage.GetPixelsUnsafe();
+							_hueClient.UpdateEntertainmentGroupFromImage(pixels, hueImage.Width, hueImage.Height);
 							hueImage.Dispose();
 						});
 					}
 				}
+				else if(_config.Model.lightStripSettings.useLightStrip)
+				{
+					var stripImage = new MagickImage(images.blurImage);
+					Task.Run(() =>
+					{
+						using var pixels = stripImage.GetPixelsUnsafe();
+						_stripLighter.UpdateFromImage(pixels, stripImage.Width, stripImage.Height, frame);
+						stripImage.Dispose();
+					});
+				}
+
 				//Console.WriteLine($"PostRead ChangeLightColor Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
 				if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
@@ -102,16 +143,6 @@ namespace HueScreenAmbience
 					{
 						_rgbLighter.UpdateFromImage(avgColor, rgbImage);
 						rgbImage.Dispose();
-					});
-				}
-
-				if(_config.Model.lightStripSettings.useLightStrip)
-				{
-					var stripImage = new MagickImage(images.blurImage);
-					Task.Run(() =>
-					{
-						_stripLighter.UpdateFromImage(stripImage, frame);
-						stripImage.Dispose();
 					});
 				}
 
