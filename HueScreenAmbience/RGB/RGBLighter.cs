@@ -1,13 +1,14 @@
 ﻿using RGB.NET.Core;
 using RGB.NET.Brushes;
-using RGB.NET.Devices.Corsair;
-using System;
-using System.Threading.Tasks;
 using RGB.NET.Groups;
-using ImageMagick;
-using System.Linq;
+using RGB.NET.Devices.Corsair;
 using RGB.NET.Devices.Razer;
 using RGB.NET.Devices.Logitech;
+using RGB.NET.Devices.Asus;
+using System;
+using System.Threading.Tasks;
+using ImageMagick;
+using System.Linq;
 using System.IO;
 using BitmapZoneProcessor;
 
@@ -90,9 +91,13 @@ namespace HueScreenAmbience.RGB
 				deviceMask |= RGBDeviceType.Keyboard;
 			if (_config.Model.rgbDeviceSettings.useMice)
 				deviceMask |= RGBDeviceType.Mouse;
+			if(_config.Model.rgbDeviceSettings.useMotherboard)
+				deviceMask |= RGBDeviceType.Mainboard;
+			Console.WriteLine("Loading rgb devices...");
 			_surface.LoadDevices(CorsairDeviceProvider.Instance, deviceMask, throwExceptions: true);
 			_surface.LoadDevices(RazerDeviceProvider.Instance, deviceMask, throwExceptions: true);
 			_surface.LoadDevices(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
+			_surface.LoadDevices(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
 			_surface.AlignDevices();
 
 			foreach (var device in _surface.Devices)
@@ -174,7 +179,7 @@ namespace HueScreenAmbience.RGB
 						}
 					}
 				}
-				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Mouse))
+				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Mouse || x.DeviceInfo.DeviceType == RGBDeviceType.Mainboard))
 				{
 					var color = new Color(averageColor.R, averageColor.G, averageColor.B);
 					foreach (var led in device)

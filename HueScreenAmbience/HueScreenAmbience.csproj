@@ -24,6 +24,7 @@
     <PackageReference Include="Q42.HueApi" Version="3.17.0" />
     <PackageReference Include="Q42.HueApi.ColorConverters" Version="3.14.0" />
     <PackageReference Include="Q42.HueApi.Entertainment" Version="3.15.0" />
+    <PackageReference Include="RGB.NET.Resources.Asus" Version="0.3.0" />
     <PackageReference Include="RGB.NET.Resources.Corsair" Version="0.3.0.361" />
     <PackageReference Include="RGB.NET.Resources.Logitech" Version="0.3.0" />
     <PackageReference Include="RGB.NET.Resources.Razer" Version="0.3.2.4" />
@@ -41,6 +42,9 @@
     </Reference>
     <Reference Include="RGB.NET.Core">
       <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="RGB.NET.Devices.Asus">
+      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Devices.Asus.dll</HintPath>
     </Reference>
     <Reference Include="RGB.NET.Devices.Corsair">
       <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Devices.Corsair.dll</HintPath>
