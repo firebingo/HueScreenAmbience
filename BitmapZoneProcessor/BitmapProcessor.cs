@@ -8,8 +8,9 @@ namespace BitmapZoneProcessor
 {
 	public static class BitmapProcessor
 	{
-		public static void ReadBitmap(int width, int height, float readResolutionReduce, int zoneRows, int zoneColumns, int pixelCount, ReadPixel[] readPixels, ref Bitmap bmp, ref PixelZone[] zones, Rectangle? bitmapRect = null)
+		public static bool ReadBitmap(int width, int height, float readResolutionReduce, int zoneRows, int zoneColumns, int pixelCount, ReadPixel[] readPixels, ref Bitmap bmp, ref PixelZone[] zones, bool disposeBitmapOnChange = true, Rectangle? bitmapRect = null)
 		{
+			bool bitmapChanged = false;
 			//Reset zones
 			foreach (var zone in zones)
 			{
@@ -22,18 +23,34 @@ namespace BitmapZoneProcessor
 
 			if (bitmapRect.HasValue)
 			{
-				var oldBmp = bmp;
-				bmp = ImageHandler.CropBitmapRect(oldBmp, bitmapRect.Value);
-				oldBmp.Dispose();
+				if (disposeBitmapOnChange)
+				{
+					var oldBmp = bmp;
+					bmp = ImageHandler.CropBitmapRect(oldBmp, bitmapRect.Value);
+					oldBmp.Dispose();
+				}
+				else
+				{
+					bmp = ImageHandler.CropBitmapRect(bmp, bitmapRect.Value);
+				}
+				bitmapChanged = true;
 			}
 
 			var t = DateTime.UtcNow;
 			//Reducing the resolution of the desktop capture takes time but it saves a lot of time on reading the image
 			if (readResolutionReduce > 1.0f)
 			{
-				var oldBmp = bmp;
-				bmp = ImageHandler.ResizeBitmapImage(oldBmp, width, height);
-				oldBmp.Dispose();
+				if (disposeBitmapOnChange)
+				{
+					var oldBmp = bmp;
+					bmp = ImageHandler.CropBitmapRect(oldBmp, bitmapRect.Value);
+					oldBmp.Dispose();
+				}
+				else
+				{
+					bmp = ImageHandler.ResizeBitmapImage(bmp, width, height);
+				}
+				bitmapChanged = true;
 			}
 			//Console.WriteLine($"Resize Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 
@@ -127,6 +144,7 @@ namespace BitmapZoneProcessor
 				//Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
 			}
 			bmp.UnlockBits(srcData);
+			return bitmapChanged;
 		}
 
 		public static (MagickImage image, MagickImage blurImage) PreparePostBitmap(PixelZone[] zones, int columns, int rows, float resizeScale, FilterType resizeFilter, float resizeSigma, MemoryStream smallImageMemStream = null)

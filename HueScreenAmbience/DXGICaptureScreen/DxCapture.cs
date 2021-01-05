@@ -20,6 +20,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		private readonly OutputDuplication _duplicatedOutput;
 		private readonly Texture2D _screenTexture;
 		private readonly FileLogger _logger;
+		private Bitmap _bitmap;
 
 		public DxCapture(int width, int height, int adapter, int monitor, FileLogger logger)
 		{
@@ -63,7 +64,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		{
 			try
 			{
-				Bitmap bitmap = null;
+				var returnChange = false;
 				var result = _duplicatedOutput.TryAcquireNextFrame(1000, out var duplicateFrameInformation, out var screenResource);
 				if (result.Success && duplicateFrameInformation.LastPresentTime != 0)
 				{
@@ -74,10 +75,12 @@ namespace HueScreenAmbience.DXGICaptureScreen
 
 					var mapSource = _device.ImmediateContext.MapSubresource(_screenTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
 
-					bitmap = new Bitmap(_width, _height, PixelFormat.Format32bppArgb);
+					if(_bitmap == null)
+						_bitmap = new Bitmap(_width, _height, PixelFormat.Format32bppArgb);
+
 					var boundsRect = new Rectangle(0, 0, _width, _height);
 
-					var mapDest = bitmap.LockBits(boundsRect, ImageLockMode.WriteOnly, bitmap.PixelFormat);
+					var mapDest = _bitmap.LockBits(boundsRect, ImageLockMode.WriteOnly, _bitmap.PixelFormat);
 					var sourcePtr = mapSource.DataPointer;
 					var destPtr = mapDest.Scan0;
 					for (int y = 0; y < _height; y++)
@@ -86,15 +89,20 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
 						destPtr = IntPtr.Add(destPtr, mapDest.Stride);
 					}
-					bitmap.UnlockBits(mapDest);
+					_bitmap.UnlockBits(mapDest);
 
 					_device.ImmediateContext.UnmapSubresource(_screenTexture, 0);
+					returnChange = true;
 				}
 
 				screenResource?.Dispose();
 				_duplicatedOutput.ReleaseFrame();
 
-				return bitmap;
+				//Only return the bitmap if it has actually been updated so we can still ignore it otherwise and save the processing.
+				if (returnChange)
+					return _bitmap;
+				else
+					return null;
 			}
 			catch (Exception ex)
 			{

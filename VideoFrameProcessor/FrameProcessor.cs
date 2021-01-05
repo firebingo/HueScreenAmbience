@@ -49,8 +49,7 @@ namespace VideoFrameProcessor
 			}
 			finally
 			{
-				if(bmp!= null)
-					bmp.Dispose();
+				bmp?.Dispose();
 				await stream.DisposeAsync();
 			}
 		}

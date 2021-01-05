@@ -163,9 +163,11 @@ namespace HueScreenAmbience
 			Bitmap bmp = null;
 			do
 			{
+				bool bitmapChanged = false;
 				try
 				{
 					var start = DateTime.UtcNow;
+					//Do not dispose this bitmap as DxCapture uses the same bitmap every loop to save allocation.
 					bmp = _dxCapture.GetFrame();
 					//Console.WriteLine($"Capture Time:        {(DateTime.UtcNow - start).TotalMilliseconds}");
 					//If the bitmap is null that usually means the desktop has not been updated
@@ -183,7 +185,7 @@ namespace HueScreenAmbience
 						continue;
 					}
 
-					BitmapProcessor.ReadBitmap(ScreenInfo.Width, ScreenInfo.Height, _config.Model.readResolutionReduce, _config.Model.zoneRows, _config.Model.zoneColumns, _config.Model.pixelCount, _pixelsToRead, ref bmp, ref _zones, _config.Model.bitmapRect);
+					bitmapChanged = BitmapProcessor.ReadBitmap(ScreenInfo.Width, ScreenInfo.Height, _config.Model.readResolutionReduce, _config.Model.zoneRows, _config.Model.zoneColumns, _config.Model.pixelCount, _pixelsToRead, ref bmp, ref _zones, false, _config.Model.bitmapRect);
 
 					//Console.WriteLine($"Read Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 					long f = _frame;
@@ -210,8 +212,13 @@ namespace HueScreenAmbience
 				}
 				finally
 				{
-					bmp?.Dispose();
-					bmp = null;
+					//Only dispose the bitmap if ReadBitmap updated the reference to a new bitmap.
+					// Otherwise we want to leave it as DxCapture will reuse the same bitmap.
+					if (bitmapChanged)
+					{
+						bmp?.Dispose();
+						bmp = null;
+					}
 				}
 			} while (IsRunning);
 		}
