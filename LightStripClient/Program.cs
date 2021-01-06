@@ -16,6 +16,14 @@ namespace LightStripClient
 			_lighter.Start();
 
 			AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
+
+			Console.CancelKeyPress += Console_CancelKeyPress;
+		}
+
+		private static void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
+		{
+			_lighter?.Stop();
+			_lighter?.Dispose();
 		}
 
 		private static void CurrentDomain_ProcessExit(object? sender, EventArgs e)

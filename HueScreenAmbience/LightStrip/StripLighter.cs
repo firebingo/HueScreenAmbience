@@ -203,7 +203,7 @@ namespace HueScreenAmbience.LightStrip
 							b = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.B, 2) + blendAmount * Math.Pow(b, 2));
 						}
 					}
-					light.Color = Color.FromArgb(255, pix.GetChannel(0), pix.GetChannel(1), pix.GetChannel(2));
+					light.Color = Color.FromArgb(255, (byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
 					light.LastColor = light.Color;
 					SerializeLightColor(light.Color);
 				}
