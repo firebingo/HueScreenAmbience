@@ -81,7 +81,7 @@ namespace LightStripClient
 		}
 		public string? RemoteAddress = null;
 		public int ReceivePort { get; set; } = 9250;
-		public int ReceiveTimeout { get; set; } = 20000;
+		public int ReceiveTimeout { get; set; } = 10000;
 		public int LightCount { get; set; } = 0;
 	}
 }

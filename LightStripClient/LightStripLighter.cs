@@ -58,7 +58,29 @@ namespace LightStripClient
 			if (_config == null)
 				throw new Exception("Config is null");
 
-			ResetUdpClient();
+			if (_lightClientSocket != null)
+			{
+				if (_lightClientSocket.IsBound)
+					_lightClientSocket.Close();
+				_lightClientSocket.Dispose();
+				_lightClientSocket = null;
+			}
+
+			if (_config.Model.RemoteAddress == null || _config.Model.RemoteAddressIp == null)
+			{
+				_lightServerEndpoint = new IPEndPoint(IPAddress.Any, _config.Model.ReceivePort);
+				_lightServerEndpointRemote = _lightServerEndpoint;
+				_lightClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+			}
+			else
+			{
+				_lightServerEndpoint = new IPEndPoint(_config.Model.RemoteAddressIp, _config.Model.ReceivePort);
+				_lightServerEndpointRemote = _lightServerEndpoint;
+				_lightClientSocket = new Socket(_config.Model.RemoteAddressIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+			}
+
+			_lightClientSocket.ReceiveTimeout = _config.Model.ReceiveTimeout;
+			_lightClientSocket.Bind(_lightServerEndpointRemote);
 
 			_buffer = new byte[_packetMaxSize];
 
@@ -88,36 +110,6 @@ namespace LightStripClient
 			_processThread = new Thread(UpdateLightsLoop);
 			_processThread.Name = "Light Client Update Thread";
 			_processThread.Start();
-		}
-
-		public void ResetUdpClient()
-		{
-			if (_config == null)
-				throw new Exception("Config is null");
-
-			if (_lightClientSocket != null)
-			{
-				if(_lightClientSocket.IsBound)
-					_lightClientSocket.Close();
-				_lightClientSocket.Dispose();
-				_lightClientSocket = null;
-			}
-
-			if (_config.Model.RemoteAddress == null || _config.Model.RemoteAddressIp == null)
-			{
-				_lightServerEndpoint = new IPEndPoint(IPAddress.Any, _config.Model.ReceivePort);
-				_lightServerEndpointRemote = _lightServerEndpoint;
-				_lightClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-			}
-			else
-			{
-				_lightServerEndpoint = new IPEndPoint(_config.Model.RemoteAddressIp, _config.Model.ReceivePort);
-				_lightServerEndpointRemote = _lightServerEndpoint;
-				_lightClientSocket = new Socket(_config.Model.RemoteAddressIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-			}
-
-			_lightClientSocket.ReceiveTimeout = _config.Model.ReceiveTimeout;
-			_lightClientSocket.Bind(_lightServerEndpointRemote);
 		}
 
 		public void UpdateLightsLoop()
@@ -204,9 +196,6 @@ namespace LightStripClient
 					{
 						Console.WriteLine($"No packets received in {_config?.Model.ReceiveTimeout}ms");
 						ResetLights();
-						//I recreate the udp client because it seems if the server is shut down and disconnects the client will not receive any
-						// more if the server is restarted even if the loop keeps running.
-						ResetUdpClient();
 						//_ = Task.Run(() => _logger?.WriteLog($"Receive Timeout: {tex}"));
 					}
 					else
@@ -229,6 +218,7 @@ namespace LightStripClient
 
 		public void ResetLights()
 		{
+			_currentFrame = 0;
 			_lightStrip?.Image?.Clear();
 			_lightStrip?.Update();
 		}
