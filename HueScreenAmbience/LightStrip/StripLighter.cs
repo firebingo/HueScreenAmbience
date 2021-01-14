@@ -261,7 +261,7 @@ namespace HueScreenAmbience.LightStrip
 		private void SerializeLightColor(Color color)
 		{
 			var stream = _serializeStreams[_currentStream];
-			if (stream.Position + _colorByteCount > _packetColorSize)
+			if ((stream.Position - _packetHeaderSize) + _colorByteCount > _packetColorSize)
 			{
 				_currentStream++;
 				stream = _serializeStreams[_currentStream];

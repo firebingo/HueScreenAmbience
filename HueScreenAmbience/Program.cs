@@ -30,16 +30,16 @@ namespace HueScreenAmbience
 			try
 			{
 				_map = ConfigureServices();
-				
+
 				_config.LoadConfig();
 
 				_input.InstallServices(_map);
 				Thread inputThread = new Thread(new ThreadStart(_input.HandleInput));
-				inputThread.Name = "Input Thread";		
-				
+				inputThread.Name = "Input Thread";
+
 				_core.InstallServices(_map);
 				Thread coreThread = new Thread(new ThreadStart(_core.Start));
-				coreThread.Name = "Core Thread";		
+				coreThread.Name = "Core Thread";
 
 				_screen.InstallServices(_map);
 				Thread screenThread = new Thread(new ThreadStart(_screen.Start));
@@ -53,6 +53,10 @@ namespace HueScreenAmbience
 				coreThread.Start();
 				screenThread.Start();
 
+				AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
+
+				Console.CancelKeyPress += Console_CancelKeyPress;
+
 				//Delay until application quit
 				await Task.Delay(-1);
 			}
@@ -60,6 +64,30 @@ namespace HueScreenAmbience
 			{
 				return;
 			}
+		}
+
+		//Try to gracefully shut down a little so hue and light strips will be stopped immediatly instead
+		// of just timing out on their sides.
+		private void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
+		{
+			Console.WriteLine("closing");
+			var task = _core.StopScreenReading();
+			do
+			{
+				Thread.Sleep(0);
+			}
+			while (!task.IsCompleted);
+		}
+
+		private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
+		{
+			Console.WriteLine("closing");
+			var task = _core.StopScreenReading();
+			do
+			{
+				Thread.Sleep(0);
+			}
+			while (!task.IsCompleted);
 		}
 
 		private IServiceProvider ConfigureServices()

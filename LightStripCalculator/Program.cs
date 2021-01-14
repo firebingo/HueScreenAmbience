@@ -48,8 +48,21 @@ namespace LightStripCalculator
 					return;
 				}
 
+				var borderDecrease = 1.0f;
+				var borderInS = commandLine["border_decrease"];
+				if (!string.IsNullOrWhiteSpace(borderInS) && (!float.TryParse(borderInS, out borderDecrease) || borderDecrease <= 0.0f || borderDecrease > 1.0f))
+				{
+					Console.WriteLine("invalid border decrease");
+					Console.ReadLine();
+					return;
+				}
+
+				borderDecrease = (1.0f - borderDecrease) + 1.0f;
+
 				var rect = Rectangle.FromLTRB(0, 0, bottomRight.Value.X, bottomRight.Value.Y);
-				Dictionary<int, LightCoordF> dict = new Dictionary<int, LightCoordF>();
+				var bigRect = Rectangle.FromLTRB(0, 0, (int)Math.Floor(bottomRight.Value.X * borderDecrease), (int)Math.Floor(bottomRight.Value.Y * borderDecrease));
+				Dictionary<int, LightCoord> dictInt = new Dictionary<int, LightCoord>();
+				Dictionary<int, LightCoordF> dictFloat = new Dictionary<int, LightCoordF>();
 
 				//This circles around the edge of the rectangle counting the start light as 0,0 then filling the coordinates for each light until we hit the light count.
 				// Then it goes back to light 0 and keeps filling.
@@ -57,38 +70,52 @@ namespace LightStripCalculator
 				//Top
 				for (var x = 0; x < rect.Width; x++)
 				{
-					dict.Add(lightIter, new LightCoordF(x / (float)rect.Width, 0.0f));
+					dictInt.Add(lightIter, new LightCoord(x, 0));
 					//doSomethingWith(x, 0)
-					if(++lightIter > lightCount)
+					if (++lightIter > lightCount - 1)
 						lightIter = 0;
 				}
 				//Right
 				for (var y = 0; y < rect.Height; y++)
 				{
-					dict.Add(lightIter, new LightCoordF(1.0f, y / (float)rect.Height));
+					dictInt.Add(lightIter, new LightCoord(rect.Width, y));
 					//doSomethingWith(0, y)
-					if (++lightIter > lightCount)
+					if (++lightIter > lightCount - 1)
 						lightIter = 0;
 				}
 				//Bottom
 				for (var x = rect.Width; x > 0; x--)
 				{
-					dict.Add(lightIter, new LightCoordF(x / (float)rect.Width, 1.0f));
-					//doSomethingWith(x, rect.height)
-					if (++lightIter > lightCount)
+					dictInt.Add(lightIter, new LightCoord(x, rect.Height));
+					//doSomethingWith(x, smallRect.height)
+					if (++lightIter > lightCount - 1)
 						lightIter = 0;
 				}
 				//Left
 				for (var y = rect.Height; y > 0; y--)
 				{
-					dict.Add(lightIter, new LightCoordF(0.0f, y / (float)rect.Height));
-					//doSomethingWith(rect.width, y)
-					if (++lightIter > lightCount)
+					dictInt.Add(lightIter, new LightCoord(0, y));
+					//doSomethingWith(smallRect.width, y)
+					if (++lightIter > lightCount - 1)
 						lightIter = 0;
 				}
 
+				//We need to center the reduced size rect in the full rect.
+				var xDif = (bigRect.Width - rect.Width) / 2.0f;
+				var yDif = (bigRect.Height - rect.Height) / 2.0f;
+				for (var i = 0; i < lightCount; ++i)
+				{
+					float x = dictInt[i].X + xDif;
+					float y = dictInt[i].Y + yDif;
+					x /= bigRect.Width;
+					y /= bigRect.Height;
+					dictFloat.Add(i, new LightCoordF(x, y));
+				}
+
+				if (File.Exists("lightlist.json"))
+					File.Delete("lightlist.json");
 				using var fileOut = File.OpenWrite("lightlist.json");
-				var list = dict.OrderBy(x => x.Key).Select(x => x.Value).ToList();
+				var list = dictFloat.OrderBy(x => x.Key).Select(x => x.Value).ToList();
 				await JsonSerializer.SerializeAsync(fileOut, list, new JsonSerializerOptions()
 				{
 					WriteIndented = true

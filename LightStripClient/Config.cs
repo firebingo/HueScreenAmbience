@@ -29,6 +29,7 @@ namespace LightStripClient
 					_config = readJson;
 					ValidateConfig();
 					SaveConfig();
+					Console.WriteLine($"Config loaded with {_config.LightCount} lights, receiving on port {_config.ReceivePort}");
 				}
 				else
 				{

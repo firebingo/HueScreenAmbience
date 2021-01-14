@@ -174,7 +174,7 @@ namespace LightStripClient
 					{
 						if(_config?.Model.LightCount != _packets.Sum(x => x.Value.Count))
 						{
-							Console.WriteLine("Light count received does not match configured count");
+							Console.WriteLine($"Light count received does not match configured count ({_config?.Model.LightCount}), received ({_packets.Sum(x => x.Value.Count)})");
 							continue;
 						}
 
@@ -184,6 +184,7 @@ namespace LightStripClient
 						{
 							for (var j = 0; j < _packets[i].Count; ++j)
 							{
+								//Console.WriteLine($"Frame {_currentFrame}: Setting light {lightIter.ToString().PadLeft(2, '0')} to color {_packets[i][j].R},{_packets[i][j].G},{_packets[i][j].B}");
 								_lightStrip?.Image.SetPixel(lightIter++, 0, _packets[i][j]);
 							}
 						}
@@ -218,7 +219,7 @@ namespace LightStripClient
 
 		public void ResetLights()
 		{
-			_currentFrame = 0;
+			_currentFrame = -1;
 			_lightStrip?.Image?.Clear();
 			_lightStrip?.Update();
 		}
