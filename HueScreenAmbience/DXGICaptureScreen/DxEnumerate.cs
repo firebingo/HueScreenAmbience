@@ -48,13 +48,13 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			return displays;
 		}
 
-		public static List<DxEnumeratedDisplay> GetMonitors()
+		public static List<DxEnumeratedDisplay> GetMonitors(int adapterId)
 		{
 			var displays = new List<DxEnumeratedDisplay>();
 			try
 			{
 				using var factory = new Factory1();
-				using var adapter = factory.GetAdapter1(0);
+				using var adapter = factory.GetAdapter1(adapterId);
 				using var device = new SharpDX.Direct3D11.Device(adapter);
 				var displayCount = adapter.GetOutputCount();
 				for (var i = 0; i < displayCount; ++i)

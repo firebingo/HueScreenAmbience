@@ -275,7 +275,7 @@ namespace HueScreenAmbience
 		public void SelectMonitor()
 		{
 			var validInput = false;
-			var displays = DxEnumerate.GetMonitors();
+			var displays = DxEnumerate.GetMonitors(_config.Model.adapterId);
 
 			if (!displays?.Any() ?? true)
 			{

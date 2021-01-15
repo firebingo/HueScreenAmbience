@@ -68,7 +68,7 @@ namespace HueScreenAmbience
 
 		//Try to gracefully shut down a little so hue and light strips will be stopped immediatly instead
 		// of just timing out on their sides.
-		private void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
+		private void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
 		{
 			Console.WriteLine("closing");
 			var task = _core.StopScreenReading();
@@ -79,7 +79,7 @@ namespace HueScreenAmbience
 			while (!task.IsCompleted);
 		}
 
-		private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
+		private void CurrentDomain_ProcessExit(object sender, EventArgs e)
 		{
 			Console.WriteLine("closing");
 			var task = _core.StopScreenReading();
