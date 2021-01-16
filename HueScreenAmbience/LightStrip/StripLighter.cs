@@ -204,6 +204,8 @@ namespace HueScreenAmbience.LightStrip
 						}
 					}
 					light.Color = Color.FromArgb(255, (byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
+					if (_config.Model.lightStripSettings.saturateColors != 1.0f)
+						light.Color = ColorHelper.SaturateColor(light.Color, _config.Model.lightStripSettings.saturateColors);
 					light.LastColor = light.Color;
 					SerializeLightColor(light.Color);
 				}

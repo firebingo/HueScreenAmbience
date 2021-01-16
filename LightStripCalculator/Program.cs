@@ -48,11 +48,32 @@ namespace LightStripCalculator
 					return;
 				}
 
+				//Pushes in the coordinates of the lights by an amount so they are not sampling the very edge of the screen.
 				var borderDecrease = 1.0f;
 				var borderInS = commandLine["border_decrease"];
 				if (!string.IsNullOrWhiteSpace(borderInS) && (!float.TryParse(borderInS, out borderDecrease) || borderDecrease <= 0.0f || borderDecrease > 1.0f))
 				{
 					Console.WriteLine("invalid border decrease");
+					Console.ReadLine();
+					return;
+				}
+
+				//Depending on which way the light strip is run the x coordinates may need to be flipped.
+				var flipX = false;
+				var flipXInS = commandLine["flipx"];
+				if (!string.IsNullOrWhiteSpace(flipXInS) && (!bool.TryParse(flipXInS, out flipX)))
+				{
+					Console.WriteLine("invalid flip x");
+					Console.ReadLine();
+					return;
+				}
+
+				//Depending on which way the light strip is run the y coordinates may need to be flipped.
+				var flipY = false;
+				var flipYInS = commandLine["flipy"];
+				if (!string.IsNullOrWhiteSpace(flipYInS) && (!bool.TryParse(flipYInS, out flipY)))
+				{
+					Console.WriteLine("invalid flip y");
 					Console.ReadLine();
 					return;
 				}
@@ -109,6 +130,10 @@ namespace LightStripCalculator
 					float y = dictInt[i].Y + yDif;
 					x /= bigRect.Width;
 					y /= bigRect.Height;
+					if(flipX)
+						x = 1.0f - x;
+					if (flipY)
+						y = 1.0f - y;
 					dictFloat.Add(i, new LightCoordF(x, y));
 				}
 

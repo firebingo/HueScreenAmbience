@@ -45,6 +45,7 @@
     "remotePort": 9250, //Port to communicate with
     "colorMultiplier": 1.0, //Multiply values sent to lights by this 0.0-2.0
     "blendLastColorAmount": 0.4, //A value to blend the current color by the last color. This reduces response time a bit to give smoother color changes. 0.4 is a good value to start. (0.0-1.0)
+	"saturateColors": 1.0, //A multiplier for the color saturation. Can help with color contrast a bit for a backlight. 1.1-1.3 are reasonable values to increase saturation. (0.0-5.0)
     "updateFrameRate": 24, //Can be used to throttle rate that light strip is allowed to update at
     "lights": [ //List of light x and y positions to sample from screen. (0.0,0.0) is top left, (1.0,1.0) is bottom right.
       {

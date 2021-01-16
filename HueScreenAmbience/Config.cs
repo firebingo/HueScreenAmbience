@@ -59,6 +59,8 @@ namespace HueScreenAmbience
 			_config.hueSettings.updateFrameRate = Math.Clamp(_config.hueSettings.updateFrameRate, 1, 24);
 			_config.rgbDeviceSettings.colorMultiplier = Math.Clamp(_config.rgbDeviceSettings.colorMultiplier, 0.0f, 2.0f);
 			_config.lightStripSettings.remotePort = Math.Clamp(_config.lightStripSettings.remotePort, 1, 65535);
+			_config.lightStripSettings.blendLastColorAmount = Math.Clamp(_config.lightStripSettings.blendLastColorAmount, 0.0f, 1.0f);
+			_config.lightStripSettings.saturateColors = Math.Clamp(_config.lightStripSettings.saturateColors, 0.0f, 5.0f);
 			_config.zoneColumns = Math.Max(1, _config.zoneColumns);
 			_config.zoneRows = Math.Max(1, _config.zoneRows);
 			_config.readResolutionReduce = Math.Clamp(_config.readResolutionReduce, 1.0f, 10.0f);
@@ -171,6 +173,7 @@ namespace HueScreenAmbience
 		public int remotePort = 9250;
 		public float colorMultiplier = 1.0f;
 		public float blendLastColorAmount = 0.4f;
+		public float saturateColors = 1.0f;
 		public int updateFrameRate = 24;
 		public List<SimplePointF> lights = new List<SimplePointF>();
 	}
