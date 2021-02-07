@@ -29,9 +29,10 @@ namespace HueScreenAmbience
 		{
 			try
 			{
-				_map = ConfigureServices();
-
+				_config = new Config();
 				_config.LoadConfig();
+
+				_map = ConfigureServices();
 
 				_input.InstallServices(_map);
 				Thread inputThread = new Thread(new ThreadStart(_input.HandleInput));
@@ -93,7 +94,6 @@ namespace HueScreenAmbience
 		private IServiceProvider ConfigureServices()
 		{
 			//setup and add command service.
-			_config = new Config();
 			_input = new InputHandler();
 			_core = new Core();
 			_screen = new ScreenReader();
@@ -102,7 +102,22 @@ namespace HueScreenAmbience
 			_rgbLighter = new RGBLighter();
 			_stripLighter = new StripLighter();
 
-			var services = new ServiceCollection()
+			var services = new ServiceCollection();
+			if (_config.Model.piCameraSettings.isPi)
+			{
+				services
+				.AddScoped<FileLogger>()
+				.AddSingleton(_config)
+				.AddSingleton(_input)
+				.AddSingleton(_core)
+				.AddSingleton(_hueClient)
+				.AddSingleton(_screen)
+				.AddSingleton(_zoneProcesser)
+				.AddSingleton(_stripLighter);
+			}
+			else
+			{
+				services
 				.AddScoped<FileLogger>()
 				.AddSingleton(_config)
 				.AddSingleton(_input)
@@ -112,6 +127,7 @@ namespace HueScreenAmbience
 				.AddSingleton(_zoneProcesser)
 				.AddSingleton(_rgbLighter)
 				.AddSingleton(_stripLighter);
+			}
 			var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
 			return provider;
 		}

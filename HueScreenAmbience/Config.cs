@@ -93,6 +93,7 @@ namespace HueScreenAmbience
 		public HueSettings hueSettings = new HueSettings();
 		public ZoneProcessSettings zoneProcessSettings = new ZoneProcessSettings();
 		public RGBDeviceSettings rgbDeviceSettings = new RGBDeviceSettings();
+		public PiCameraSettings piCameraSettings = new PiCameraSettings();
 		public int adapterId = 0;
 		public int monitorId = 0;
 		public int zoneColumns = 1;
@@ -176,5 +177,13 @@ namespace HueScreenAmbience
 		public float saturateColors = 1.0f;
 		public int updateFrameRate = 24;
 		public List<SimplePointF> lights = new List<SimplePointF>();
+	}
+
+	public class PiCameraSettings
+	{
+		public bool isPi = false;
+		public int width = 1280;
+		public int height = 720;
+		public int frameRate = 30;
 	}
 }

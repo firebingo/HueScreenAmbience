@@ -1,4 +1,5 @@
 ﻿using HueScreenAmbience.DXGICaptureScreen;
+using HueScreenAmbience.PiCapture;
 using HueScreenAmbience.RGB;
 using BitmapZoneProcessor;
 using System;
@@ -24,6 +25,7 @@ namespace HueScreenAmbience
 		private StripLighter _stripLighter;
 		private FileLogger _logger;
 		private DxCapture _dxCapture;
+		private PiCapture.PiCapture _piCapture;
 		private DateTime _lastPostReadTime;
 		private long _frame;
 		public bool IsRunning { get; private set; } = false;
@@ -46,7 +48,17 @@ namespace HueScreenAmbience
 		public void Start()
 		{
 			_frameRate = _config.Model.screenReadFrameRate;
-			GetScreenInfo();
+			if (_config.Model.piCameraSettings.isPi)
+			{
+				ScreenInfo = new ScreenDimensions()
+				{
+					RealWidth = _config.Model.piCameraSettings.width,
+					RealHeight = _config.Model.piCameraSettings.height,
+					SizeReduction = _config.Model.readResolutionReduce
+				};
+			}
+			else
+				GetScreenInfo();
 			SetupPixelZones();
 			_pixelsToRead = Array.Empty<ReadPixel>();
 			PreparePixelsToGet();
@@ -57,7 +69,8 @@ namespace HueScreenAmbience
 			_config = _map.GetService(typeof(Config)) as Config;
 			_zoneProcesser = _map.GetService(typeof(ZoneProcessor)) as ZoneProcessor;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
-			_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
+			if(!_config.Model.piCameraSettings.isPi)
+				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
 
@@ -83,7 +96,7 @@ namespace HueScreenAmbience
 					SizeReduction = _config.Model.readResolutionReduce
 				};
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				Console.WriteLine(ex);
 				Task.Run(() => _logger.WriteLog(ex.ToString()));
@@ -150,14 +163,20 @@ namespace HueScreenAmbience
 
 		public void InitScreenLoop()
 		{
-			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.adapterId, Screen.OutputId, _logger);
-			if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
-				_rgbLighter.Start();
-			if(_config.Model.lightStripSettings.useLightStrip)
+			if (_config.Model.piCameraSettings.isPi)
+				_piCapture = new PiCapture.PiCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _logger);
+			else
+			{
+				_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.adapterId, Screen.OutputId, _logger);
+				if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
+					_rgbLighter.Start();
+			}
+			
+			if (_config.Model.lightStripSettings.useLightStrip)
 				_stripLighter.Start();
 		}
 
-		public void ReadScreenLoopDx()
+		public async Task ReadScreenLoopDx()
 		{
 			IsRunning = true;
 			Bitmap bmp = null;
@@ -168,14 +187,17 @@ namespace HueScreenAmbience
 				{
 					var start = DateTime.UtcNow;
 					//Do not dispose this bitmap as DxCapture uses the same bitmap every loop to save allocation.
-					bmp = _dxCapture.GetFrame();
+					if (_config.Model.piCameraSettings.isPi)
+						bmp = await _piCapture.GetFrame();
+					else
+						bmp = _dxCapture.GetFrame();
 					//Console.WriteLine($"Capture Time:        {(DateTime.UtcNow - start).TotalMilliseconds}");
 					//If the bitmap is null that usually means the desktop has not been updated
 					if (bmp == null)
 					{
 						//If we havnt got a new frame in 2 seconds because the desktop hasnt updated send a update with the last zones anyways.
 						// If this isint done hue will eventually disconnect us because we didnt send any updates.
-						if((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
+						if ((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
 						{
 							long rf = _frame;
 							_lastPostReadTime = DateTime.UtcNow;
@@ -185,7 +207,7 @@ namespace HueScreenAmbience
 						continue;
 					}
 
-					bitmapChanged = BitmapProcessor.ReadBitmap(ScreenInfo.Width, ScreenInfo.Height, _config.Model.readResolutionReduce, _config.Model.zoneRows, _config.Model.zoneColumns, _config.Model.pixelCount, _pixelsToRead, ref bmp, ref _zones, false, _config.Model.bitmapRect);
+					bitmapChanged = BitmapProcessor.ReadBitmap(ScreenInfo.Width, ScreenInfo.Height, ScreenInfo.SizeReduction, _config.Model.zoneRows, _config.Model.zoneColumns, _config.Model.pixelCount, _pixelsToRead, ref bmp, ref _zones, false, _config.Model.bitmapRect);
 
 					//Console.WriteLine($"Read Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 					long f = _frame;
@@ -207,7 +229,7 @@ namespace HueScreenAmbience
 				catch (Exception ex)
 				{
 					Console.WriteLine(ex);
-					Task.Run(() => _logger.WriteLog(ex.ToString()));
+					_ = Task.Run(() => _logger.WriteLog(ex.ToString()));
 					StopScreenLoop();
 				}
 				finally

@@ -328,9 +328,10 @@ namespace HueScreenAmbience
 			}
 
 			_screen.InitScreenLoop();
-			_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoopDx));
-			_screenLoopThread.Name = "Screen Loop Thread";
-			_screenLoopThread.Start();
+			_ = Task.Run(() => _screen.ReadScreenLoopDx());
+			//_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoopDx));
+			//_screenLoopThread.Name = "Screen Loop Thread";
+			//_screenLoopThread.Start();
 			_input.ResetConsole();
 		}
 

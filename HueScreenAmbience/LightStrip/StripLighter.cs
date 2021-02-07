@@ -1,6 +1,8 @@
 ﻿using ImageMagick;
+using Iot.Device.Ws28xx;
 using System;
 using System.Collections.Generic;
+using System.Device.Spi;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -27,7 +29,7 @@ namespace HueScreenAmbience.LightStrip
 	{
 		private static readonly int _colorByteCount = 3;
 		private static readonly int _packetMaxSize = 256;
-		private static readonly int _packetHeaderSize = 
+		private static readonly int _packetHeaderSize =
 			Marshal.SizeOf((int)0) + //version int 
 			Marshal.SizeOf((long)0) + //frame number
 			1 + //number of sequences
@@ -49,6 +51,9 @@ namespace HueScreenAmbience.LightStrip
 		private readonly Color _resetColor = Color.FromArgb(0, 0, 0, 0);
 		private DateTime _lastChangeTime;
 		private TimeSpan _frameTimeSpan;
+
+		private SpiDevice? _device;
+		private Ws2812b? _lightStrip;
 
 		public StripLighter()
 		{
@@ -85,27 +90,52 @@ namespace HueScreenAmbience.LightStrip
 					}
 				}
 
-				if (_lightClientSocket != null)
-					_lightClientSocket.Dispose();
-
-				_lightClientSocket = new Socket(_config.Model.lightStripSettings.remoteAddressIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-				_lightClientEndpoint = new IPEndPoint(_config.Model.lightStripSettings.remoteAddressIp, _config.Model.lightStripSettings.remotePort);
-
-				if (_serializeStreams != null)
+				if (_config.Model.piCameraSettings.isPi)
 				{
-					foreach (var stream in _serializeStreams)
+					try
 					{
-						stream.Value.Dispose();
+						var settings = new SpiConnectionSettings(0, 0)
+						{
+							ClockFrequency = 2400000,
+							Mode = SpiMode.Mode0,
+							DataBitLength = 8
+						};
+
+						_device = SpiDevice.Create(settings);
+						_lightStrip = new Ws2812b(_device, _lights.Count);
 					}
-					_serializeStreams.Clear();
+					catch (Exception ex)
+					{
+						_device = null;
+						_lightStrip = null;
+						Console.WriteLine(ex.ToString());
+						_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
+					}
 				}
-				_serializeStreams = new Dictionary<byte, MemoryStream>();
-				//each light takes 3 bytes for its color
-				_packetColorSize = _packetMaxSize - _packetHeaderSize;
-				_packetCount = (byte)Math.Ceiling((_lights.Count * _colorByteCount) / (double)(_packetColorSize));
-				for (byte i = 0; i < _packetCount; ++i)
+				else
 				{
-					_serializeStreams.Add(i, new MemoryStream(_packetMaxSize));
+					if (_lightClientSocket != null)
+						_lightClientSocket.Dispose();
+
+					_lightClientSocket = new Socket(_config.Model.lightStripSettings.remoteAddressIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+					_lightClientEndpoint = new IPEndPoint(_config.Model.lightStripSettings.remoteAddressIp, _config.Model.lightStripSettings.remotePort);
+
+					if (_serializeStreams != null)
+					{
+						foreach (var stream in _serializeStreams)
+						{
+							stream.Value.Dispose();
+						}
+						_serializeStreams.Clear();
+					}
+					_serializeStreams = new Dictionary<byte, MemoryStream>();
+					//each light takes 3 bytes for its color
+					_packetColorSize = _packetMaxSize - _packetHeaderSize;
+					_packetCount = (byte)Math.Ceiling((_lights.Count * _colorByteCount) / (double)(_packetColorSize));
+					for (byte i = 0; i < _packetCount; ++i)
+					{
+						_serializeStreams.Add(i, new MemoryStream(_packetMaxSize));
+					}
 				}
 				_started = true;
 
@@ -131,23 +161,40 @@ namespace HueScreenAmbience.LightStrip
 				} while (_updating);
 
 				_updating = true;
-				SerializeLightMetadata(-1);
-				foreach (var light in _lights)
+				if (_config.Model.piCameraSettings.isPi)
 				{
-					light.Color = Color.FromArgb(_resetColor.R, _resetColor.G, _resetColor.B);
-					light.LastColor = light.Color;
-					SerializeLightColor(light.Color);
+					foreach (var light in _lights)
+					{
+						light.Color = Color.FromArgb(_resetColor.R, _resetColor.G, _resetColor.B);
+						light.LastColor = light.Color;
+					}
+					_lightStrip?.Image?.Clear();
+					_lightStrip?.Update();
+
+					_device?.Dispose();
+					_device = null;
+					_lightStrip = null;
 				}
-
-				SerializePad();
-
-				//Send packets and then reset streams to start
-				foreach (var stream in _serializeStreams)
+				else
 				{
-					_lightClientSocket.SendTo(stream.Value.ToArray(), _lightClientEndpoint);
-					stream.Value.Seek(0, SeekOrigin.Begin);
+					SerializeLightMetadata(-1);
+					foreach (var light in _lights)
+					{
+						light.Color = Color.FromArgb(_resetColor.R, _resetColor.G, _resetColor.B);
+						light.LastColor = light.Color;
+						SerializeLightColor(light.Color);
+					}
+
+					SerializePad();
+
+					//Send packets and then reset streams to start
+					foreach (var stream in _serializeStreams)
+					{
+						_lightClientSocket.SendTo(stream.Value.ToArray(), _lightClientEndpoint);
+						stream.Value.Seek(0, SeekOrigin.Begin);
+					}
+					_currentStream = 0;
 				}
-				_currentStream = 0;
 				_started = false;
 			}
 			catch (Exception ex)
@@ -172,54 +219,10 @@ namespace HueScreenAmbience.LightStrip
 					return;
 
 				_updating = true;
-				SerializeLightMetadata(frame);
-				var (x, y) = (0, 0);
-				IPixel<byte> pix;
-				foreach (var light in _lights)
-				{
-					if (light.CacheLocation.HasValue && width == light.Width && height == light.Height)
-					{
-						(x, y) = (light.CacheLocation.Value.X, light.CacheLocation.Value.Y);
-					}
-					else
-					{
-						(x, y) = MapLightLocationToImage(light.Location, width, height);
-						light.Width = width;
-						light.Height = height;
-						light.CacheLocation = new Point(x, y);
-					}
-
-					pix = pixels[x, y];
-					var r = Math.Floor(pix.GetChannel(0) * _config.Model.lightStripSettings.colorMultiplier);
-					var g = Math.Floor(pix.GetChannel(1) * _config.Model.lightStripSettings.colorMultiplier);
-					var b = Math.Floor(pix.GetChannel(2) * _config.Model.lightStripSettings.colorMultiplier);
-					if (light.LastColor.HasValue)
-					{
-						var blendAmount = 1.0f - _config.Model.lightStripSettings.blendLastColorAmount;
-						if (blendAmount != 0.0f)
-						{
-							r = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.R, 2) + blendAmount * Math.Pow(r, 2));
-							g = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.G, 2) + blendAmount * Math.Pow(g, 2));
-							b = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.B, 2) + blendAmount * Math.Pow(b, 2));
-						}
-					}
-					light.Color = Color.FromArgb(255, (byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
-					if (_config.Model.lightStripSettings.saturateColors != 1.0f)
-						light.Color = ColorHelper.SaturateColor(light.Color, _config.Model.lightStripSettings.saturateColors);
-					light.LastColor = light.Color;
-					SerializeLightColor(light.Color);
-				}
-
-				SerializePad();
-
-				//Send packets and then reset streams to start
-				foreach (var stream in _serializeStreams)
-				{
-					_lightClientSocket.SendTo(stream.Value.ToArray(), _lightClientEndpoint);
-					stream.Value.Seek(0, SeekOrigin.Begin);
-				}
-				_currentStream = 0;
-				_lastChangeTime = DateTime.UtcNow;
+				if (_config.Model.piCameraSettings.isPi)
+					UpdateImagePi(pixels, width, height, frame);
+				else
+					UpdateImageServer(pixels, width, height, frame);
 
 				//Console.WriteLine($"StripLighter UpdateFromImage Time: {(_lastChangeTime - start).TotalMilliseconds}");
 			}
@@ -231,10 +234,76 @@ namespace HueScreenAmbience.LightStrip
 			_updating = false;
 		}
 
+		public void UpdateImageServer(IUnsafePixelCollection<byte> pixels, int width, int height, long frame)
+		{
+			SerializeLightMetadata(frame);
+			foreach (var light in _lights)
+			{
+				UpdateLightColor(pixels, light, width, height);
+				SerializeLightColor(light.Color);
+			}
+
+			SerializePad();
+
+			//Send packets and then reset streams to start
+			foreach (var stream in _serializeStreams)
+			{
+				_lightClientSocket.SendTo(stream.Value.ToArray(), _lightClientEndpoint);
+				stream.Value.Seek(0, SeekOrigin.Begin);
+			}
+			_currentStream = 0;
+			_lastChangeTime = DateTime.UtcNow;
+		}
+
+		public void UpdateImagePi(IUnsafePixelCollection<byte> pixels, int width, int height, long frame)
+		{
+			for (var i = 0; i < _lights.Count; ++i)
+			{
+				UpdateLightColor(pixels, _lights[i], width, height);
+				_lightStrip?.Image?.SetPixel(i, 0, _lights[i].Color);
+			}
+			_lightStrip?.Update();
+		}
+
+		public void UpdateLightColor(IUnsafePixelCollection<byte> pixels, StripLighterLight light, int width, int height)
+		{
+			int x;
+			int y;
+			if (light.CacheLocation.HasValue && width == light.Width && height == light.Height)
+			{
+				(x, y) = (light.CacheLocation.Value.X, light.CacheLocation.Value.Y);
+			}
+			else
+			{
+				(x, y) = MapLightLocationToImage(light.Location, width, height);
+				light.Width = width;
+				light.Height = height;
+				light.CacheLocation = new Point(x, y);
+			}
+
+			var r = Math.Floor(pixels[x, y].GetChannel(0) * _config.Model.lightStripSettings.colorMultiplier);
+			var g = Math.Floor(pixels[x, y].GetChannel(1) * _config.Model.lightStripSettings.colorMultiplier);
+			var b = Math.Floor(pixels[x, y].GetChannel(2) * _config.Model.lightStripSettings.colorMultiplier);
+			if (light.LastColor.HasValue)
+			{
+				var blendAmount = 1.0f - _config.Model.lightStripSettings.blendLastColorAmount;
+				if (blendAmount != 0.0f)
+				{
+					r = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.R, 2) + blendAmount * Math.Pow(r, 2));
+					g = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.G, 2) + blendAmount * Math.Pow(g, 2));
+					b = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.B, 2) + blendAmount * Math.Pow(b, 2));
+				}
+			}
+			light.Color = Color.FromArgb(255, (byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
+			if (_config.Model.lightStripSettings.saturateColors != 1.0f)
+				light.Color = ColorHelper.SaturateColor(light.Color, _config.Model.lightStripSettings.saturateColors);
+			light.LastColor = light.Color;
+		}
+
 		private static (int x, int y) MapLightLocationToImage(PointF location, int width, int height)
 		{
 			var x = (int)Math.Floor(location.X * width);
-			var y = (int)Math.Floor(location.Y* height);
+			var y = (int)Math.Floor(location.Y * height);
 			return (x, y);
 		}
 
@@ -301,6 +370,10 @@ namespace HueScreenAmbience.LightStrip
 				_serializeStreams.Clear();
 				_serializeStreams = null;
 			}
+			_device?.Dispose();
+			_device = null;
+			_lightStrip?.Image?.Clear();
+			_lightStrip = null;
 			GC.SuppressFinalize(this);
 		}
 	}

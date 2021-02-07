@@ -121,6 +121,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			_output1?.Dispose();
 			_duplicatedOutput?.Dispose();
 			_screenTexture?.Dispose();
+			_bitmap?.Dispose();
 			GC.SuppressFinalize(this);
 		}
 	}
