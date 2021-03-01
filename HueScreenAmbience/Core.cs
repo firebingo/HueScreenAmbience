@@ -323,11 +323,12 @@ namespace HueScreenAmbience
 					_input.ResetConsole();
 					return;
 				}
-
-				await _hueClient.OnStartReading();
 			}
 
 			_screen.InitScreenLoop();
+			if (_config.Model.hueSettings.useHue)
+				await _hueClient.OnStartReading();
+
 			_ = Task.Run(() => _screen.ReadScreenLoopDx());
 			//_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoopDx));
 			//_screenLoopThread.Name = "Screen Loop Thread";

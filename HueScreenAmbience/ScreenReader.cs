@@ -69,7 +69,7 @@ namespace HueScreenAmbience
 			_config = _map.GetService(typeof(Config)) as Config;
 			_zoneProcesser = _map.GetService(typeof(ZoneProcessor)) as ZoneProcessor;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
-			if(!_config.Model.piCameraSettings.isPi)
+			if (!_config.Model.piCameraSettings.isPi)
 				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
@@ -168,10 +168,10 @@ namespace HueScreenAmbience
 			else
 			{
 				_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.adapterId, Screen.OutputId, _logger);
-				if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
+				if (_config.Model.rgbDeviceSettings.useMotherboard || _config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
 					_rgbLighter.Start();
 			}
-			
+
 			if (_config.Model.lightStripSettings.useLightStrip)
 				_stripLighter.Start();
 		}
