@@ -83,7 +83,7 @@ namespace HueScreenAmbience
 					SizeReduction = _config.Model.readResolutionReduce
 				};
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				Console.WriteLine(ex);
 				Task.Run(() => _logger.WriteLog(ex.ToString()));
@@ -153,7 +153,7 @@ namespace HueScreenAmbience
 			_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.adapterId, Screen.OutputId, _logger);
 			if (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice)
 				_rgbLighter.Start();
-			if(_config.Model.lightStripSettings.useLightStrip)
+			if (_config.Model.lightStripSettings.useLightStrip)
 				_stripLighter.Start();
 		}
 
@@ -175,7 +175,7 @@ namespace HueScreenAmbience
 					{
 						//If we havnt got a new frame in 2 seconds because the desktop hasnt updated send a update with the last zones anyways.
 						// If this isint done hue will eventually disconnect us because we didnt send any updates.
-						if((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
+						if ((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
 						{
 							long rf = _frame;
 							_lastPostReadTime = DateTime.UtcNow;

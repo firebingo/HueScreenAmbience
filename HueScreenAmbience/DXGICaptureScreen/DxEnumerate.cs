@@ -1,8 +1,6 @@
 ﻿using SharpDX.DXGI;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HueScreenAmbience.DXGICaptureScreen
 {
@@ -20,6 +18,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		public int Height { get; set; }
 		public int RefreshRate { get; set; }
 		public string Format { get; set; }
+		public int Bpp { get; set; }
+		public string ColorSpace { get; set; }
 	}
 
 	public static class DxEnumerate
@@ -30,7 +30,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			try
 			{
 				using var factory = new Factory1();
-				var adapterCount =  factory.GetAdapterCount();
+				var adapterCount = factory.GetAdapterCount();
 				for (var i = 0; i < adapterCount; ++i)
 				{
 					using var adapter = factory.GetAdapter1(i);
@@ -60,8 +60,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				for (var i = 0; i < displayCount; ++i)
 				{
 					using var output = adapter.GetOutput(i);
-					using var output1 = output.QueryInterface<Output1>();
-					using var duplicatedOutput = output1.DuplicateOutput(device);
+					using var output6 = output.QueryInterface<Output6>();
+					using var duplicatedOutput = output6.DuplicateOutput(device);
 					displays.Add(new DxEnumeratedDisplay()
 					{
 						OutputId = i,
@@ -69,7 +69,9 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						Width = duplicatedOutput.Description.ModeDescription.Width,
 						Height = duplicatedOutput.Description.ModeDescription.Height,
 						RefreshRate = duplicatedOutput.Description.ModeDescription.RefreshRate.Numerator / duplicatedOutput.Description.ModeDescription.RefreshRate.Denominator,
-						Format = duplicatedOutput.Description.ModeDescription.Format.ToString()
+						Format = duplicatedOutput.Description.ModeDescription.Format.ToString(),
+						Bpp = output6.Description1.BitsPerColor,
+						ColorSpace = output6.Description1.ColorSpace.ToString()
 					});
 				}
 			}
@@ -93,8 +95,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					return null;
 				}
 				using var output = adapter.GetOutput(id);
-				using var output1 = output.QueryInterface<Output1>();
-				using var duplicatedOutput = output1.DuplicateOutput(device);
+				using var output6 = output.QueryInterface<Output6>();
+				using var duplicatedOutput = output6.DuplicateOutput1(device, 0, 1, new Format[] { Format.B8G8R8A8_UNorm });
 				display = new DxEnumeratedDisplay()
 				{
 					OutputId = id,
@@ -102,7 +104,9 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					Width = duplicatedOutput.Description.ModeDescription.Width,
 					Height = duplicatedOutput.Description.ModeDescription.Height,
 					RefreshRate = duplicatedOutput.Description.ModeDescription.RefreshRate.Numerator / duplicatedOutput.Description.ModeDescription.RefreshRate.Denominator,
-					Format = duplicatedOutput.Description.ModeDescription.Format.ToString()
+					Format = duplicatedOutput.Description.ModeDescription.Format.ToString(),
+					Bpp = output6.Description1.BitsPerColor,
+					ColorSpace = output6.Description1.ColorSpace.ToString()
 				};
 			}
 			catch (Exception ex)
