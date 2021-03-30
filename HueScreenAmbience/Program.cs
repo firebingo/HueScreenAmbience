@@ -1,4 +1,8 @@
 ﻿using System;
+#if ANYCPU
+#else
+using System.Runtime.InteropServices;
+#endif
 using System.Threading;
 using System.Threading.Tasks;
 using HueScreenAmbience.Hue;
@@ -20,6 +24,29 @@ namespace HueScreenAmbience
 		private StripLighter _stripLighter = null;
 		private IServiceProvider _map = null;
 
+#if ANYCPU
+#else
+		[DllImport("user32.dll", SetLastError = true)]
+		internal static extern bool SetProcessDpiAwarenessContext(int dpiFlag);
+		[DllImport("SHCore.dll", SetLastError = true)]
+		internal static extern bool SetProcessDpiAwareness(PROCESS_DPI_AWARENESS awareness);
+
+		internal enum PROCESS_DPI_AWARENESS
+		{
+			Process_DPI_Unaware = 0,
+			Process_System_DPI_Aware = 1,
+			Process_Per_Monitor_DPI_Aware = 2
+		}
+
+		internal enum DPI_AWARENESS_CONTEXT
+		{
+			DPI_AWARENESS_CONTEXT_UNAWARE = 16,
+			DPI_AWARENESS_CONTEXT_SYSTEM_AWARE = 17,
+			DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE = 18,
+			DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = 34
+		}
+#endif
+
 		static void Main()
 		{
 			new HueScreenAmbience().Run().GetAwaiter().GetResult();
@@ -27,6 +54,33 @@ namespace HueScreenAmbience
 
 		public async Task Run()
 		{
+			//If we are on windows and trying to read screen we have to set dpi awareness for DuplicateOutput1 to work.
+			// DuplicateOutput1 is required for duplicate output to be hdr aware.
+#if ANYCPU
+#else
+			try
+			{
+				if (Environment.OSVersion.Version >= new Version(6, 3, 0)) // win 8.1 added support for per monitor dpi
+				{
+					if (Environment.OSVersion.Version >= new Version(10, 0, 15063)) // win 10 creators update added support for per monitor v2
+					{
+						SetProcessDpiAwarenessContext((int)DPI_AWARENESS_CONTEXT.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+					}
+					else
+						SetProcessDpiAwareness(PROCESS_DPI_AWARENESS.Process_Per_Monitor_DPI_Aware);
+				}
+				else
+				{
+					Console.WriteLine($"{Environment.OSVersion.Version} is not supported. min req: {new Version(6, 3, 0)} (win 8.1)");
+					return;
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex.ToString());
+			}
+#endif
+
 			try
 			{
 				_config = new Config();
@@ -61,9 +115,9 @@ namespace HueScreenAmbience
 				//Delay until application quit
 				await Task.Delay(-1);
 			}
-			catch
+			catch (Exception ex)
 			{
-				return;
+				Console.WriteLine(ex.ToString());
 			}
 		}
 

@@ -91,7 +91,7 @@ namespace HueScreenAmbience.RGB
 				deviceMask |= RGBDeviceType.Keyboard;
 			if (_config.Model.rgbDeviceSettings.useMice)
 				deviceMask |= RGBDeviceType.Mouse;
-			if(_config.Model.rgbDeviceSettings.useMotherboard)
+			if (_config.Model.rgbDeviceSettings.useMotherboard)
 				deviceMask |= RGBDeviceType.Mainboard;
 			Console.WriteLine("Loading rgb devices...");
 			_surface.LoadDevices(CorsairDeviceProvider.Instance, deviceMask, throwExceptions: true);

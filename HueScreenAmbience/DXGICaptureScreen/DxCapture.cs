@@ -16,7 +16,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		private readonly Adapter1 _adapter;
 		private readonly SharpDX.Direct3D11.Device _device;
 		private readonly Output _output;
-		private readonly Output1 _output1;
+		private readonly Output6 _output6;
 		private readonly OutputDuplication _duplicatedOutput;
 		private readonly Texture2D _screenTexture;
 		private readonly FileLogger _logger;
@@ -35,8 +35,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				_device = new SharpDX.Direct3D11.Device(_adapter);
 
 				_output = _adapter.GetOutput(monitor);
-				_output1 = _output.QueryInterface<Output1>();
-				_duplicatedOutput = _output1.DuplicateOutput(_device);
+				_output6 = _output.QueryInterface<Output6>();
+				_duplicatedOutput = _output6.DuplicateOutput1(_device, 0, 1, new Format[] { Format.B8G8R8A8_UNorm });
 
 				var textureDesc = new Texture2DDescription
 				{
@@ -69,13 +69,18 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				if (result.Success && duplicateFrameInformation.LastPresentTime != 0)
 				{
 					using (var screenTexture2D = screenResource.QueryInterface<Texture2D>())
-						_device.ImmediateContext.CopyResource(screenTexture2D, _screenTexture);
+					{
+						if (screenTexture2D.Description.Format == Format.B8G8R8A8_UNorm)
+							_device.ImmediateContext.CopyResource(screenTexture2D, _screenTexture);
+						else
+							return null;
+					}
 
 					_device.ImmediateContext.MapSubresource(_screenTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None, out var dataStream);
 
 					var mapSource = _device.ImmediateContext.MapSubresource(_screenTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
 
-					if(_bitmap == null)
+					if (_bitmap == null)
 						_bitmap = new Bitmap(_width, _height, PixelFormat.Format32bppArgb);
 
 					var boundsRect = new Rectangle(0, 0, _width, _height);
@@ -118,7 +123,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			_adapter?.Dispose();
 			_device?.Dispose();
 			_output?.Dispose();
-			_output1?.Dispose();
+			_output6?.Dispose();
 			_duplicatedOutput?.Dispose();
 			_screenTexture?.Dispose();
 			_bitmap?.Dispose();
