@@ -327,6 +327,12 @@ namespace HueScreenAmbience
 				await _hueClient.OnStartReading();
 			}
 
+#if ANYCPU
+#else
+			//This should prevent windows from going to sleep as entering idle or sleep state seems to break several things.
+			var res = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS | WindowsApi.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
+#endif
+
 			_screen.InitScreenLoop();
 			_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoopDx));
 			_screenLoopThread.Name = "Screen Loop Thread";
@@ -336,6 +342,12 @@ namespace HueScreenAmbience
 
 		public async Task StopScreenReading()
 		{
+#if ANYCPU
+#else
+			//Allow windows to sleep again
+			var res = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS);
+#endif
+
 			if (_screenLoopThread != null && _screenLoopThread.IsAlive)
 			{
 				_screen.StopScreenLoop();

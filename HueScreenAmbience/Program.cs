@@ -1,8 +1,4 @@
 ﻿using System;
-#if ANYCPU
-#else
-using System.Runtime.InteropServices;
-#endif
 using System.Threading;
 using System.Threading.Tasks;
 using HueScreenAmbience.Hue;
@@ -24,29 +20,6 @@ namespace HueScreenAmbience
 		private StripLighter _stripLighter = null;
 		private IServiceProvider _map = null;
 
-#if ANYCPU
-#else
-		[DllImport("user32.dll", SetLastError = true)]
-		internal static extern bool SetProcessDpiAwarenessContext(int dpiFlag);
-		[DllImport("SHCore.dll", SetLastError = true)]
-		internal static extern bool SetProcessDpiAwareness(PROCESS_DPI_AWARENESS awareness);
-
-		internal enum PROCESS_DPI_AWARENESS
-		{
-			Process_DPI_Unaware = 0,
-			Process_System_DPI_Aware = 1,
-			Process_Per_Monitor_DPI_Aware = 2
-		}
-
-		internal enum DPI_AWARENESS_CONTEXT
-		{
-			DPI_AWARENESS_CONTEXT_UNAWARE = 16,
-			DPI_AWARENESS_CONTEXT_SYSTEM_AWARE = 17,
-			DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE = 18,
-			DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = 34
-		}
-#endif
-
 		static void Main()
 		{
 			new HueScreenAmbience().Run().GetAwaiter().GetResult();
@@ -64,10 +37,10 @@ namespace HueScreenAmbience
 				{
 					if (Environment.OSVersion.Version >= new Version(10, 0, 15063)) // win 10 creators update added support for per monitor v2
 					{
-						SetProcessDpiAwarenessContext((int)DPI_AWARENESS_CONTEXT.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+						WindowsApi.SetProcessDpiAwarenessContext((int)WindowsApi.DPI_AWARENESS_CONTEXT.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 					}
 					else
-						SetProcessDpiAwareness(PROCESS_DPI_AWARENESS.Process_Per_Monitor_DPI_Aware);
+						WindowsApi.SetProcessDpiAwareness(WindowsApi.PROCESS_DPI_AWARENESS.Process_Per_Monitor_DPI_Aware);
 				}
 				else
 				{
@@ -124,16 +97,15 @@ namespace HueScreenAmbience
 		// of just timing out on their sides.
 		private void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
 		{
-			Console.WriteLine("closing");
-			var task = _core.StopScreenReading();
-			do
-			{
-				Thread.Sleep(0);
-			}
-			while (!task.IsCompleted);
+			OnProcessStop();
 		}
 
 		private void CurrentDomain_ProcessExit(object sender, EventArgs e)
+		{
+			OnProcessStop();
+		}
+
+		private void OnProcessStop()
 		{
 			Console.WriteLine("closing");
 			var task = _core.StopScreenReading();
