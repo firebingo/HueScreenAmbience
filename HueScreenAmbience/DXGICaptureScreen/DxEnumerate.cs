@@ -61,7 +61,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				{
 					using var output = adapter.GetOutput(i);
 					using var output6 = output.QueryInterface<Output6>();
-					using var duplicatedOutput = output6.DuplicateOutput(device);
+					using var duplicatedOutput = output6.DuplicateOutput1(device, 0, 1, new Format[] { Format.B8G8R8A8_UNorm });
 					displays.Add(new DxEnumeratedDisplay()
 					{
 						OutputId = i,
