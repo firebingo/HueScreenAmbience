@@ -164,7 +164,10 @@ namespace HueScreenAmbience
 		public void InitScreenLoop()
 		{
 			if (_config.Model.piCameraSettings.isPi)
-				_piCapture = new PiCapture.PiCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _logger);
+			{
+				_piCapture = new PiCapture.PiCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.piCameraSettings.frameRate, _logger);
+				_piCapture.Start();
+			}
 			else
 			{
 				_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.adapterId, Screen.OutputId, _logger);
@@ -248,8 +251,16 @@ namespace HueScreenAmbience
 		public void StopScreenLoop()
 		{
 			IsRunning = false;
-			_dxCapture.Dispose();
-			_rgbLighter?.Stop();
+			if (_config.Model.piCameraSettings.isPi)
+			{
+				_piCapture.Stop();
+				_piCapture.Dispose();
+			}
+			else
+			{
+				_dxCapture.Dispose();
+				_rgbLighter?.Stop();
+			}
 			_stripLighter?.Stop();
 		}
 

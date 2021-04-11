@@ -21,6 +21,9 @@ namespace BitmapZoneProcessor
 				zone.ResetAverages();
 			}
 
+			if (bmp.PixelFormat != PixelFormat.Format32bppArgb && bmp.PixelFormat != PixelFormat.Format24bppRgb)
+				throw new Exception("Bitmap must be either 32bppArgb or 24bppRgb");
+
 			if (bitmapRect.HasValue)
 			{
 				if (disposeBitmapOnChange)
@@ -61,7 +64,7 @@ namespace BitmapZoneProcessor
 			BitmapData srcData = bmp.LockBits(
 			new Rectangle(0, 0, bmp.Width, bmp.Height),
 			ImageLockMode.ReadOnly,
-			PixelFormat.Format32bppArgb);
+			bmp.PixelFormat);
 
 			unsafe
 			{
@@ -69,6 +72,7 @@ namespace BitmapZoneProcessor
 				//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
 
 				var totalSize = readPixels.Length;
+				var pixLength = bmp.PixelFormat == PixelFormat.Format32bppArgb ? 4 : 3;
 
 				byte* p = (byte*)(void*)srcData.Scan0;
 				//Colors in are bitmap format are 32bpp so 4 bytes for each color in RGBA format
@@ -83,7 +87,7 @@ namespace BitmapZoneProcessor
 					int zoneRow = 0;
 					int xIter = 0;
 					int yIter = 0;
-					for (var i = 0; i < totalSize * 4; i += 4)
+					for (var i = 0; i < totalSize * pixLength; i += pixLength)
 					{
 						//index is our power of 4 padded index in the bitmap.
 						zone.TotalB += p[i]; //b
@@ -132,7 +136,7 @@ namespace BitmapZoneProcessor
 						//y * stride gives us the offset for the scanline we are in on the bitmap (ex. line 352 * 1080 = 380160 bits)
 						//x * 4 gives us our power of 4 for column
 						//ex. total offset for coord 960x540 on a 1080p image is is (540 * 1080) + 960 * 4 = 587040 bits
-						pixIndex = (readPixels[i].Pixel.Y * srcData.Stride) + readPixels[i].Pixel.X * 4;
+						pixIndex = (readPixels[i].Pixel.Y * srcData.Stride) + readPixels[i].Pixel.X * pixLength;
 						readPixels[i].Zone.TotalR += p[pixIndex + 2];
 						readPixels[i].Zone.TotalG += p[pixIndex + 1];
 						readPixels[i].Zone.TotalB += p[pixIndex];
