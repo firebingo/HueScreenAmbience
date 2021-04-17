@@ -1,8 +1,10 @@
-﻿using ImageMagick;
+﻿//using ImageMagick;
+using ImageMagickProcessor;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace BitmapZoneProcessor
 {
@@ -151,20 +153,21 @@ namespace BitmapZoneProcessor
 			return bitmapChanged;
 		}
 
-		public static (MagickImage image, MagickImage blurImage) PreparePostBitmap(PixelZone[] zones, int columns, int rows, float resizeScale, FilterType resizeFilter, float resizeSigma, MemoryStream smallImageMemStream = null)
+		public static async Task<(MemoryStream image, MemoryStream blurImage)> PreparePostBitmap(PixelZone[] zones, int columns, int rows, int newWidth, int newHeight, FilterType resizeFilter, float resizeSigma, MemoryStream smallImageMemStream, MemoryStream blurImageMemStream)
 		{
-			var memStreamExists = true;
 			try
 			{
-				if (smallImageMemStream == null)
-				{
-					smallImageMemStream = new MemoryStream(columns * rows);
-					memStreamExists = false;
-				}
+				//var newWidth = (int)Math.Floor(columns * resizeScale);
+				//var newHeight = (int)Math.Floor(rows * resizeScale);
+
 				var image = ImageHandler.CreateSmallImageFromZones(zones, columns, rows, smallImageMemStream);
-				var blurImage = ImageHandler.ResizeImage(image,
-					(int)Math.Floor(columns * resizeScale),
-					(int)Math.Floor(rows * resizeScale),
+
+				var blurImage = await ImageHandler.ResizeImage(image,
+					columns,
+					rows,
+					blurImageMemStream,
+					newWidth,
+					newHeight,
 					resizeFilter,
 					resizeSigma);
 
@@ -173,11 +176,6 @@ namespace BitmapZoneProcessor
 			catch
 			{
 				throw;
-			}
-			finally
-			{
-				if (!memStreamExists)
-					smallImageMemStream?.Dispose();
 			}
 		}
 	}

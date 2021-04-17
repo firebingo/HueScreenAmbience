@@ -2,8 +2,9 @@
 using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.RGB;
-using ImageMagick;
+//using ImageMagick;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -15,6 +16,10 @@ namespace HueScreenAmbience
 	{
 		private bool _processingFrame;
 		private MemoryStream _smallImageMemStream;
+		private MemoryStream _blurImageMemStream;
+		private MemoryStream _hueImageMemStream;
+		private MemoryStream _lstripImageMemStream;
+		private MemoryStream _rgbImageMemStream;
 		private Config _config;
 		private HueCore _hueClient;
 		private FileLogger _logger;
@@ -26,24 +31,30 @@ namespace HueScreenAmbience
 			_config = _map.GetService(typeof(Config)) as Config;
 			_hueClient = _map.GetService(typeof(HueCore)) as HueCore;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
-			if(!_config.Model.piCameraSettings.isPi)
+			if (!_config.Model.piCameraSettings.isPi)
 				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
 
-		public void PostRead(PixelZone[] zones, int width, int height, long frame)
+		public async Task PostRead(PixelZone[] zones, int width, int height, long frame)
 		{
 			if (_processingFrame)
 				return;
 			_processingFrame = true;
 
-			(MagickImage image, MagickImage blurImage) images = (null, null);
+			(MemoryStream image, MemoryStream blurImage) images = (null, null);
 			var columns = zones.OrderByDescending(x => x.Column).First().Column + 1;
 			var rows = zones.OrderByDescending(x => x.Row).First().Row + 1;
 
 			//Pre allocate the memory stream for images since it will be the same size every time
 			if (_smallImageMemStream == null)
-				_smallImageMemStream = new MemoryStream(columns * rows);
+				_smallImageMemStream = new MemoryStream(columns * rows * 3);
+
+			var newWidth = (int)Math.Floor(columns * _config.Model.zoneProcessSettings.resizeScale);
+			var newHeight = (int)Math.Floor(rows * _config.Model.zoneProcessSettings.resizeScale);
+
+			if (_blurImageMemStream == null)
+				_blurImageMemStream = new MemoryStream(newWidth * newHeight * 3);
 
 			try
 			{
@@ -64,7 +75,8 @@ namespace HueScreenAmbience
 				//}
 
 				time = DateTime.UtcNow;
-				images = BitmapProcessor.PreparePostBitmap(zones, columns, rows, _config.Model.zoneProcessSettings.resizeScale, _config.Model.zoneProcessSettings.resizeFilter, _config.Model.zoneProcessSettings.resizeSigma, _smallImageMemStream);
+
+				images = await BitmapProcessor.PreparePostBitmap(zones, columns, rows, newWidth, newHeight, _config.Model.zoneProcessSettings.resizeFilter, _config.Model.zoneProcessSettings.resizeSigma, _smallImageMemStream, _blurImageMemStream);
 
 				if (images.image == null)
 				{
@@ -79,72 +91,54 @@ namespace HueScreenAmbience
 
 				time = DateTime.UtcNow;
 
-				//This is a little spaghet but if hue and a light strip are enabled we can have them use the same
-				// image since they dont modify it instead of creating 2 images and getting a byte array of it twice.
-				if(_config.Model.hueSettings.useHue && _config.Model.lightStripSettings.useLightStrip)
-				{
-					var lightImage = new MagickImage(images.blurImage);
+				var processingTasks = new List<Task>();
 
-					if (_config.Model.hueSettings.hueType == HueType.Basic)
-					{
-						Task.Run(() => _hueClient.ChangeLightColorBasic(avgColor));
-
-						Task.Run(() =>
-						{
-							using var pixels = lightImage.GetPixelsUnsafe();
-							_stripLighter.UpdateFromImage(pixels, lightImage.Width, lightImage.Height, frame);
-							lightImage.Dispose();
-						});
-					}
-					else if(_config.Model.hueSettings.hueType == HueType.Entertainment)
-					{
-						Task.Run(() =>
-						{
-							using var pixels = lightImage.GetPixelsUnsafe();
-							_stripLighter.UpdateFromImage(pixels, lightImage.Width, lightImage.Height, frame);
-							_hueClient.UpdateEntertainmentGroupFromImage(pixels, lightImage.Width, lightImage.Height);
-							lightImage.Dispose();
-						});
-					}
-				}
-				else if(_config.Model.hueSettings.useHue)
+				if (_config.Model.hueSettings.useHue)
 				{
 					if (_config.Model.hueSettings.hueType == HueType.Basic)
 					{
-						Task.Run(() => _hueClient.ChangeLightColorBasic(avgColor));
+						processingTasks.Add(Task.Run(() => _hueClient.ChangeLightColorBasic(avgColor)));
 					}
 					else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
 					{
-						var hueImage = new MagickImage(images.blurImage);
-						Task.Run(() =>
+						if (_hueImageMemStream == null)
+							_hueImageMemStream = new MemoryStream(newWidth * newHeight * 3);
+						_hueImageMemStream.Seek(0, SeekOrigin.Begin);
+						_blurImageMemStream.Seek(0, SeekOrigin.Begin);
+						await _blurImageMemStream.CopyToAsync(_hueImageMemStream);
+						processingTasks.Add(Task.Run(() =>
 						{
-							using var pixels = hueImage.GetPixelsUnsafe();
-							_hueClient.UpdateEntertainmentGroupFromImage(pixels, hueImage.Width, hueImage.Height);
-							hueImage.Dispose();
-						});
+							_hueClient.UpdateEntertainmentGroupFromImage(_hueImageMemStream, newWidth, newHeight);
+						}));
 					}
 				}
-				else if(_config.Model.lightStripSettings.useLightStrip)
+				if (_config.Model.lightStripSettings.useLightStrip)
 				{
-					var stripImage = new MagickImage(images.blurImage);
-					Task.Run(() =>
+					if (_lstripImageMemStream == null)
+						_lstripImageMemStream = new MemoryStream(newWidth * newHeight * 3);
+					_lstripImageMemStream.Seek(0, SeekOrigin.Begin);
+					_blurImageMemStream.Seek(0, SeekOrigin.Begin);
+					await _blurImageMemStream.CopyToAsync(_lstripImageMemStream);
+					processingTasks.Add(Task.Run(() =>
 					{
-						using var pixels = stripImage.GetPixelsUnsafe();
-						_stripLighter.UpdateFromImage(pixels, stripImage.Width, stripImage.Height, frame);
-						stripImage.Dispose();
-					});
+
+						_stripLighter.UpdateFromImage(_lstripImageMemStream, newWidth, newHeight, frame);
+					}));
 				}
 
 				//Console.WriteLine($"PostRead ChangeLightColor Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
 				if (!_config.Model.piCameraSettings.isPi && (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice))
 				{
-					var rgbImage = new MagickImage(images.blurImage);
-					Task.Run(() =>
+					if (_rgbImageMemStream == null)
+						_rgbImageMemStream = new MemoryStream(newWidth * newHeight * 3);
+					_rgbImageMemStream.Seek(0, SeekOrigin.Begin);
+					_blurImageMemStream.Seek(0, SeekOrigin.Begin);
+					await _blurImageMemStream.CopyToAsync(_rgbImageMemStream);
+					processingTasks.Add(Task.Run(() =>
 					{
-						_rgbLighter.UpdateFromImage(avgColor, rgbImage);
-						rgbImage.Dispose();
-					});
+						_rgbLighter.UpdateFromImage(avgColor, _rgbImageMemStream, newWidth, newHeight);
+					}));
 				}
 
 				if (_config.Model.dumpPngs)
@@ -160,24 +154,26 @@ namespace HueScreenAmbience
 					}
 					catch (Exception ex)
 					{
-						Task.Run(() => _logger.WriteLog(ex.ToString()));
+						_ = Task.Run(() => _logger.WriteLog(ex.ToString()));
 					}
 				}
+
+				await Task.WhenAll(processingTasks);
 
 				//Console.WriteLine($"PostRead Total Time: {(DateTime.UtcNow - start).TotalMilliseconds}");
 			}
 			catch (Exception ex)
 			{
-				Task.Run(() => _logger.WriteLog(ex.ToString()));
+				_ = Task.Run(() => _logger.WriteLog(ex.ToString()));
 			}
 			finally
 			{
+				_blurImageMemStream.Seek(0, SeekOrigin.Begin);
 				_smallImageMemStream.Seek(0, SeekOrigin.Begin);
+				_hueImageMemStream.Seek(0, SeekOrigin.Begin);
+				_rgbImageMemStream.Seek(0, SeekOrigin.Begin);
+				_lstripImageMemStream.Seek(0, SeekOrigin.Begin);
 				_processingFrame = false;
-				if (images.image != null)
-					images.image.Dispose();
-				if (images.blurImage != null)
-					images.blurImage.Dispose();
 			}
 		}
 	}

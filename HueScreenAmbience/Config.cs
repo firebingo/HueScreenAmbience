@@ -1,4 +1,5 @@
-﻿using ImageMagick;
+﻿//using ImageMagick;
+using ImageMagickProcessor;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;

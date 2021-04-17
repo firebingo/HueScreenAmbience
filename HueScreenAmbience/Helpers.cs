@@ -1,12 +1,14 @@
 ﻿using System.Drawing;
+using System.IO;
 
 namespace HueScreenAmbience
 {
-    public static class Helpers
-    {
-		public static string ColorToHex(Color c)
+	public static class Helpers
+	{
+		public static int GetImageCoordinate(int width, int x, int y)
 		{
-			return $"{c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2")}";
+
+			return 0;
 		}
 	}
 }

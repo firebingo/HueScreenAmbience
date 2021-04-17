@@ -1,19 +1,19 @@
-﻿using Q42.HueApi;
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.IO;
+using Q42.HueApi;
 using Q42.HueApi.ColorConverters;
 using Q42.HueApi.Interfaces;
 using Q42.HueApi.Models.Bridge;
 using Q42.HueApi.Models.Groups;
 using Q42.HueApi.ColorConverters.HSB;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Threading.Tasks;
 using Q42.HueApi.Streaming;
 using Q42.HueApi.Streaming.Models;
-using System.Threading;
 using Q42.HueApi.Streaming.Extensions;
-using ImageMagick;
 using Q42.HueApi.Streaming.Effects;
 
 namespace HueScreenAmbience.Hue
@@ -266,7 +266,7 @@ namespace HueScreenAmbience.Hue
 			{
 				TransitionTime = _frameTimeSpan
 			};
-			command.SetColor(new RGBColor(Helpers.ColorToHex(c)));
+			command.SetColor(new RGBColor(ColorHelper.ColorToHex(c)));
 			_sendingCommand = true;
 			try
 			{
@@ -280,7 +280,7 @@ namespace HueScreenAmbience.Hue
 			_sendingCommand = false;
 		}
 
-		public void UpdateEntertainmentGroupFromImage(IUnsafePixelCollection<byte> pixels, int width, int height)
+		public void UpdateEntertainmentGroupFromImage(MemoryStream image, int width, int height)
 		{
 			try
 			{
@@ -293,10 +293,10 @@ namespace HueScreenAmbience.Hue
 				var start = DateTime.UtcNow;
 				var (x, y) = (0, 0);
 				Color c;
-				IPixel<byte> pix;
 				foreach (var light in _streamBaseLayer)
 				{
 					(x, y) = MapLightLocationToImage(light.LightLocation, width, height);
+					pixels.Seek();
 					pix = pixels[x, y];
 					var min = _config.Model.hueSettings.minColorValue;
 					var max = _config.Model.hueSettings.maxColorValue;
@@ -327,8 +327,8 @@ namespace HueScreenAmbience.Hue
 						c = Color.FromArgb(255, (byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
 						_lastLightColors.Add(light.Id, c);
 					}
-					
-					light.SetState(_cancelToken, new RGBColor(Helpers.ColorToHex(c)), 1.0);
+
+					light.SetState(_cancelToken, new RGBColor(ColorHelper.ColorToHex(c)), 1.0);
 				}
 
 				_streamClient.ManualUpdate(_streamGroup);

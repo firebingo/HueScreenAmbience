@@ -59,5 +59,10 @@ namespace HueScreenAmbience
 			var newSat = Math.Min(1.0f, hsv.S * saturate);
 			return HSVColor.ColorFromHSV(hsv.H, newSat, hsv.V);
 		}
+
+		public static string ColorToHex(Color c)
+		{
+			return $"{c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2")}";
+		}
 	}
 }
