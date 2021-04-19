@@ -1,5 +1,4 @@
-﻿//using ImageMagick;
-using ImageMagickProcessor;
+﻿using BitmapZoneProcessor;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -128,9 +127,9 @@ namespace HueScreenAmbience
 
 	public class ZoneProcessSettings
 	{
-		public float resizeScale = 16.0f;
-		public float resizeSigma = 0.45f;
-		public FilterType resizeFilter = FilterType.Gaussian;
+		public float resizeScale = 4.0f;
+		public float resizeSigma = 0.75f;
+		public ImageFilter resizeFilter = ImageFilter.Gaussian;
 	}
 
 	public class RGBDeviceSettings
@@ -182,6 +181,7 @@ namespace HueScreenAmbience
 	public class PiCameraSettings
 	{
 		public bool isPi = false;
+		public bool lightsLocal = false;
 		public int width = 1280;
 		public int height = 720;
 		public int frameRate = 30;

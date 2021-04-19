@@ -1,6 +1,4 @@
-﻿//using ImageMagick;
-using ImageMagickProcessor;
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -12,6 +10,7 @@ namespace BitmapZoneProcessor
 	{
 		public static bool ReadBitmap(int width, int height, float readResolutionReduce, int zoneRows, int zoneColumns, int pixelCount, ReadPixel[] readPixels, ref Bitmap bmp, ref PixelZone[] zones, bool disposeBitmapOnChange = true, Rectangle? bitmapRect = null)
 		{
+			var start = DateTime.UtcNow;
 			bool bitmapChanged = false;
 			//Reset zones
 			foreach (var zone in zones)
@@ -70,7 +69,7 @@ namespace BitmapZoneProcessor
 
 			unsafe
 			{
-				//var t1 = DateTime.UtcNow;
+				var t1 = DateTime.UtcNow;
 				//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
 
 				var totalSize = readPixels.Length;
@@ -146,23 +145,19 @@ namespace BitmapZoneProcessor
 					}
 				}
 
-				//t2 = DateTime.UtcNow;
-				//Console.WriteLine($"Read Bitmap Time:  {(t2 - t1).TotalMilliseconds}");
+				//Console.WriteLine($"Read Bitmap Time:  {(DateTime.UtcNow - t1).TotalMilliseconds}");
 			}
 			bmp.UnlockBits(srcData);
 			return bitmapChanged;
 		}
 
-		public static async Task<(MemoryStream image, MemoryStream blurImage)> PreparePostBitmap(PixelZone[] zones, int columns, int rows, int newWidth, int newHeight, FilterType resizeFilter, float resizeSigma, MemoryStream smallImageMemStream, MemoryStream blurImageMemStream)
+		public static (MemoryStream image, MemoryStream blurImage) PreparePostBitmap(PixelZone[] zones, int columns, int rows, int newWidth, int newHeight, ImageFilter resizeFilter, float resizeSigma, MemoryStream smallImageMemStream, MemoryStream blurImageMemStream)
 		{
 			try
 			{
-				//var newWidth = (int)Math.Floor(columns * resizeScale);
-				//var newHeight = (int)Math.Floor(rows * resizeScale);
+				var image = ImageHandler.CreateSmallImageFromZones(zones, smallImageMemStream);
 
-				var image = ImageHandler.CreateSmallImageFromZones(zones, columns, rows, smallImageMemStream);
-
-				var blurImage = await ImageHandler.ResizeImage(image,
+				var blurImage = ImageHandler.ResizeImage(image,
 					columns,
 					rows,
 					blurImageMemStream,

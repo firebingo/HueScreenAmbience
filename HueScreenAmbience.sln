@@ -13,8 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LightStripClient", "LightSt
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LightStripCalculator", "LightStripCalculator\LightStripCalculator.csproj", "{53F529FB-A669-441F-9C6E-B50D1961E68B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageMagickProcessor", "ImageMagickProcessor\ImageMagickProcessor.csproj", "{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -75,18 +73,6 @@ Global
 		{53F529FB-A669-441F-9C6E-B50D1961E68B}.Release|ARM.ActiveCfg = Release|x64
 		{53F529FB-A669-441F-9C6E-B50D1961E68B}.Release|x64.ActiveCfg = Release|x64
 		{53F529FB-A669-441F-9C6E-B50D1961E68B}.Release|x64.Build.0 = Release|x64
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Debug|ARM.ActiveCfg = Debug|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Debug|ARM.Build.0 = Debug|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Debug|x64.Build.0 = Debug|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Release|ARM.ActiveCfg = Release|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Release|ARM.Build.0 = Release|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Release|x64.ActiveCfg = Release|Any CPU
-		{3DA35ADA-3322-45D3-9E6A-54B9C94FA0E6}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

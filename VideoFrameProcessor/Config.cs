@@ -1,4 +1,4 @@
-﻿using ImageMagick;
+﻿using BitmapZoneProcessor;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -70,7 +70,7 @@ namespace VideoFrameProcessor
 		public int ZoneRows { get; set; } = 1;
 		public float ResizeScale { get; set; } = 16.0f;
 		public float ResizeSigma { get; set; } = 0.45f;
-		public FilterType ResizeFilter { get; set; } = FilterType.Gaussian;
+		public ImageFilter ResizeFilter { get; set; } = ImageFilter.Gaussian;
 		public float ReadResolutionReduce { get; set; } = 2.0f;
 	}
 }

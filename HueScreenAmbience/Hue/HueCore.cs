@@ -296,13 +296,12 @@ namespace HueScreenAmbience.Hue
 				foreach (var light in _streamBaseLayer)
 				{
 					(x, y) = MapLightLocationToImage(light.LightLocation, width, height);
-					pixels.Seek();
-					pix = pixels[x, y];
+					image.Seek(Helpers.GetImageCoordinate(width, x, y), SeekOrigin.Begin);
 					var min = _config.Model.hueSettings.minColorValue;
 					var max = _config.Model.hueSettings.maxColorValue;
-					var r = Math.Floor(pix.GetChannel(0) * _config.Model.hueSettings.colorMultiplier);
-					var g = Math.Floor(pix.GetChannel(1) * _config.Model.hueSettings.colorMultiplier);
-					var b = Math.Floor(pix.GetChannel(2) * _config.Model.hueSettings.colorMultiplier);
+					var r = Math.Floor(image.ReadByte() * _config.Model.hueSettings.colorMultiplier);
+					var g = Math.Floor(image.ReadByte() * _config.Model.hueSettings.colorMultiplier);
+					var b = Math.Floor(image.ReadByte() * _config.Model.hueSettings.colorMultiplier);
 					if (_lastLightColors.ContainsKey(light.Id))
 					{
 						var lastColor = _lastLightColors[light.Id];

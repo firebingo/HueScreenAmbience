@@ -189,6 +189,7 @@ namespace HueScreenAmbience
 				try
 				{
 					var start = DateTime.UtcNow;
+					var t = start;
 					//Do not dispose this bitmap as DxCapture uses the same bitmap every loop to save allocation.
 					if (_config.Model.piCameraSettings.isPi)
 						bmp = await _piCapture.GetFrame();
@@ -204,18 +205,25 @@ namespace HueScreenAmbience
 						{
 							long rf = _frame;
 							_lastPostReadTime = DateTime.UtcNow;
-							_zoneProcesser.PostRead(_zones, ScreenInfo.Width, ScreenInfo.Height, rf);
+							await _zoneProcesser.PostRead(_zones, ScreenInfo.Width, ScreenInfo.Height, rf);
 							_frame++;
 						}
 						continue;
 					}
 
+					//Console.WriteLine($"Capture Time:     {(DateTime.UtcNow - t).TotalMilliseconds}");
+					t = DateTime.UtcNow;
+
 					bitmapChanged = BitmapProcessor.ReadBitmap(ScreenInfo.Width, ScreenInfo.Height, ScreenInfo.SizeReduction, _config.Model.zoneRows, _config.Model.zoneColumns, _config.Model.pixelCount, _pixelsToRead, ref bmp, ref _zones, false, _config.Model.bitmapRect);
 
 					//Console.WriteLine($"Read Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
+					t = DateTime.UtcNow;
+
 					long f = _frame;
 					_lastPostReadTime = DateTime.UtcNow;
-					_zoneProcesser.PostRead(_zones, ScreenInfo.Width, ScreenInfo.Height, f);
+					await _zoneProcesser.PostRead(_zones, ScreenInfo.Width, ScreenInfo.Height, f);
+
+					//Console.WriteLine($"PostRead Time:    {(DateTime.UtcNow - t).TotalMilliseconds}");
 
 					var dt = DateTime.UtcNow - start;
 					if (++_averageIter >= _averageValues.Length)

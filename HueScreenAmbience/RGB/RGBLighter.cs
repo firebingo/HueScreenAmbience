@@ -7,7 +7,6 @@ using RGB.NET.Devices.Logitech;
 using RGB.NET.Devices.Asus;
 using System;
 using System.Threading.Tasks;
-using ImageMagick;
 using System.Linq;
 using System.IO;
 using BitmapZoneProcessor;
@@ -19,14 +18,16 @@ namespace HueScreenAmbience.RGB
 		private readonly RGBSurface _surface;
 		private FileLogger _logger;
 		private Config _config;
-		private MemoryStream imageByteStream;
+		private MemoryStream _imageByteStream;
 		private DateTime _lastChangeTime;
 		private TimeSpan _frameTimeSpan;
 		private bool _started = false;
 		private byte _colorChangeThreshold = 5;
+		private readonly int[] _colors;
 
 		public RGBLighter()
 		{
+			_colors = new int[] { 0, 0, 0 };
 			_surface = RGBSurface.Instance;
 			_surface.Exception += Surface_Exception;
 		}
@@ -46,7 +47,6 @@ namespace HueScreenAmbience.RGB
 
 				_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.rgbDeviceSettings.updateFrameRate);
 				_colorChangeThreshold = _config.Model.rgbDeviceSettings.colorChangeThreshold;
-				imageByteStream = new MemoryStream();
 				LoadDevices();
 				_started = true;
 			}
@@ -111,7 +111,7 @@ namespace HueScreenAmbience.RGB
 			}
 		}
 
-		public void UpdateFromImage(System.Drawing.Color averageColor, MagickImage image)
+		public void UpdateFromImage(System.Drawing.Color averageColor, MemoryStream image, int width, int height)
 		{
 			try
 			{
@@ -120,62 +120,63 @@ namespace HueScreenAmbience.RGB
 
 				var start = DateTime.UtcNow;
 				var red = _config.Model.rgbDeviceSettings.keyboardResReduce;
-				unsafe
+
+				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Keyboard))
 				{
-					int* colors = stackalloc int[] { 0, 0, 0 };
-					//byte[] bytes;
-					foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Keyboard))
+
+					//I am sampling the image by half the given dimensions because the rgb.net layouts width/height are not physical key dimensions and I dont need the extra accuracy here.
+					// It is better to reduce the footprint created by doing this to try and help the gc.
+					var newWidth = (int)Math.Floor(device.DeviceRectangle.Size.Width / red);
+					var newHeight = (int)Math.Floor(device.DeviceRectangle.Size.Height / red);
+					if (_imageByteStream == null)
+						_imageByteStream = new MemoryStream(newWidth * newHeight * 3);
+
+					_imageByteStream.Seek(0, SeekOrigin.Begin);
+					var resizeImage = ImageHandler.ResizeImage(image, width, height, _imageByteStream, newWidth, newHeight);
+
+					int count = 0;
+					var sampleX = 0;
+					var sampleY = 0;
+					var pixIndex = 0;
+					var stride = newWidth * 3;
+					var r = 0;
+					var g = 0;
+					var b = 0;
+					//Get the colors for the whole size of the key so we can average the whole key instead of just sampling its center.
+					foreach (var key in device)
 					{
-						imageByteStream.Seek(0, SeekOrigin.Begin);
-						//I am sampling the image by half the given dimensions because the rgb.net layouts width/height are not physical key dimensions and I dont need the extra accuracy here.
-						// It is better to reduce the footprint created by doing this to try and help the gc.
-						using var resizeImage = ImageHandler.ResizeImage(image, (int)device.DeviceRectangle.Size.Width / red, (int)device.DeviceRectangle.Size.Height / red);
-						resizeImage.Write(imageByteStream);
-
-						int count = 0;
-						var sampleX = 0;
-						var sampleY = 0;
-						var pixIndex = 0;
-						var stride = resizeImage.Width * 3;
-						var r = 0;
-						var g = 0;
-						var b = 0;
-						//Get the colors for the whole size of the key so we can average the whole key instead of just sampling its center.
-						foreach (var key in device)
+						_colors[0] = 0;
+						_colors[1] = 0;
+						_colors[2] = 0;
+						count = 0;
+						for (var y = 0; y < key.LedRectangle.Size.Height / red; ++y)
 						{
-							colors[0] = 0;
-							colors[1] = 0;
-							colors[2] = 0;
-							count = 0;
-							for (var y = 0; y < key.LedRectangle.Size.Height / red; ++y)
+							for (var x = 0; x < key.LedRectangle.Size.Width / red; ++x)
 							{
-								for (var x = 0; x < key.LedRectangle.Size.Width / red; ++x)
-								{
-									sampleX = (int)Math.Floor(key.LedRectangle.Location.X / red + x);
-									sampleY = (int)Math.Floor(key.LedRectangle.Location.Y / red + y);
-									pixIndex = (sampleY * stride) + sampleX * 3;
-									imageByteStream.Seek(pixIndex, SeekOrigin.Begin);
-									colors[0] += imageByteStream.ReadByte();
-									colors[1] += imageByteStream.ReadByte();
-									colors[2] += imageByteStream.ReadByte();
-									count++;
-								}
+								sampleX = (int)Math.Floor(key.LedRectangle.Location.X / red + x);
+								sampleY = (int)Math.Floor(key.LedRectangle.Location.Y / red + y);
+								pixIndex = (sampleY * stride) + sampleX * 3;
+								_imageByteStream.Seek(pixIndex, SeekOrigin.Begin);
+								_colors[0] += _imageByteStream.ReadByte();
+								_colors[1] += _imageByteStream.ReadByte();
+								_colors[2] += _imageByteStream.ReadByte();
+								count++;
 							}
+						}
 
-							r = (int)Math.Floor((colors[0] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
-							g = (int)Math.Floor((colors[1] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
-							b = (int)Math.Floor((colors[2] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
-							var lastColorR = key.Color.R * 255;
-							var lastColorG = key.Color.G * 255;
-							var lastColorB = key.Color.B * 255;
-							//Only set the key color if it has changed enough.
-							//This is to hopefully slow down the amount of allocations needed for the RGB.Net Color.
-							if (!(lastColorR >= r - _colorChangeThreshold && lastColorR <= r + _colorChangeThreshold &&
-								lastColorG >= g - _colorChangeThreshold && lastColorG <= g + _colorChangeThreshold &&
-								lastColorB >= b - _colorChangeThreshold && lastColorB <= b + _colorChangeThreshold))
-							{
-								key.Color = new Color(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
-							}
+						r = (int)Math.Floor((_colors[0] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
+						g = (int)Math.Floor((_colors[1] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
+						b = (int)Math.Floor((_colors[2] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
+						var lastColorR = key.Color.R * 255;
+						var lastColorG = key.Color.G * 255;
+						var lastColorB = key.Color.B * 255;
+						//Only set the key color if it has changed enough.
+						//This is to hopefully slow down the amount of allocations needed for the RGB.Net Color.
+						if (!(lastColorR >= r - _colorChangeThreshold && lastColorR <= r + _colorChangeThreshold &&
+							lastColorG >= g - _colorChangeThreshold && lastColorG <= g + _colorChangeThreshold &&
+							lastColorB >= b - _colorChangeThreshold && lastColorB <= b + _colorChangeThreshold))
+						{
+							key.Color = new Color(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
 						}
 					}
 				}
@@ -236,8 +237,8 @@ namespace HueScreenAmbience.RGB
 				}
 			}
 
-			imageByteStream?.Dispose();
-			imageByteStream = null;
+			_imageByteStream?.Dispose();
+			_imageByteStream = null;
 			_surface.Exception -= Surface_Exception;
 			_surface?.Dispose();
 			_started = false;

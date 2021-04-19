@@ -14,7 +14,6 @@ namespace HueScreenAmbience
 {
 	public class ZoneProcessor
 	{
-		private bool _processingFrame;
 		private MemoryStream _smallImageMemStream;
 		private MemoryStream _blurImageMemStream;
 		private MemoryStream _hueImageMemStream;
@@ -38,10 +37,6 @@ namespace HueScreenAmbience
 
 		public async Task PostRead(PixelZone[] zones, int width, int height, long frame)
 		{
-			if (_processingFrame)
-				return;
-			_processingFrame = true;
-
 			(MemoryStream image, MemoryStream blurImage) images = (null, null);
 			var columns = zones.OrderByDescending(x => x.Column).First().Column + 1;
 			var rows = zones.OrderByDescending(x => x.Row).First().Row + 1;
@@ -76,7 +71,9 @@ namespace HueScreenAmbience
 
 				time = DateTime.UtcNow;
 
-				images = await BitmapProcessor.PreparePostBitmap(zones, columns, rows, newWidth, newHeight, _config.Model.zoneProcessSettings.resizeFilter, _config.Model.zoneProcessSettings.resizeSigma, _smallImageMemStream, _blurImageMemStream);
+				images = BitmapProcessor.PreparePostBitmap(zones, columns, rows, newWidth, newHeight, _config.Model.zoneProcessSettings.resizeFilter, _config.Model.zoneProcessSettings.resizeSigma, _smallImageMemStream, _blurImageMemStream);
+
+				//Console.WriteLine($"PreparePostBitmap Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
 				if (images.image == null)
 				{
@@ -121,7 +118,6 @@ namespace HueScreenAmbience
 					await _blurImageMemStream.CopyToAsync(_lstripImageMemStream);
 					processingTasks.Add(Task.Run(() =>
 					{
-
 						_stripLighter.UpdateFromImage(_lstripImageMemStream, newWidth, newHeight, frame);
 					}));
 				}
@@ -147,9 +143,8 @@ namespace HueScreenAmbience
 					{
 						time = DateTime.UtcNow;
 						var path = Path.Combine(_config.Model.imageDumpLocation, $"{frame.ToString().PadLeft(6, '0')}.png");
-						using var writeStream = File.OpenWrite(path);
-						using var resizeImage = ImageHandler.ResizeImage(images.image, width, height);
-						images.blurImage.Write(writeStream, MagickFormat.Png);
+						//_ = ImageHandler.WriteImageToFile(images.image, columns, rows, path, width, height);
+						_ = ImageHandler.WriteImageToFile(images.blurImage, newWidth, newHeight, path);
 						//Console.WriteLine($"PostRead writeStream Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 					}
 					catch (Exception ex)
@@ -168,12 +163,11 @@ namespace HueScreenAmbience
 			}
 			finally
 			{
-				_blurImageMemStream.Seek(0, SeekOrigin.Begin);
-				_smallImageMemStream.Seek(0, SeekOrigin.Begin);
-				_hueImageMemStream.Seek(0, SeekOrigin.Begin);
-				_rgbImageMemStream.Seek(0, SeekOrigin.Begin);
-				_lstripImageMemStream.Seek(0, SeekOrigin.Begin);
-				_processingFrame = false;
+				_blurImageMemStream?.Seek(0, SeekOrigin.Begin);
+				_smallImageMemStream?.Seek(0, SeekOrigin.Begin);
+				_hueImageMemStream?.Seek(0, SeekOrigin.Begin);
+				_rgbImageMemStream?.Seek(0, SeekOrigin.Begin);
+				_lstripImageMemStream?.Seek(0, SeekOrigin.Begin);
 			}
 		}
 	}

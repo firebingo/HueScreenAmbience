@@ -11,7 +11,7 @@ namespace VideoFrameProcessor
 	{
 		public static async Task ProcessFrame(Config config, MemoryStream stream, int frame, int frameLength, int width, int height, string outPath)
 		{
-			Bitmap bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+			var bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
 			try
 			{
 				stream.Seek(0, SeekOrigin.Begin);
@@ -37,13 +37,18 @@ namespace VideoFrameProcessor
 					zone.CalculateAverages();
 				}
 
-				var (image, blurImage) = BitmapProcessor.PreparePostBitmap(zones, config.Model.ZoneColumns, config.Model.ZoneRows, config.Model.ResizeScale, config.Model.ResizeFilter, config.Model.ResizeSigma, null);
-				using var fileStream = File.Open(Path.Combine(outPath, $"out{frame.ToString().PadLeft(6, '0')}.png"), FileMode.OpenOrCreate, FileAccess.Write);
-				await blurImage.WriteAsync(fileStream, ImageMagick.MagickFormat.Png);
+				var newWidth = (int)Math.Floor(config.Model.ZoneColumns * config.Model.ResizeScale);
+				var newHeight = (int)Math.Floor(config.Model.ZoneRows * config.Model.ResizeScale);
+
+				var image = new MemoryStream(config.Model.ZoneColumns * config.Model.ZoneRows * 3);
+				var blurImage = new MemoryStream(newWidth * newHeight * 3);
+
+				(image, blurImage) = BitmapProcessor.PreparePostBitmap(zones, config.Model.ZoneColumns, config.Model.ZoneRows, newWidth, newHeight, config.Model.ResizeFilter, config.Model.ResizeSigma, image, blurImage);
+				await ImageHandler.WriteImageToFile(blurImage, newWidth, newHeight, Path.Combine(outPath, $"out{frame.ToString().PadLeft(6, '0')}.png"));
 				blurImage.Dispose();
 				image.Dispose();
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				Console.WriteLine(ex);
 			}

@@ -1,14 +1,10 @@
-﻿using System.Drawing;
-using System.IO;
-
-namespace HueScreenAmbience
+﻿namespace HueScreenAmbience
 {
 	public static class Helpers
 	{
-		public static int GetImageCoordinate(int width, int x, int y)
+		public static int GetImageCoordinate(int stride, int x, int y, int bitDepth = 3)
 		{
-
-			return 0;
+			return (y * stride) + x * bitDepth;
 		}
 	}
 }

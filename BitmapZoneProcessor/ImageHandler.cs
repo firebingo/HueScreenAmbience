@@ -1,20 +1,32 @@
-﻿using BitmapZoneProcessor;
-//using ImageMagick;
-using ImageMagickProcessor;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace BitmapZoneProcessor
 {
+	public enum ImageFilter
+	{
+		Point = 0,
+		Bilinear = 1,
+		Gaussian = 2
+	}
+
 	public static class ImageHandler
 	{
+		private static readonly ConcurrentDictionary<string, ResizeOptions> _resizeOptionCache;
+
+		static ImageHandler()
+		{
+			_resizeOptionCache = new ConcurrentDictionary<string, ResizeOptions>();
+		}
+
 		public static Bitmap ResizeBitmapImage(Bitmap bmp, int width, int height)
 		{
 			Bitmap result = new Bitmap(width, height);
@@ -26,13 +38,13 @@ namespace BitmapZoneProcessor
 			return result;
 		}
 
-		public static Bitmap CropBitmapRect(Bitmap bmp, Rectangle rect)
+		public static Bitmap CropBitmapRect(Bitmap bmp, System.Drawing.Rectangle rect)
 		{
 			PixelFormat format = bmp.PixelFormat;
 			return bmp.Clone(rect, format);
 		}
 
-		public static MemoryStream CreateSmallImageFromZones(PixelZone[] zones, int columns, int rows, MemoryStream memStream)
+		public static MemoryStream CreateSmallImageFromZones(PixelZone[] zones, MemoryStream memStream)
 		{
 			if (memStream == null)
 				memStream = new MemoryStream();
@@ -48,135 +60,61 @@ namespace BitmapZoneProcessor
 
 			return memStream;
 		}
-
-		//public static MagickImage CreateSmallImageFromZones(PixelZone[] zones, int columns, int rows, MemoryStream memStream = null)
-		//{
-		//	var memStreamExists = false;
-		//	if (memStream == null)
-		//		memStream = new MemoryStream();
-		//	else
-		//		memStreamExists = true;
-		//	using var binaryWriter = new BinaryWriter(memStream, Encoding.Default, memStreamExists);
-		//
-		//	for (var i = 0; i < zones.Length; ++i)
-		//	{
-		//		binaryWriter.Write(zones[i].AvgR);
-		//		binaryWriter.Write(zones[i].AvgG);
-		//		binaryWriter.Write(zones[i].AvgB);
-		//	}
-		//
-		//	memStream.Seek(0, SeekOrigin.Begin);
-		//
-		//	var settings = new MagickReadSettings
-		//	{
-		//		Width = columns,
-		//		Height = rows,
-		//		Depth = 8,
-		//		Format = MagickFormat.Rgb,
-		//		Compression = CompressionMethod.NoCompression
-		//	};
-		//	var image = new MagickImage(memStream, settings);
-		//
-		//	if (!memStreamExists)
-		//		memStream.Dispose();
-		//
-		//	return image;
-		//}
-
-		//public static MagickImage CreateImageFromZones(PixelZone[] zones, int width, int height, MemoryStream memStream = null)
-		//{
-		//	//var start = DateTime.UtcNow;
-		//	var memStreamExists = false;
-		//	if (memStream == null)
-		//		memStream = new MemoryStream();
-		//	else
-		//		memStreamExists = true;
-		//	using var binaryWriter = new BinaryWriter(memStream, Encoding.Default, memStreamExists);
-		//
-		//	ConcurrentDictionary<int, byte[]> bytes = new ConcurrentDictionary<int, byte[]>();
-		//	Parallel.For(0, height, y =>
-		//	{
-		//		var currentZone = 0;
-		//		//Get the zone index for the current scanline
-		//		for (var i = 0; i < zones.Length; ++i)
-		//		{
-		//			if (zones[i].IsCoordInZone(0, y))
-		//			{
-		//				currentZone = i;
-		//				break;
-		//			}
-		//		}
-		//		bytes.TryAdd(y, new byte[width * 3]);
-		//		var scan = bytes[y];
-		//		var iter = 0;
-		//		for (var x = 0; x < width; ++x)
-		//		{
-		//			if (x > zones[currentZone].BottomRight.X)
-		//				currentZone++;
-		//			scan[iter] = zones[currentZone].AvgR;
-		//			scan[iter + 1] = zones[currentZone].AvgG;
-		//			scan[iter + 2] = zones[currentZone].AvgB;
-		//			iter += 3;
-		//		}
-		//	});
-		//	foreach (var b in bytes.OrderBy(x => x.Key))
-		//	{
-		//		binaryWriter.Write(b.Value);
-		//	}
-		//
-		//	//var t1 = DateTime.UtcNow;
-		//	//Console.WriteLine($"Zone Loop Time: {(DateTime.UtcNow - start).TotalMilliseconds}");
-		//
-		//	memStream.Seek(0, SeekOrigin.Begin);
-		//
-		//	var settings = new MagickReadSettings
-		//	{
-		//		Width = width,
-		//		Height = height,
-		//		Depth = 8,
-		//		Format = MagickFormat.Rgb,
-		//		Compression = CompressionMethod.NoCompression
-		//	};
-		//	var image = new MagickImage(memStream, settings);
-		//
-		//	//Console.WriteLine($"Image Build Time: {(DateTime.UtcNow - t1).TotalMilliseconds}");
-		//
-		//	if (!memStreamExists)
-		//		memStream.Dispose();
-		//
-		//	return image;
-		//}
-
-		public static async Task<MemoryStream> ResizeImage(MemoryStream image, int width, int height, MemoryStream newImage, int newWidth, int newHeight, FilterType filter = FilterType.Point, double sigma = 0.5)
+		public static MemoryStream ResizeImage(MemoryStream image, int width, int height, MemoryStream newImage, int newWidth, int newHeight, ImageFilter filter = ImageFilter.Point, double sigma = 0.5)
 		{
-			return await MagickProcessor.ResizeImage(image, width, height, newImage, newWidth, newHeight, filter, sigma);
+			var resizeKey = $"{newWidth}{newHeight}{filter}{sigma}";
+			if (!_resizeOptionCache.TryGetValue(resizeKey, out var options))
+			{
+				options = new ResizeOptions()
+				{
+					Size = new SixLabors.ImageSharp.Size(newWidth, newHeight),
+					Mode = ResizeMode.Manual,
+					Sampler = ImageFilterToResampler(filter),
+					TargetRectangle = new SixLabors.ImageSharp.Rectangle(0, 0, newWidth, newHeight),
+					Compand = false
+				};
+				_resizeOptionCache.TryAdd(resizeKey, options);
+			}
+			image.Seek(0, SeekOrigin.Begin);
+			var simage = SixLabors.ImageSharp.Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height);
+			switch (filter)
+			{
+				case ImageFilter.Gaussian:
+					simage.Mutate(x => x.Resize(options));
+					simage.Mutate(x => x.GaussianBlur((float)sigma));
+					break;
+				default:
+					simage.Mutate(x => x.Resize(options));
+					break;
+			}
+			if (simage.TryGetSinglePixelSpan(out var pixelSpan))
+			{
+				newImage.Seek(0, SeekOrigin.Begin);
+				newImage.Write(MemoryMarshal.AsBytes(pixelSpan));
+			}
+
+			simage.Dispose();
+			return newImage;
 		}
 
-		//public static MagickImage ResizeImage(MagickImage image, int width, int height, FilterType filter = FilterType.Point, double sigma = 0.5)
-		//{
-		//	var newImage = new MagickImage(image)
-		//	{
-		//		FilterType = filter
-		//	};
-		//	var geo = new MagickGeometry(width, height)
-		//	{
-		//		IgnoreAspectRatio = true,
-		//		FillArea = true
-		//	};
-		//	newImage.SetArtifact("filter:sigma", sigma.ToString());
-		//	newImage.Resize(geo);
-		//	return newImage;
-		//}
+		public static IResampler ImageFilterToResampler(ImageFilter filter)
+		{
+			return filter switch
+			{
+				ImageFilter.Bilinear => KnownResamplers.Triangle,
+				_ => KnownResamplers.NearestNeighbor
+			};
+		}
 
-		//public static void DumpZonesToImage(PixelZone[] zones, int width, int height, string imageName, string imageDumpLocation)
-		//{
-		//	var image = CreateImageFromZones(zones, width, height);
-		//
-		//	//var start = DateTime.UtcNow;
-		//	image.Write(Path.Combine(imageDumpLocation, imageName), MagickFormat.Png);
-		//	//Console.WriteLine($"Image Write Time: {(DateTime.UtcNow - start).TotalMilliseconds}");
-		//
-		//	image.Dispose();
-		//}
+		public static async Task WriteImageToFile(MemoryStream image, int width, int height, string path, int? resizeWidth = null, int? resizeHeight = null)
+		{
+			image.Seek(0, SeekOrigin.Begin);
+			var simage = SixLabors.ImageSharp.Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height);
+			if (resizeWidth.HasValue && resizeHeight.HasValue)
+				simage.Mutate(x => x.Resize(resizeWidth.Value, resizeHeight.Value, KnownResamplers.NearestNeighbor));
+
+			await simage.SaveAsPngAsync(path);
+			simage.Dispose();
+		}
 	}
 }

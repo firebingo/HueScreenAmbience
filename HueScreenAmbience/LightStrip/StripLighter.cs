@@ -1,5 +1,4 @@
-﻿using ImageMagick;
-using Iot.Device.Ws28xx;
+﻿using Iot.Device.Ws28xx;
 using System;
 using System.Collections.Generic;
 using System.Device.Spi;
@@ -9,7 +8,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace HueScreenAmbience.LightStrip
@@ -204,7 +202,7 @@ namespace HueScreenAmbience.LightStrip
 			_updating = false;
 		}
 
-		public void UpdateFromImage(IUnsafePixelCollection<byte> pixels, int width, int height, long frame)
+		public void UpdateFromImage(MemoryStream image, int width, int height, long frame)
 		{
 			try
 			{
@@ -219,10 +217,10 @@ namespace HueScreenAmbience.LightStrip
 					return;
 
 				_updating = true;
-				if (_config.Model.piCameraSettings.isPi)
-					UpdateImagePi(pixels, width, height, frame);
+				if (_config.Model.piCameraSettings.isPi && _config.Model.piCameraSettings.lightsLocal)
+					UpdateImagePi(image, width, height, frame);
 				else
-					UpdateImageServer(pixels, width, height, frame);
+					UpdateImageServer(image, width, height, frame);
 
 				//Console.WriteLine($"StripLighter UpdateFromImage Time: {(_lastChangeTime - start).TotalMilliseconds}");
 			}
@@ -234,12 +232,12 @@ namespace HueScreenAmbience.LightStrip
 			_updating = false;
 		}
 
-		public void UpdateImageServer(IUnsafePixelCollection<byte> pixels, int width, int height, long frame)
+		public void UpdateImageServer(MemoryStream image, int width, int height, long frame)
 		{
 			SerializeLightMetadata(frame);
 			foreach (var light in _lights)
 			{
-				UpdateLightColor(pixels, light, width, height);
+				UpdateLightColor(image, light, width, height);
 				SerializeLightColor(light.Color);
 			}
 
@@ -255,17 +253,17 @@ namespace HueScreenAmbience.LightStrip
 			_lastChangeTime = DateTime.UtcNow;
 		}
 
-		public void UpdateImagePi(IUnsafePixelCollection<byte> pixels, int width, int height, long frame)
+		public void UpdateImagePi(MemoryStream image, int width, int height, long frame)
 		{
 			for (var i = 0; i < _lights.Count; ++i)
 			{
-				UpdateLightColor(pixels, _lights[i], width, height);
+				UpdateLightColor(image, _lights[i], width, height);
 				_lightStrip?.Image?.SetPixel(i, 0, _lights[i].Color);
 			}
 			_lightStrip?.Update();
 		}
 
-		public void UpdateLightColor(IUnsafePixelCollection<byte> pixels, StripLighterLight light, int width, int height)
+		public void UpdateLightColor(MemoryStream image, StripLighterLight light, int width, int height)
 		{
 			int x;
 			int y;
@@ -281,9 +279,10 @@ namespace HueScreenAmbience.LightStrip
 				light.CacheLocation = new Point(x, y);
 			}
 
-			var r = Math.Floor(pixels[x, y].GetChannel(0) * _config.Model.lightStripSettings.colorMultiplier);
-			var g = Math.Floor(pixels[x, y].GetChannel(1) * _config.Model.lightStripSettings.colorMultiplier);
-			var b = Math.Floor(pixels[x, y].GetChannel(2) * _config.Model.lightStripSettings.colorMultiplier);
+			image.Seek(Helpers.GetImageCoordinate(width, x, y), SeekOrigin.Begin);
+			var r = Math.Floor(image.ReadByte() * _config.Model.lightStripSettings.colorMultiplier);
+			var g = Math.Floor(image.ReadByte() * _config.Model.lightStripSettings.colorMultiplier);
+			var b = Math.Floor(image.ReadByte() * _config.Model.lightStripSettings.colorMultiplier);
 			if (light.LastColor.HasValue)
 			{
 				var blendAmount = 1.0f - _config.Model.lightStripSettings.blendLastColorAmount;
