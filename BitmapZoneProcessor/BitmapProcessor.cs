@@ -2,7 +2,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Threading.Tasks;
 
 namespace BitmapZoneProcessor
 {
@@ -22,8 +21,8 @@ namespace BitmapZoneProcessor
 				zone.ResetAverages();
 			}
 
-			if (bmp.PixelFormat != PixelFormat.Format32bppArgb && bmp.PixelFormat != PixelFormat.Format24bppRgb)
-				throw new Exception("Bitmap must be either 32bppArgb or 24bppRgb");
+			if (bmp.PixelFormat != PixelFormat.Format32bppArgb && bmp.PixelFormat != PixelFormat.Format24bppRgb && bmp.PixelFormat != PixelFormat.Format32bppRgb)
+				throw new Exception("Bitmap must be either 32bppArgb, 32bppRgb, or 24bppRgb");
 
 			if (bitmapRect.HasValue)
 			{
@@ -47,7 +46,7 @@ namespace BitmapZoneProcessor
 				if (disposeBitmapOnChange)
 				{
 					var oldBmp = bmp;
-					bmp = ImageHandler.CropBitmapRect(oldBmp, bitmapRect.Value);
+					bmp = ImageHandler.ResizeBitmapImage(oldBmp, width, height);
 					oldBmp.Dispose();
 				}
 				else
@@ -58,8 +57,8 @@ namespace BitmapZoneProcessor
 			}
 			//Console.WriteLine($"Resize Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 
-			//using (var fi = System.IO.File.OpenWrite($"Images/i{_frame.ToString().PadLeft(5, '0')}.png"))
-			//	bmp.Save(fi, ImageFormat.Png);
+			//using (var fi = File.OpenWrite($"Images/{DateTime.Now.Ticks.ToString().PadLeft(5, '0')}.jpeg"))
+			//	bmp.Save(fi, ImageFormat.Jpeg);
 
 			t = DateTime.UtcNow;
 			BitmapData srcData = bmp.LockBits(
@@ -73,7 +72,7 @@ namespace BitmapZoneProcessor
 				//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
 
 				var totalSize = readPixels.Length;
-				var pixLength = bmp.PixelFormat == PixelFormat.Format32bppArgb ? 4 : 3;
+				var pixLength = (bmp.PixelFormat == PixelFormat.Format32bppArgb || bmp.PixelFormat == PixelFormat.Format32bppRgb) ? 4 : 3;
 
 				byte* p = (byte*)(void*)srcData.Scan0;
 				//Colors in are bitmap format are 32bpp so 4 bytes for each color in RGBA format

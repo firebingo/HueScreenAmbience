@@ -35,7 +35,7 @@ namespace HueScreenAmbience
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
 
-		public async Task PostRead(PixelZone[] zones, int width, int height, long frame)
+		public async Task PostRead(PixelZone[] zones, long frame)
 		{
 			(MemoryStream image, MemoryStream blurImage) images = (null, null);
 			var columns = zones.OrderByDescending(x => x.Column).First().Column + 1;

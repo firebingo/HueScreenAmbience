@@ -60,6 +60,7 @@ namespace BitmapZoneProcessor
 
 			return memStream;
 		}
+
 		public static MemoryStream ResizeImage(MemoryStream image, int width, int height, MemoryStream newImage, int newWidth, int newHeight, ImageFilter filter = ImageFilter.Point, double sigma = 0.5)
 		{
 			var resizeKey = $"{newWidth}{newHeight}{filter}{sigma}";

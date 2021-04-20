@@ -186,9 +186,9 @@ namespace HueScreenAmbience
 			do
 			{
 				bool bitmapChanged = false;
+				var start = DateTime.UtcNow;
 				try
 				{
-					var start = DateTime.UtcNow;
 					var t = start;
 					//Do not dispose this bitmap as DxCapture uses the same bitmap every loop to save allocation.
 					if (_config.Model.piCameraSettings.isPi)
@@ -197,15 +197,25 @@ namespace HueScreenAmbience
 						bmp = _dxCapture.GetFrame();
 					//Console.WriteLine($"Capture Time:        {(DateTime.UtcNow - start).TotalMilliseconds}");
 					//If the bitmap is null that usually means the desktop has not been updated
+
+					//If we are on pi and have skip frames set wait until we are past the frame number before we start trying to read.
+					// This is done because initialization for the hdmi connection can take a bit before we get real frames back.
+					if (_config.Model.piCameraSettings.isPi && _frame < _config.Model.piCameraSettings.skipFrames)
+					{
+						_lastPostReadTime = DateTime.UtcNow;
+						await _zoneProcesser.PostRead(_zones, _frame);
+						_frame++;
+						continue;
+					}
+
 					if (bmp == null)
 					{
 						//If we havnt got a new frame in 2 seconds because the desktop hasnt updated send a update with the last zones anyways.
 						// If this isint done hue will eventually disconnect us because we didnt send any updates.
 						if ((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
 						{
-							long rf = _frame;
 							_lastPostReadTime = DateTime.UtcNow;
-							await _zoneProcesser.PostRead(_zones, ScreenInfo.Width, ScreenInfo.Height, rf);
+							await _zoneProcesser.PostRead(_zones, _frame);
 							_frame++;
 						}
 						continue;
@@ -221,7 +231,7 @@ namespace HueScreenAmbience
 
 					long f = _frame;
 					_lastPostReadTime = DateTime.UtcNow;
-					await _zoneProcesser.PostRead(_zones, ScreenInfo.Width, ScreenInfo.Height, f);
+					await _zoneProcesser.PostRead(_zones, f);
 
 					//Console.WriteLine($"PostRead Time:    {(DateTime.UtcNow - t).TotalMilliseconds}");
 
@@ -229,13 +239,10 @@ namespace HueScreenAmbience
 					if (++_averageIter >= _averageValues.Length)
 						_averageIter = 0;
 					_averageValues[_averageIter] = dt.TotalMilliseconds;
-					//Console.WriteLine($"Total Time:        {dt.TotalMilliseconds}");
-					//Console.WriteLine($"AverageDt:         {AverageDt}");
+					//Console.WriteLine($"Total Time:       {dt.TotalMilliseconds}");
+					//Console.WriteLine($"AverageDt:        {AverageDt}");
 					//Console.WriteLine("---------------------------------------");
 					_frame++;
-
-					if (dt.TotalMilliseconds < 1000 / _frameRate)
-						Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
 				}
 				catch (Exception ex)
 				{
@@ -252,6 +259,10 @@ namespace HueScreenAmbience
 						bmp?.Dispose();
 						bmp = null;
 					}
+
+					var dt = DateTime.UtcNow - start;
+					if (dt.TotalMilliseconds < 1000 / _frameRate)
+						Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
 				}
 			} while (IsRunning);
 		}

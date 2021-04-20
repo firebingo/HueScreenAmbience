@@ -88,7 +88,7 @@ namespace HueScreenAmbience.LightStrip
 					}
 				}
 
-				if (_config.Model.piCameraSettings.isPi)
+				if (_config.Model.piCameraSettings.isPi && _config.Model.piCameraSettings.lightsLocal)
 				{
 					try
 					{
@@ -279,7 +279,7 @@ namespace HueScreenAmbience.LightStrip
 				light.CacheLocation = new Point(x, y);
 			}
 
-			image.Seek(Helpers.GetImageCoordinate(width, x, y), SeekOrigin.Begin);
+			image.Seek(Helpers.GetImageCoordinate(width * 3, x, y), SeekOrigin.Begin);
 			var r = Math.Floor(image.ReadByte() * _config.Model.lightStripSettings.colorMultiplier);
 			var g = Math.Floor(image.ReadByte() * _config.Model.lightStripSettings.colorMultiplier);
 			var b = Math.Floor(image.ReadByte() * _config.Model.lightStripSettings.colorMultiplier);

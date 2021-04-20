@@ -296,7 +296,7 @@ namespace HueScreenAmbience.Hue
 				foreach (var light in _streamBaseLayer)
 				{
 					(x, y) = MapLightLocationToImage(light.LightLocation, width, height);
-					image.Seek(Helpers.GetImageCoordinate(width, x, y), SeekOrigin.Begin);
+					image.Seek(Helpers.GetImageCoordinate(width * 3, x, y), SeekOrigin.Begin);
 					var min = _config.Model.hueSettings.minColorValue;
 					var max = _config.Model.hueSettings.maxColorValue;
 					var r = Math.Floor(image.ReadByte() * _config.Model.hueSettings.colorMultiplier);

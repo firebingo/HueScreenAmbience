@@ -18,15 +18,24 @@
   "zoneProcessSettings": {
     "resizeScale": 16.0, //What to scale zone image by. Generally more zones means use a lower value to keep efficiency. ex 6x2 zones -> 96x32 image.
     "resizeSigma": 0.50, //The sigma to use for the gaussian resize. Higher values means more blur. More zones generally means to use a larger value. 0.4-0.6 is a good range.
-    "resizeFilter": 8 //8 is a gaussian resize filter. Reccomended to keep set as is. Although any imagemagick FilterType enum value will work if you know them.
+    "resizeFilter": 8 //8 is a gaussian resize filter. Recommended to keep set as is. Although any imagemagick FilterType enum value will work if you know them.
   },
   "rgbDeviceSettings": {
     "useKeyboards": true, //Whether to display on connected rgb keyboards or not
     "useMice": true,  //Whether to display on connected rgb mice or not
+	"useMotherboard": false, //Whether to display on connected rgb motherboards or not
 	"colorChangeThreshold": 5 //Byte threshold to determine if key color should change. This helps memory pressure by possibly not having to change key very frame even if it is the same.
     "colorMultiplier": 1.0 //Multiply values sent to rgb device by this 0.0-2.0
 	"keyboardResReduce": 4, //Reduces the sample size of the keyboard layout. This is for layouts from rgb.net that represent keys as larger rects.
 	"updateFrameRate": 60 //Can be used to throttle rate that rgb devices are allowed to update at
+  },
+  "piCameraSettings": {
+    "isPi": false, //Whether or not we are running on a pi and taking in camera input from csi port.
+    "lightsLocal": false, //Whether or not a light strip is connected to the pi to update or if it should send udp packets like a standard device.
+    "width": 1280, //Dimensions of image from camera input
+    "height": 720, //Recommended to keep at 1280x720 otherwise it may not be able to keep up with reading.
+    "frameRate": 18, //The frame rate to read the camera input. ffmpeg drops extra frames. recommended to keep below 20. Higher rates typically mean more delay in reading and updating lights.
+    "skipFrames": 200 //An amount of frames to skip before updating lights. This can be used to skip hdmi causing flashes while the connection is starting.
   },
   "adapterId": 0, //The id of the graphics adapter to use.
   "monitorId": 0, //The id of the monitor to read.

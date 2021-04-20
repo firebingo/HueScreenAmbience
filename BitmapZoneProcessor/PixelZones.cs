@@ -54,9 +54,12 @@ namespace BitmapZoneProcessor
 
 		public void CalculateAverages()
 		{
-			AvgR = (byte)(TotalR / Count);
-			AvgG = (byte)(TotalG / Count);
-			AvgB = (byte)(TotalB / Count);
+			if (Count > 0)
+			{
+				AvgR = (byte)(TotalR / Count);
+				AvgG = (byte)(TotalG / Count);
+				AvgB = (byte)(TotalB / Count);
+			}
 		}
 
 		public bool IsCoordInZone(int x, int y)
@@ -68,7 +71,7 @@ namespace BitmapZoneProcessor
 
 		public bool IsPointInZone(Point p)
 		{
-			if(p.X >= TopLeft.X && p.X < BottomRight.X && p.Y >= TopLeft.Y && p.Y < BottomRight.Y)
+			if (p.X >= TopLeft.X && p.X < BottomRight.X && p.Y >= TopLeft.Y && p.Y < BottomRight.Y)
 				return true;
 			return false;
 		}
@@ -96,7 +99,7 @@ namespace BitmapZoneProcessor
 
 		public override bool Equals(object obj)
 		{
-			if(obj is ReadPixel p)
+			if (obj is ReadPixel p)
 				return p.Pixel.Equals(this.Pixel);
 			return false;
 		}
