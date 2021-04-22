@@ -211,7 +211,7 @@ namespace HueScreenAmbience.Hue
 			}
 			else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
 			{
-				if (_config.Model.hueSettings.shutLightOffOnStop)
+				if (_config.Model.hueSettings.shutLightOffOnStop && _streamBaseLayer != null)
 				{
 					foreach (var light in _streamBaseLayer)
 					{
@@ -219,14 +219,15 @@ namespace HueScreenAmbience.Hue
 					}
 				}
 
-				_streamClient.ManualUpdate(_streamGroup);
+				if (_streamGroup != null)
+					_streamClient?.ManualUpdate(_streamGroup);
 
-				_cancelSource.Cancel();
-				_cancelSource.Dispose();
+				_cancelSource?.Cancel();
+				_cancelSource?.Dispose();
 				_streamGroup = null;
 				_streamBaseLayer = null;
 				//Closing disposes the client so we need to reconnect if we want to reuse it.
-				_streamClient.Close();
+				_streamClient?.Close();
 				_streamClient = null;
 				await ConnectToBridge();
 			}

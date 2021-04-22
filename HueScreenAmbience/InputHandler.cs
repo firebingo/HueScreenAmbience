@@ -1,6 +1,7 @@
 ﻿using HueScreenAmbience.Hue;
 using Q42.HueApi.Interfaces;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,12 +9,20 @@ namespace HueScreenAmbience
 {
 	class InputHandler
 	{
-		public bool isRunning = false;
+		private bool _isRunning = false;
+		private readonly bool _isHeadless = false;
 		private bool _isReady = false;
 		private Core _core;
 		private Config _config;
 		private HueCore _hueClient;
 		private ScreenReader _screen;
+		private bool _headlessHasWrittenInfo;
+		private StreamReader _stdinsr;
+
+		public InputHandler(bool isHeadless)
+		{
+			_isHeadless = isHeadless;
+		}
 
 		public void InstallServices(IServiceProvider map)
 		{
@@ -28,7 +37,8 @@ namespace HueScreenAmbience
 		/// </summary>
 		public async void HandleInput()
 		{
-			isRunning = true;
+			_stdinsr = new StreamReader(Console.OpenStandardInput());
+			_isRunning = true;
 			string input;
 
 			ResetConsole();
@@ -46,9 +56,11 @@ namespace HueScreenAmbience
 					Thread.Sleep(500);
 					continue;
 				}
-				 
+
 				//Read the input line and act based on it.
-				input = Console.ReadLine();
+				input = await _stdinsr.ReadLineAsync();
+				if (string.IsNullOrWhiteSpace(input))
+					continue;
 				switch (input.ToLower())
 				{
 					//help
@@ -67,7 +79,7 @@ namespace HueScreenAmbience
 					//Connect to hue bridge
 					case "-connect":
 					case "-c":
-						if(CheckRunning())
+						if (CheckRunning())
 							break;
 						Console.WriteLine("Searching");
 						await _core.ConnectToBridge();
@@ -91,7 +103,7 @@ namespace HueScreenAmbience
 						_ = _core.StopScreenReading();
 						Thread.Sleep(2000);
 						Environment.Exit(0);
-						isRunning = false;
+						_isRunning = false;
 						break;
 					//Select a room
 					case "-room":
@@ -144,7 +156,7 @@ namespace HueScreenAmbience
 						break;
 				}
 			}
-			while (isRunning);
+			while (_isRunning);
 		}
 
 		private bool CheckRunning()
@@ -161,24 +173,47 @@ namespace HueScreenAmbience
 
 		public void ResetConsole()
 		{
-			Console.Clear();
-			Console.WriteLine("HUE Screen Based Lighting");
-			if (!_screen.Ready)
-				Console.WriteLine("Loading...");
-			else
+			if (!_isHeadless)
+			{
+				Console.Clear();
+				Console.WriteLine("HUE Screen Based Lighting");
+				if (!_screen.Ready)
+					Console.WriteLine("Loading...");
+				else
+				{
+					if (_hueClient.IsConnectedToBridge)
+						Console.WriteLine("Connected to Bridge");
+					if (_hueClient.UseRoom != null)
+						Console.WriteLine($"Using room: {_hueClient.UseRoom.Name}");
+					if (_screen.Screen != null)
+						Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate}");
+					if (_config.Model.piCameraSettings.isPi)
+						Console.WriteLine($"Using pi camera input: {_config.Model.piCameraSettings.width}x{_config.Model.piCameraSettings.height}x{_config.Model.piCameraSettings.frameRate}");
+					Console.WriteLine("Use -h for help");
+					if (_screen.IsRunning)
+						Console.WriteLine($"Lighting is running");
+				}
+			}
+			else if (!_headlessHasWrittenInfo)
 			{
 				if (_hueClient.IsConnectedToBridge)
 					Console.WriteLine("Connected to Bridge");
 				if (_hueClient.UseRoom != null)
 					Console.WriteLine($"Using room: {_hueClient.UseRoom.Name}");
-				if(_screen.Screen != null)
+				if (_screen.Screen != null)
 					Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate}");
-				if(_config.Model.piCameraSettings.isPi)
+				if (_config.Model.piCameraSettings.isPi)
 					Console.WriteLine($"Using pi camera input: {_config.Model.piCameraSettings.width}x{_config.Model.piCameraSettings.height}x{_config.Model.piCameraSettings.frameRate}");
-				Console.WriteLine("Use -h for help");
 				if (_screen.IsRunning)
 					Console.WriteLine($"Lighting is running");
+				_headlessHasWrittenInfo = true;
 			}
+		}
+
+		public void StopInput()
+		{
+			_isRunning = false;
+			_stdinsr?.Dispose();
 		}
 	}
 }

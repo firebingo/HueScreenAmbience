@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
-using System.Drawing;
-using System.Reflection.Metadata.Ecma335;
 using HueScreenAmbience.Hue;
-using System.Runtime.CompilerServices;
 using HueScreenAmbience.DXGICaptureScreen;
 
 namespace HueScreenAmbience
@@ -17,13 +12,11 @@ namespace HueScreenAmbience
 		private Config _config;
 		private InputHandler _input;
 		private ScreenReader _screen;
-		private Thread _screenLoopThread;
 		private HueCore _hueClient;
 
 		public void Start()
 		{
 			_hueClient.Start();
-			Task.Run(() => Connect());
 		}
 
 		public void InstallServices(IServiceProvider map)
@@ -32,12 +25,6 @@ namespace HueScreenAmbience
 			_input = map.GetService(typeof(InputHandler)) as InputHandler;
 			_screen = map.GetService(typeof(ScreenReader)) as ScreenReader;
 			_hueClient = map.GetService(typeof(HueCore)) as HueCore;
-		}
-
-		public async Task Connect()
-		{
-			await _hueClient.AutoConnectAttempt();
-			_input.ResetConsole();
 		}
 
 		public async Task<bool> ConnectToBridge()
@@ -105,6 +92,7 @@ namespace HueScreenAmbience
 				return true;
 			}
 		}
+
 		public async Task<bool> SelectHue()
 		{
 			var oldSetting = _config.Model.hueSettings.hueType;
@@ -336,9 +324,6 @@ namespace HueScreenAmbience
 				await _hueClient.OnStartReading();
 
 			_ = Task.Run(() => _screen.ReadScreenLoopDx());
-			//_screenLoopThread = new Thread(new ThreadStart(_screen.ReadScreenLoopDx));
-			//_screenLoopThread.Name = "Screen Loop Thread";
-			//_screenLoopThread.Start();
 			_input.ResetConsole();
 		}
 
@@ -349,12 +334,7 @@ namespace HueScreenAmbience
 			//Allow windows to sleep again
 			var res = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS);
 #endif
-
-			if (_screenLoopThread != null && _screenLoopThread.IsAlive)
-			{
-				_screen.StopScreenLoop();
-				_screenLoopThread = null;
-			}
+			_screen.StopScreenLoop();
 
 			await _hueClient.OnStopReading();
 

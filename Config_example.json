@@ -1,6 +1,6 @@
 {
   "hueSettings": {
-	"useHue": true, //Whether to use hue lighting or not
+    "useHue": true, //Whether to use hue lighting or not
     "appKey": "", //set when connecting to bridge
     "entertainmentKey": "", //set when connecting to bridge
     "ip": "", //set when connecting to bridge
@@ -9,25 +9,25 @@
     "updateFrameRate": 8, //HUE can only handle so many updates at once. anything above 8 is unreliable for basic. for Entertainment ~25 and below is fine.
     "turnLightOnIfOff": true, //If lights are off when reading started turn them on.
     "shutLightOffOnStop": true, //When reading is stopped turn lights off.
-	"maxColorValue": 255, //A byte value (0-255) to clamp color value max to.
+    "maxColorValue": 255, //A byte value (0-255) to clamp color value max to.
     "minColorValue": 0, //A byte value (0-255) to clamp color value min to.
     "colorMultiplier": 1.0, //Multiply values sent to lights by this 0.0-2.0
-    "colorChangeThreshold": 15 //a byte value (0-255) that if next color is within this range dont change colors. can help reduce flickering.
-	"blendLastColorAmount": 0.6 //A value to blend the current color by the last color. This reduces response time a bit to give smoother color changes. 0.6 is a good value to start. (0.0-1.0)
+    "colorChangeThreshold": 15, //a byte value (0-255) that if next color is within this range dont change colors. can help reduce flickering.
+    "blendLastColorAmount": 0.6 //A value to blend the current color by the last color. This reduces response time a bit to give smoother color changes. 0.6 is a good value to start. (0.0-1.0)
   },
   "zoneProcessSettings": {
-    "resizeScale": 16.0, //What to scale zone image by. Generally more zones means use a lower value to keep efficiency. ex 6x2 zones -> 96x32 image.
-    "resizeSigma": 0.50, //The sigma to use for the gaussian resize. Higher values means more blur. More zones generally means to use a larger value. 0.4-0.6 is a good range.
-    "resizeFilter": 8 //8 is a gaussian resize filter. Recommended to keep set as is. Although any imagemagick FilterType enum value will work if you know them.
+    "resizeScale": 3.0, //What to scale zone image by. Generally more zones means use a lower value to keep efficiency. ex 9x5 zones -> 27x15 image.
+    "resizeSigma": 0.75, //The sigma to use for the gaussian resize. Higher values means more blur. More zones generally means to use a larger value. 0.4-0.6 is a good range.
+    "resizeFilter": 2 //2 is a gaussian resize filter. Recommended to keep set as is. 0 = point, 1 = bilinear
   },
   "rgbDeviceSettings": {
     "useKeyboards": true, //Whether to display on connected rgb keyboards or not
     "useMice": true,  //Whether to display on connected rgb mice or not
-	"useMotherboard": false, //Whether to display on connected rgb motherboards or not
-	"colorChangeThreshold": 5 //Byte threshold to determine if key color should change. This helps memory pressure by possibly not having to change key very frame even if it is the same.
-    "colorMultiplier": 1.0 //Multiply values sent to rgb device by this 0.0-2.0
-	"keyboardResReduce": 4, //Reduces the sample size of the keyboard layout. This is for layouts from rgb.net that represent keys as larger rects.
-	"updateFrameRate": 60 //Can be used to throttle rate that rgb devices are allowed to update at
+    "useMotherboard": false, //Whether to display on connected rgb motherboards or not
+    "colorChangeThreshold": 5, //Byte threshold to determine if key color should change. This helps memory pressure by possibly not having to change key very frame even if it is the same.
+    "colorMultiplier": 1.0, //Multiply values sent to rgb device by this 0.0-2.0
+    "keyboardResReduce": 4, //Reduces the sample size of the keyboard layout. This is for layouts from rgb.net that represent keys as larger rects.
+    "updateFrameRate": 60 //Can be used to throttle rate that rgb devices are allowed to update at
   },
   "piCameraSettings": {
     "isPi": false, //Whether or not we are running on a pi and taking in camera input from csi port.
@@ -39,8 +39,8 @@
   },
   "adapterId": 0, //The id of the graphics adapter to use.
   "monitorId": 0, //The id of the monitor to read.
-  "zoneColumns": 6, //How many columns to split image into. If you are using a keyboard for lighting generally higher values are better.
-  "zoneRows": 2, //how many rows to split image into. If you are using a keyboard for lighting generally higher values are better.
+  "zoneColumns": 9, //How many columns to split image into. If you are using a keyboard for lighting generally higher values are better.
+  "zoneRows": 5, //how many rows to split image into. If you are using a keyboard for lighting generally higher values are better.
   "screenReadFrameRate": 24, //Max rate screen can be read. In practice this can be up to around 30-35 fps.
   "pixelCount": 0, //How many pixels to read of screen. 0 with readResolutionReduce set is recommended as it is faster to do this way and produces more accurate results.
   "dumpPngs": false, //Dump processed image zones into a image.
@@ -54,7 +54,7 @@
     "remotePort": 9250, //Port to communicate with
     "colorMultiplier": 1.0, //Multiply values sent to lights by this 0.0-2.0
     "blendLastColorAmount": 0.4, //A value to blend the current color by the last color. This reduces response time a bit to give smoother color changes. 0.4 is a good value to start. (0.0-1.0)
-	"saturateColors": 1.0, //A multiplier for the color saturation. Can help with color contrast a bit for a backlight. 1.1-1.3 are reasonable values to increase saturation. (0.0-5.0)
+    "saturateColors": 1.0, //A multiplier for the color saturation. Can help with color contrast a bit for a backlight. 1.1-1.3 are reasonable values to increase saturation. (0.0-5.0)
     "updateFrameRate": 24, //Can be used to throttle rate that light strip is allowed to update at
     "lights": [ //List of light x and y positions to sample from screen. (0.0,0.0) is top left, (1.0,1.0) is bottom right.
       {

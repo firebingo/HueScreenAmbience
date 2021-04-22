@@ -20,12 +20,12 @@ namespace HueScreenAmbience
 		private StripLighter _stripLighter = null;
 		private IServiceProvider _map = null;
 
-		static void Main()
+		static async Task Main(string[] args)
 		{
-			new HueScreenAmbience().Run().GetAwaiter().GetResult();
+			await new HueScreenAmbience().Run(args);
 		}
 
-		public async Task Run()
+		public async Task Run(string[] args)
 		{
 			//If we are on windows and trying to read screen we have to set dpi awareness for DuplicateOutput1 to work.
 			// DuplicateOutput1 is required for duplicate output to be hdr aware.
@@ -56,34 +56,47 @@ namespace HueScreenAmbience
 
 			try
 			{
+				var isHeadless = false;
+				foreach (var value in args)
+				{
+					if (!string.IsNullOrWhiteSpace(value) && value.Equals("--headless", StringComparison.OrdinalIgnoreCase))
+					{
+						isHeadless = true;
+						break;
+					}
+				}
+
 				_config = new Config();
 				_config.LoadConfig();
 
-				_map = ConfigureServices();
+				_map = ConfigureServices(isHeadless);
 
 				_input.InstallServices(_map);
-				Thread inputThread = new Thread(new ThreadStart(_input.HandleInput));
-				inputThread.Name = "Input Thread";
+				Thread inputThread = null;
+				if (!isHeadless)
+				{
+					inputThread = new Thread(new ThreadStart(_input.HandleInput));
+					inputThread.Name = "Input Thread";
+				}
 
 				_core.InstallServices(_map);
-				Thread coreThread = new Thread(new ThreadStart(_core.Start));
-				coreThread.Name = "Core Thread";
 
 				_screen.InstallServices(_map);
-				Thread screenThread = new Thread(new ThreadStart(_screen.Start));
-				screenThread.Name = "Screen Reader Thread";
 				_hueClient.InstallServices(_map);
 				_zoneProcesser.InstallServices(_map);
 				_rgbLighter.InstallServices(_map);
 				_stripLighter.InstallServices(_map);
 
-				inputThread.Start();
-				coreThread.Start();
-				screenThread.Start();
+				inputThread?.Start();
+				_core.Start();
+				_screen.Start();
 
 				AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
 
 				Console.CancelKeyPress += Console_CancelKeyPress;
+
+				if (isHeadless)
+					await _core.StartScreenReading();
 
 				//Delay until application quit
 				await Task.Delay(-1);
@@ -109,6 +122,7 @@ namespace HueScreenAmbience
 		private void OnProcessStop()
 		{
 			Console.WriteLine("closing");
+			_input.StopInput();
 			var task = _core.StopScreenReading();
 			do
 			{
@@ -117,10 +131,10 @@ namespace HueScreenAmbience
 			while (!task.IsCompleted);
 		}
 
-		private IServiceProvider ConfigureServices()
+		private IServiceProvider ConfigureServices(bool isHeadless)
 		{
 			//setup and add command service.
-			_input = new InputHandler();
+			_input = new InputHandler(isHeadless);
 			_core = new Core();
 			_screen = new ScreenReader();
 			_zoneProcesser = new ZoneProcessor();

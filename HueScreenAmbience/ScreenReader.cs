@@ -269,6 +269,9 @@ namespace HueScreenAmbience
 
 		public void StopScreenLoop()
 		{
+			if (!IsRunning)
+				return;
+
 			IsRunning = false;
 			if (_config.Model.piCameraSettings.isPi)
 			{
