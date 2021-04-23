@@ -1,20 +1,16 @@
 ﻿using HueScreenAmbience.DXGICaptureScreen;
-using HueScreenAmbience.PiCapture;
 using HueScreenAmbience.RGB;
 using BitmapZoneProcessor;
 using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HueScreenAmbience.LightStrip;
+using System.IO;
 
 namespace HueScreenAmbience
 {
 	class ScreenReader
 	{
-		private ReadPixel[] _pixelsToRead = null;
 		private PixelZone[] _zones = null;
 		public bool Ready { get; private set; }
 		public DxEnumeratedDisplay Screen { get; private set; }
@@ -43,8 +39,6 @@ namespace HueScreenAmbience
 		private int _averageIter = 0;
 		private int _frameRate = 24;
 
-		private readonly object _lockPixelsObj = new object();
-
 		public void Start()
 		{
 			_frameRate = _config.Model.screenReadFrameRate;
@@ -60,8 +54,6 @@ namespace HueScreenAmbience
 			else
 				GetScreenInfo();
 			SetupPixelZones();
-			_pixelsToRead = Array.Empty<ReadPixel>();
-			PreparePixelsToGet();
 		}
 
 		public void InstallServices(IServiceProvider _map)
@@ -108,57 +100,40 @@ namespace HueScreenAmbience
 			_zones = new PixelZone[_config.Model.zoneColumns * _config.Model.zoneRows];
 			if (_zones.Length == 0)
 				throw new Exception("0 Light zones created");
+			var newWidth = ScreenInfo.Width;
+			var newHeight = ScreenInfo.Height;
+			if (_config.Model.imageRect.HasValue)
+			{
+				if (_config.Model.readResolutionReduce > 1.0f)
+				{
+					newWidth = (int)Math.Floor(_config.Model.imageRect.Value.Width / _config.Model.readResolutionReduce);
+					newHeight = (int)Math.Floor(_config.Model.imageRect.Value.Height / _config.Model.readResolutionReduce);
+				}
+				else
+				{
+					newWidth = _config.Model.imageRect.Value.Width;
+					newHeight = _config.Model.imageRect.Value.Height;
+				}
+			}
 			var row = 0;
 			for (var i = 0; i < _zones.Length; ++i)
 			{
 				var col = i % _config.Model.zoneColumns;
-				var xMin = (ScreenInfo.Width / (double)_config.Model.zoneColumns) * col;
+				var xMin = (newWidth / (double)_config.Model.zoneColumns) * col;
 				//If we are in the last column just set the bottom right to screen width so we dont get weird rounding where edge is not included
 				var xMax = col == _config.Model.zoneColumns - 1
-					? ScreenInfo.Width
-					: (ScreenInfo.Width / (double)_config.Model.zoneColumns) * (col + 1);
-				var yMin = (ScreenInfo.Height / (double)_config.Model.zoneRows) * row;
+					? newWidth
+					: (newWidth / (double)_config.Model.zoneColumns) * (col + 1);
+				var yMin = (newHeight / (double)_config.Model.zoneRows) * row;
 				//If we are in the last row just set the bottom right to screen height so we dont get weird rounding where edge is not included
 				var yMax = row == _config.Model.zoneRows - 1
-					? ScreenInfo.Height
-					: (ScreenInfo.Height / (double)_config.Model.zoneRows) * (row + 1);
+					? newHeight
+					: (newHeight / (double)_config.Model.zoneRows) * (row + 1);
 				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax));
 				if (col == _config.Model.zoneColumns - 1)
 					row += 1;
 			}
-		}
-
-		public void PreparePixelsToGet()
-		{
-			Ready = false;
-			lock (_lockPixelsObj)
-			{
-				var pixelsToGet = new List<ReadPixel>();
-				var r = new Random();
-
-				Point p = Point.Empty;
-				if (_config.Model.pixelCount >= ScreenInfo.Width * ScreenInfo.Height)
-					throw new Exception("More pixels to read than screen has");
-				//Get a distinct list of points until we have the needed pixel count
-				do
-				{
-					var newPixels = new List<ReadPixel>();
-					for (var i = 0; i < _config.Model.pixelCount; ++i)
-					{
-						p = new Point(r.Next(0, ScreenInfo.Width), r.Next(0, ScreenInfo.Height));
-						var zone = _zones.First(x => x.IsPointInZone(p));
-						newPixels.Add(new ReadPixel(zone, p));
-					}
-					pixelsToGet.AddRange(newPixels.Distinct());
-					pixelsToGet = pixelsToGet.Distinct().ToList();
-				} while (pixelsToGet.Count < _config.Model.pixelCount);
-				pixelsToGet = pixelsToGet.GetRange(0, _config.Model.pixelCount).ToList();
-
-				//looping over an array is noticeably faster than a list at this scale
-				_pixelsToRead = pixelsToGet.Distinct().ToArray();
-			}
 			Ready = true;
-			GC.Collect();
 		}
 
 		public void InitScreenLoop()
@@ -182,21 +157,40 @@ namespace HueScreenAmbience
 		public async Task ReadScreenLoopDx()
 		{
 			IsRunning = true;
-			Bitmap bmp = null;
+			var newWidth = ScreenInfo.Width;
+			var newHeight = ScreenInfo.Height;
+			var frameStream = new MemoryStream(ScreenInfo.RealWidth * ScreenInfo.RealHeight * 4);
+			MemoryStream cropFrameStream = null;
+			if (_config.Model.imageRect.HasValue)
+			{
+				cropFrameStream = new MemoryStream(_config.Model.imageRect.Value.Width * _config.Model.imageRect.Value.Height * 4);
+				if (_config.Model.readResolutionReduce > 1.0f)
+				{
+					newWidth = (int)Math.Floor(_config.Model.imageRect.Value.Width / _config.Model.readResolutionReduce);
+					newHeight = (int)Math.Floor(_config.Model.imageRect.Value.Height / _config.Model.readResolutionReduce);
+				}
+				else
+				{
+					newWidth = _config.Model.imageRect.Value.Width;
+					newHeight = _config.Model.imageRect.Value.Height;
+				}
+			}
+			MemoryStream sizeFrameStream = null;
+			if (_config.Model.readResolutionReduce > 1.0f)
+				sizeFrameStream = new MemoryStream(newWidth * newHeight * 4);
+
 			do
 			{
-				bool bitmapChanged = false;
 				var start = DateTime.UtcNow;
 				try
 				{
+					var updatedFrame = false;
 					var t = start;
-					//Do not dispose this bitmap as DxCapture uses the same bitmap every loop to save allocation.
 					if (_config.Model.piCameraSettings.isPi)
-						bmp = await _piCapture.GetFrame();
+						updatedFrame = await _piCapture.GetFrame(frameStream);
 					else
-						bmp = _dxCapture.GetFrame();
+						updatedFrame = _dxCapture.GetFrame(frameStream);
 					//Console.WriteLine($"Capture Time:        {(DateTime.UtcNow - start).TotalMilliseconds}");
-					//If the bitmap is null that usually means the desktop has not been updated
 
 					//If we are on pi and have skip frames set wait until we are past the frame number before we start trying to read.
 					// This is done because initialization for the hdmi connection can take a bit before we get real frames back.
@@ -208,7 +202,7 @@ namespace HueScreenAmbience
 						continue;
 					}
 
-					if (bmp == null)
+					if (!updatedFrame)
 					{
 						//If we havnt got a new frame in 2 seconds because the desktop hasnt updated send a update with the last zones anyways.
 						// If this isint done hue will eventually disconnect us because we didnt send any updates.
@@ -221,27 +215,36 @@ namespace HueScreenAmbience
 						continue;
 					}
 
-					//Console.WriteLine($"Capture Time:     {(DateTime.UtcNow - t).TotalMilliseconds}");
+					var captureTime = (DateTime.UtcNow - t).TotalMilliseconds;
 					t = DateTime.UtcNow;
 
-					bitmapChanged = BitmapProcessor.ReadBitmap(ScreenInfo.Width, ScreenInfo.Height, ScreenInfo.SizeReduction, _config.Model.zoneRows, _config.Model.zoneColumns, _config.Model.pixelCount, _pixelsToRead, ref bmp, ref _zones, false, _config.Model.bitmapRect);
+					BitmapProcessor.ReadBitmap(frameStream, ScreenInfo.RealWidth, ScreenInfo.RealHeight, newWidth, newHeight, _config.Model.readResolutionReduce,
+						_config.Model.zoneRows, _config.Model.zoneColumns, ref _zones, sizeFrameStream, cropFrameStream, _config.Model.imageRect);
 
-					//Console.WriteLine($"Read Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
+					var readTime = (DateTime.UtcNow - t).TotalMilliseconds;
+
 					t = DateTime.UtcNow;
 
 					long f = _frame;
 					_lastPostReadTime = DateTime.UtcNow;
 					await _zoneProcesser.PostRead(_zones, f);
 
-					//Console.WriteLine($"PostRead Time:    {(DateTime.UtcNow - t).TotalMilliseconds}");
+					var postReadTime = (DateTime.UtcNow - t).TotalMilliseconds;
+
 
 					var dt = DateTime.UtcNow - start;
 					if (++_averageIter >= _averageValues.Length)
 						_averageIter = 0;
 					_averageValues[_averageIter] = dt.TotalMilliseconds;
+					//if (dt.TotalMilliseconds > 25)
+					//{
+					//Console.WriteLine($"Capture Time:     {captureTime}");
+					//Console.WriteLine($"Read Time:        {readTime}");
+					//Console.WriteLine($"PostRead Time:    {postReadTime}");
 					//Console.WriteLine($"Total Time:       {dt.TotalMilliseconds}");
 					//Console.WriteLine($"AverageDt:        {AverageDt}");
 					//Console.WriteLine("---------------------------------------");
+					//}
 					_frame++;
 				}
 				catch (Exception ex)
@@ -252,19 +255,17 @@ namespace HueScreenAmbience
 				}
 				finally
 				{
-					//Only dispose the bitmap if ReadBitmap updated the reference to a new bitmap.
-					// Otherwise we want to leave it as DxCapture will reuse the same bitmap.
-					if (bitmapChanged)
-					{
-						bmp?.Dispose();
-						bmp = null;
-					}
-
 					var dt = DateTime.UtcNow - start;
 					if (dt.TotalMilliseconds < 1000 / _frameRate)
 						Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
 				}
 			} while (IsRunning);
+			await frameStream.DisposeAsync();
+			if (cropFrameStream != null)
+				await cropFrameStream.DisposeAsync();
+			if (sizeFrameStream != null)
+				await sizeFrameStream.DisposeAsync();
+
 		}
 
 		public void StopScreenLoop()

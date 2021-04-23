@@ -111,7 +111,7 @@ namespace HueScreenAmbience.RGB
 			}
 		}
 
-		public void UpdateFromImage(System.Drawing.Color averageColor, MemoryStream image, int width, int height)
+		public void UpdateFromImage(SixLabors.ImageSharp.PixelFormats.Rgb24 averageColor, MemoryStream image, int width, int height)
 		{
 			try
 			{
@@ -132,7 +132,7 @@ namespace HueScreenAmbience.RGB
 						_imageByteStream = new MemoryStream(newWidth * newHeight * 3);
 
 					_imageByteStream.Seek(0, SeekOrigin.Begin);
-					var resizeImage = ImageHandler.ResizeImage(image, width, height, _imageByteStream, newWidth, newHeight);
+					var resizeImage = ImageHandler.ResizeImage(image, width, height, _imageByteStream, newWidth, newHeight, pixelFormat: PixelFormat.Rgb24);
 
 					int count = 0;
 					var sampleX = 0;

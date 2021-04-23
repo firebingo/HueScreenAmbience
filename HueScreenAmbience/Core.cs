@@ -195,33 +195,6 @@ namespace HueScreenAmbience
 			return true;
 		}
 
-		public void ChangePixelCount()
-		{
-			var valid = false;
-			var screenPixelCount = _screen.ScreenInfo.Height * _screen.ScreenInfo.Width;
-			do
-			{
-				Console.Clear();
-				Console.WriteLine($"Current Count: {_config.Model.pixelCount}");
-				Console.WriteLine("Large pixel counts may take too long to calculate and will lag behind the screen.");
-				Console.WriteLine("Entering 0 will read the whole screen.");
-				Console.WriteLine($"Max: {Math.Min(screenPixelCount, 1000000)}");
-				Console.WriteLine("Input new pixel count:");
-				var read = Console.ReadLine();
-				if (int.TryParse(read, out var readInt))
-				{
-					if (readInt > screenPixelCount || readInt > 1000000)
-						continue;
-					valid = true;
-					_config.Model.pixelCount = readInt;
-					_config.SaveConfig();
-					_screen.SetupPixelZones();
-					_screen.PreparePixelsToGet();
-				}
-			}
-			while (!valid);
-		}
-
 		public void SelectAdapter()
 		{
 			var validInput = false;

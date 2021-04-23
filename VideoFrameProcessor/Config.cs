@@ -68,8 +68,8 @@ namespace VideoFrameProcessor
 		public int BufferSize { get; set; } = 32768;
 		public int ZoneColumns { get; set; } = 1;
 		public int ZoneRows { get; set; } = 1;
-		public float ResizeScale { get; set; } = 16.0f;
-		public float ResizeSigma { get; set; } = 0.45f;
+		public float ResizeScale { get; set; } = 12.0f;
+		public float ResizeSigma { get; set; } = 0.8f;
 		public ImageFilter ResizeFilter { get; set; } = ImageFilter.Gaussian;
 		public float ReadResolutionReduce { get; set; } = 2.0f;
 	}

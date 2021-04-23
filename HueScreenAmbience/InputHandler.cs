@@ -70,7 +70,6 @@ namespace HueScreenAmbience
 						Console.WriteLine("--------------------------------");
 						Console.WriteLine("-r - Select room for effect.");
 						Console.WriteLine("-t - Change hue type.");
-						Console.WriteLine("-p - Change pixel sample count.");
 						Console.WriteLine("-a - Select graphics adapter.");
 						Console.WriteLine("-m - Select monitor.");
 						Console.WriteLine("-s - Starts the lighting.");
@@ -122,14 +121,6 @@ namespace HueScreenAmbience
 						if (CheckRunning())
 							break;
 						await _core.SelectHue();
-						ResetConsole();
-						break;
-					//Change pixel count
-					case "-pixels":
-					case "-p":
-						if (CheckRunning())
-							break;
-						_core.ChangePixelCount();
 						ResetConsole();
 						break;
 					//Change monitor

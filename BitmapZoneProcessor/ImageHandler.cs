@@ -1,6 +1,4 @@
-﻿using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
+﻿using System.IO;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
@@ -18,6 +16,12 @@ namespace BitmapZoneProcessor
 		Gaussian = 2
 	}
 
+	public enum PixelFormat
+	{
+		Rgb24,
+		Rgba32
+	}
+
 	public static class ImageHandler
 	{
 		private static readonly ConcurrentDictionary<string, ResizeOptions> _resizeOptionCache;
@@ -27,28 +31,40 @@ namespace BitmapZoneProcessor
 			_resizeOptionCache = new ConcurrentDictionary<string, ResizeOptions>();
 		}
 
-		public static Bitmap ResizeBitmapImage(Bitmap bmp, int width, int height)
+		public static MemoryStream CropImageRect(MemoryStream image, int width, int height, MemoryStream newImage, Rectangle rect, PixelFormat pixelFormat = PixelFormat.Rgba32)
 		{
-			Bitmap result = new Bitmap(width, height);
-			using (Graphics g = Graphics.FromImage(result))
+			image.Seek(0, SeekOrigin.Begin);
+			Image simage = null;
+			simage = pixelFormat switch
 			{
-				g.DrawImage(bmp, 0, 0, width, height);
+				PixelFormat.Rgb24 => Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height),
+				_ => Image.LoadPixelData<Rgba32>(image.GetBuffer(), width, height)
+			};
+			simage.Mutate(x => x.Crop(rect));
+			switch (pixelFormat)
+			{
+				case PixelFormat.Rgb24:
+					if (((Image<Rgb24>)simage).TryGetSinglePixelSpan(out var rgb24Span))
+					{
+						newImage.Seek(0, SeekOrigin.Begin);
+						newImage.Write(MemoryMarshal.AsBytes(rgb24Span));
+					}
+					break;
+				default:
+					if (((Image<Rgba32>)simage).TryGetSinglePixelSpan(out var rba32Span))
+					{
+						newImage.Seek(0, SeekOrigin.Begin);
+						newImage.Write(MemoryMarshal.AsBytes(rba32Span));
+					}
+					break;
 			}
 
-			return result;
-		}
-
-		public static Bitmap CropBitmapRect(Bitmap bmp, System.Drawing.Rectangle rect)
-		{
-			PixelFormat format = bmp.PixelFormat;
-			return bmp.Clone(rect, format);
+			simage.Dispose();
+			return newImage;
 		}
 
 		public static MemoryStream CreateSmallImageFromZones(PixelZone[] zones, MemoryStream memStream)
 		{
-			if (memStream == null)
-				memStream = new MemoryStream();
-
 			for (var i = 0; i < zones.Length; ++i)
 			{
 				memStream.WriteByte(zones[i].AvgR);
@@ -61,23 +77,28 @@ namespace BitmapZoneProcessor
 			return memStream;
 		}
 
-		public static MemoryStream ResizeImage(MemoryStream image, int width, int height, MemoryStream newImage, int newWidth, int newHeight, ImageFilter filter = ImageFilter.Point, double sigma = 0.5)
+		public static MemoryStream ResizeImage(MemoryStream image, int width, int height, MemoryStream newImage, int newWidth, int newHeight, ImageFilter filter = ImageFilter.Point, double sigma = 0.5, PixelFormat pixelFormat = PixelFormat.Rgba32)
 		{
 			var resizeKey = $"{newWidth}{newHeight}{filter}{sigma}";
 			if (!_resizeOptionCache.TryGetValue(resizeKey, out var options))
 			{
 				options = new ResizeOptions()
 				{
-					Size = new SixLabors.ImageSharp.Size(newWidth, newHeight),
+					Size = new Size(newWidth, newHeight),
 					Mode = ResizeMode.Manual,
 					Sampler = ImageFilterToResampler(filter),
-					TargetRectangle = new SixLabors.ImageSharp.Rectangle(0, 0, newWidth, newHeight),
+					TargetRectangle = new Rectangle(0, 0, newWidth, newHeight),
 					Compand = false
 				};
 				_resizeOptionCache.TryAdd(resizeKey, options);
 			}
 			image.Seek(0, SeekOrigin.Begin);
-			var simage = SixLabors.ImageSharp.Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height);
+			Image simage = null;
+			simage = pixelFormat switch
+			{
+				PixelFormat.Rgb24 => Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height),
+				_ => Image.LoadPixelData<Rgba32>(image.GetBuffer(), width, height)
+			};
 			switch (filter)
 			{
 				case ImageFilter.Gaussian:
@@ -88,10 +109,22 @@ namespace BitmapZoneProcessor
 					simage.Mutate(x => x.Resize(options));
 					break;
 			}
-			if (simage.TryGetSinglePixelSpan(out var pixelSpan))
+			switch (pixelFormat)
 			{
-				newImage.Seek(0, SeekOrigin.Begin);
-				newImage.Write(MemoryMarshal.AsBytes(pixelSpan));
+				case PixelFormat.Rgb24:
+					if (((Image<Rgb24>)simage).TryGetSinglePixelSpan(out var rgb24Span))
+					{
+						newImage.Seek(0, SeekOrigin.Begin);
+						newImage.Write(MemoryMarshal.AsBytes(rgb24Span));
+					}
+					break;
+				default:
+					if (((Image<Rgba32>)simage).TryGetSinglePixelSpan(out var rba32Span))
+					{
+						newImage.Seek(0, SeekOrigin.Begin);
+						newImage.Write(MemoryMarshal.AsBytes(rba32Span));
+					}
+					break;
 			}
 
 			simage.Dispose();
@@ -107,10 +140,15 @@ namespace BitmapZoneProcessor
 			};
 		}
 
-		public static async Task WriteImageToFile(MemoryStream image, int width, int height, string path, int? resizeWidth = null, int? resizeHeight = null)
+		public static async Task WriteImageToFile(MemoryStream image, int width, int height, string path, int? resizeWidth = null, int? resizeHeight = null, PixelFormat pixelFormat = PixelFormat.Rgba32)
 		{
 			image.Seek(0, SeekOrigin.Begin);
-			var simage = SixLabors.ImageSharp.Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height);
+			Image simage = null;
+			simage = pixelFormat switch
+			{
+				PixelFormat.Rgb24 => Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height),
+				_ => Image.LoadPixelData<Rgba32>(image.GetBuffer(), width, height)
+			};
 			if (resizeWidth.HasValue && resizeHeight.HasValue)
 				simage.Mutate(x => x.Resize(resizeWidth.Value, resizeHeight.Value, KnownResamplers.NearestNeighbor));
 

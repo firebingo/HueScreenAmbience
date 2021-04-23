@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,9 +19,6 @@ namespace HueScreenAmbience.PiCapture
 		private readonly SemaphoreSlim _readingSemaphore;
 
 		private Thread _ffmpegThread;
-		private byte[] _bitmapData;
-		private GCHandle _bitmapHandle;
-		private Bitmap _bitmap;
 
 		private readonly FileLogger _logger;
 
@@ -37,10 +31,6 @@ namespace HueScreenAmbience.PiCapture
 			_frameRate = frameRate;
 			_frameLength = _width * _height * 4;
 			_frameBuffer = new byte[_frameLength];
-			_bitmapData = new byte[_frameLength];
-			_bitmapHandle = GCHandle.Alloc(_bitmapData, GCHandleType.Pinned);
-			//The bitmap expects the underlying data to be in rgba format seemingly regradless of format selected here.
-			_bitmap = new Bitmap(_width, _height, _width * 4, PixelFormat.Format32bppRgb, _bitmapHandle.AddrOfPinnedObject());
 			_readingSemaphore = new SemaphoreSlim(1, 1);
 		}
 
@@ -57,7 +47,7 @@ namespace HueScreenAmbience.PiCapture
 				_ffmpegProcess.StartInfo.RedirectStandardError = true;
 				_ffmpegProcess.StartInfo.RedirectStandardOutput = true;
 				_ffmpegProcess.StartInfo.FileName = "ffmpeg";
-				_ffmpegProcess.StartInfo.Arguments = $"-f v4l2 -input_format yuv420p -video_size {_width}x{_height} -i /dev/video0 -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -f rawvideo pipe:1";
+				_ffmpegProcess.StartInfo.Arguments = $"-f v4l2 -input_format yuv420p -video_size {_width}x{_height} -i /dev/video0 -c:v rawvideo -pix_fmt bgr32 -r {_frameRate} -f rawvideo pipe:1";
 
 				_isRunning = true;
 				_ffmpegThread = new Thread(new ThreadStart(ReadLoop));
@@ -139,29 +129,30 @@ namespace HueScreenAmbience.PiCapture
 			}
 		}
 
-		public async Task<Bitmap> GetFrame()
+		public async Task<bool> GetFrame(MemoryStream frameStream)
 		{
 			try
 			{
 				var start = DateTime.UtcNow;
+				var frameData = frameStream.GetBuffer();
 				await _readingSemaphore.WaitAsync();
 				unsafe
 				{
 					var t = DateTime.UtcNow;
-					Buffer.BlockCopy(_frameBuffer, 0, _bitmapData, 0, _frameLength);
+					Buffer.BlockCopy(_frameBuffer, 0, frameData, 0, _frameLength);
 					//Console.WriteLine($"Buffer.BlockCopy: {(DateTime.UtcNow - t).TotalMilliseconds}");
 					_readingSemaphore.Release();
 				}
 
 				//Console.WriteLine($"GetFrame: {(DateTime.UtcNow - start).TotalMilliseconds}");
-				return _bitmap;
+				return true;
 			}
 			catch (Exception ex)
 			{
 				_ = Task.Run(() => _logger.WriteLog(ex.ToString()));
 			}
 
-			return null;
+			return false;
 		}
 
 		public void Stop()
@@ -176,8 +167,6 @@ namespace HueScreenAmbience.PiCapture
 			if (_ffmpegProcess != null)
 				_ffmpegStream?.Dispose();
 
-			_bitmap?.Dispose();
-			_bitmapHandle.Free();
 			GC.SuppressFinalize(this);
 		}
 	}

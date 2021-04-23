@@ -2,8 +2,7 @@
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System;
-using System.Drawing;
-using System.Drawing.Imaging;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace HueScreenAmbience.DXGICaptureScreen
@@ -20,7 +19,6 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		private readonly OutputDuplication _duplicatedOutput;
 		private readonly Texture2D _screenTexture;
 		private readonly FileLogger _logger;
-		private Bitmap _bitmap;
 
 		public DxCapture(int width, int height, int adapter, int monitor, FileLogger logger)
 		{
@@ -60,7 +58,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			}
 		}
 
-		public Bitmap GetFrame()
+		public bool GetFrame(MemoryStream frameStream)
 		{
 			try
 			{
@@ -73,28 +71,28 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						if (screenTexture2D.Description.Format == Format.B8G8R8A8_UNorm)
 							_device.ImmediateContext.CopyResource(screenTexture2D, _screenTexture);
 						else
-							return null;
+							return false;
 					}
 
 					_device.ImmediateContext.MapSubresource(_screenTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None, out var dataStream);
 
 					var mapSource = _device.ImmediateContext.MapSubresource(_screenTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
 
-					if (_bitmap == null)
-						_bitmap = new Bitmap(_width, _height, PixelFormat.Format32bppArgb);
-
-					var boundsRect = new Rectangle(0, 0, _width, _height);
-
-					var mapDest = _bitmap.LockBits(boundsRect, ImageLockMode.WriteOnly, _bitmap.PixelFormat);
 					var sourcePtr = mapSource.DataPointer;
-					var destPtr = mapDest.Scan0;
-					for (int y = 0; y < _height; y++)
+					unsafe
 					{
-						Utilities.CopyMemory(destPtr, sourcePtr, _width * 4);
-						sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
-						destPtr = IntPtr.Add(destPtr, mapDest.Stride);
+						var frameData = frameStream.GetBuffer();
+						fixed (byte* destBytePtr = &frameData[0])
+						{
+							var destPtr = (IntPtr)destBytePtr;
+							for (int y = 0; y < _height; y++)
+							{
+								Utilities.CopyMemory(destPtr, sourcePtr, _width * 4);
+								sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
+								destPtr = IntPtr.Add(destPtr, _width * 4);
+							}
+						}
 					}
-					_bitmap.UnlockBits(mapDest);
 
 					_device.ImmediateContext.UnmapSubresource(_screenTexture, 0);
 					returnChange = true;
@@ -105,16 +103,16 @@ namespace HueScreenAmbience.DXGICaptureScreen
 
 				//Only return the bitmap if it has actually been updated so we can still ignore it otherwise and save the processing.
 				if (returnChange)
-					return _bitmap;
+					return true;
 				else
-					return null;
+					return false;
 			}
 			catch (Exception ex)
 			{
 				Task.Run(() => _logger.WriteLog(ex.ToString()));
 			}
 
-			return null;
+			return false;
 		}
 
 		public void Dispose()
@@ -126,7 +124,6 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			_output6?.Dispose();
 			_duplicatedOutput?.Dispose();
 			_screenTexture?.Dispose();
-			_bitmap?.Dispose();
 			GC.SuppressFinalize(this);
 		}
 	}

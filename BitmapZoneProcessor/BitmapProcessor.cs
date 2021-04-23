@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 
 namespace BitmapZoneProcessor
 {
 	public static class BitmapProcessor
 	{
-		public static bool ReadBitmap(int width, int height, float readResolutionReduce, int zoneRows, int zoneColumns, int pixelCount, ReadPixel[] readPixels, ref Bitmap bmp, ref PixelZone[] zones, bool disposeBitmapOnChange = true, Rectangle? bitmapRect = null)
+		public static void ReadBitmap(MemoryStream image, int width, int height, int newWidth, int newHeight, float resReduce, int zoneRows, int zoneColumns, ref PixelZone[] zones,
+			MemoryStream resizeStream = null, MemoryStream cropStream = null, SixLabors.ImageSharp.Rectangle? bitmapRect = null)
 		{
 			var start = DateTime.UtcNow;
-			bool bitmapChanged = false;
 			//Reset zones
 			foreach (var zone in zones)
 			{
@@ -21,73 +19,51 @@ namespace BitmapZoneProcessor
 				zone.ResetAverages();
 			}
 
-			if (bmp.PixelFormat != PixelFormat.Format32bppArgb && bmp.PixelFormat != PixelFormat.Format24bppRgb && bmp.PixelFormat != PixelFormat.Format32bppRgb)
-				throw new Exception("Bitmap must be either 32bppArgb, 32bppRgb, or 24bppRgb");
-
+			var useImage = image;
+			//If this is passed it is expected that the zones passed are also based on this reduced resolution for now.
+			// As the other comment below mentions maybe look into a better way of determining how reading the bitmap figures
+			// out what zone to add values to.
 			if (bitmapRect.HasValue)
 			{
-				if (disposeBitmapOnChange)
-				{
-					var oldBmp = bmp;
-					bmp = ImageHandler.CropBitmapRect(oldBmp, bitmapRect.Value);
-					oldBmp.Dispose();
-				}
-				else
-				{
-					bmp = ImageHandler.CropBitmapRect(bmp, bitmapRect.Value);
-				}
-				bitmapChanged = true;
+				useImage = ImageHandler.CropImageRect(useImage, width, height, cropStream, bitmapRect.Value);
+				width = bitmapRect.Value.Width;
+				height = bitmapRect.Value.Height;
 			}
 
 			var t = DateTime.UtcNow;
+			//It is expected that if we have a crop rect that newWidth and newHeight will be the values that would be reduced from the crop.
+			// and that resizeStream is the correct length for these values.
 			//Reducing the resolution of the desktop capture takes time but it saves a lot of time on reading the image
-			if (readResolutionReduce > 1.0f)
-			{
-				if (disposeBitmapOnChange)
-				{
-					var oldBmp = bmp;
-					bmp = ImageHandler.ResizeBitmapImage(oldBmp, width, height);
-					oldBmp.Dispose();
-				}
-				else
-				{
-					bmp = ImageHandler.ResizeBitmapImage(bmp, width, height);
-				}
-				bitmapChanged = true;
-			}
+			//TODO: Investigate just skipping this and reading the bitmap as a function of the reduce resolution value as it would
+			// effectivly produce the same result as point sampling to a lower resolution first. This could save memory pressure from
+			// rescaling the image. But it may make determining what zone to add values to more complicated.
+			if (width != newWidth || height != newHeight)
+				useImage = ImageHandler.ResizeImage(useImage, width, height, resizeStream, newWidth, newHeight, pixelFormat: PixelFormat.Rgba32);
 			//Console.WriteLine($"Resize Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 
 			//using (var fi = File.OpenWrite($"Images/{DateTime.Now.Ticks.ToString().PadLeft(5, '0')}.jpeg"))
 			//	bmp.Save(fi, ImageFormat.Jpeg);
 
 			t = DateTime.UtcNow;
-			BitmapData srcData = bmp.LockBits(
-			new Rectangle(0, 0, bmp.Width, bmp.Height),
-			ImageLockMode.ReadOnly,
-			bmp.PixelFormat);
 
 			unsafe
 			{
 				var t1 = DateTime.UtcNow;
 				//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
 
-				var totalSize = readPixels.Length;
-				var pixLength = (bmp.PixelFormat == PixelFormat.Format32bppArgb || bmp.PixelFormat == PixelFormat.Format32bppRgb) ? 4 : 3;
+				var pixLength = 4;
 
-				byte* p = (byte*)(void*)srcData.Scan0;
-				//Colors in are bitmap format are 32bpp so 4 bytes for each color in RGBA format
-				//If we are set to 0 just read the full screen
-				//This is reccomended if reducing the resolution as it is fast enough and produces better results
-				if (pixelCount == 0 || readPixels.Length == 0)
+				fixed (byte* p = &(useImage.GetBuffer()[0]))
 				{
-					totalSize = srcData.Width * srcData.Height;
+					//Colors in are bitmap format are 32bpp so 4 bytes for each color in BGRA format
+					var totalSize = newWidth * newHeight * pixLength;
 					bool oneZone = !(zones.Length > 1);
 					int currentZone = 0;
 					var zone = zones[currentZone];
 					int zoneRow = 0;
 					int xIter = 0;
 					int yIter = 0;
-					for (var i = 0; i < totalSize * pixLength; i += pixLength)
+					for (var i = 0; i < totalSize; i += pixLength)
 					{
 						//index is our power of 4 padded index in the bitmap.
 						zone.TotalB += p[i]; //b
@@ -128,26 +104,9 @@ namespace BitmapZoneProcessor
 						}
 					}
 				}
-				else
-				{
-					int pixIndex = 0;
-					for (var i = 0; i < totalSize; ++i)
-					{
-						//y * stride gives us the offset for the scanline we are in on the bitmap (ex. line 352 * 1080 = 380160 bits)
-						//x * 4 gives us our power of 4 for column
-						//ex. total offset for coord 960x540 on a 1080p image is is (540 * 1080) + 960 * 4 = 587040 bits
-						pixIndex = (readPixels[i].Pixel.Y * srcData.Stride) + readPixels[i].Pixel.X * pixLength;
-						readPixels[i].Zone.TotalR += p[pixIndex + 2];
-						readPixels[i].Zone.TotalG += p[pixIndex + 1];
-						readPixels[i].Zone.TotalB += p[pixIndex];
-						readPixels[i].Zone.Count++;
-					}
-				}
 
 				//Console.WriteLine($"Read Bitmap Time:  {(DateTime.UtcNow - t1).TotalMilliseconds}");
 			}
-			bmp.UnlockBits(srcData);
-			return bitmapChanged;
 		}
 
 		public static (MemoryStream image, MemoryStream blurImage) PreparePostBitmap(PixelZone[] zones, int columns, int rows, int newWidth, int newHeight, ImageFilter resizeFilter, float resizeSigma, MemoryStream smallImageMemStream, MemoryStream blurImageMemStream)
@@ -163,7 +122,8 @@ namespace BitmapZoneProcessor
 					newWidth,
 					newHeight,
 					resizeFilter,
-					resizeSigma);
+					resizeSigma,
+					PixelFormat.Rgb24);
 
 				return (image, blurImage);
 			}

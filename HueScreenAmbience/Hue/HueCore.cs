@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +14,8 @@ using Q42.HueApi.Streaming;
 using Q42.HueApi.Streaming.Models;
 using Q42.HueApi.Streaming.Extensions;
 using Q42.HueApi.Streaming.Effects;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace HueScreenAmbience.Hue
 {
@@ -28,14 +29,14 @@ namespace HueScreenAmbience.Hue
 		public bool IsConnectedToBridge { get; private set; } = false;
 		private DateTime _lastHueChangeTime;
 		private bool _sendingCommand;
-		private Color _lastColor;
+		private Rgb24 _lastColor;
 		private byte _colorChangeThreshold = 15;
 		private TimeSpan _frameTimeSpan;
 		private StreamingGroup _streamGroup;
 		private EntertainmentLayer _streamBaseLayer;
 		private CancellationTokenSource _cancelSource;
 		private CancellationToken _cancelToken;
-		private Dictionary<Byte, Color> _lastLightColors;
+		private Dictionary<Byte, Rgb24> _lastLightColors;
 
 		private Config _config;
 		private FileLogger _logger;
@@ -49,12 +50,12 @@ namespace HueScreenAmbience.Hue
 		public void Start()
 		{
 			_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.hueSettings.updateFrameRate);
-			_lastColor = Color.FromArgb(255, 255, 255);
+			_lastColor = new Rgb24(255, 255, 255);
 			_colorChangeThreshold = _config.Model.hueSettings.colorChangeThreshold;
 			if (_lastLightColors != null)
 				_lastLightColors.Clear();
 			else
-				_lastLightColors = new Dictionary<byte, Color>();
+				_lastLightColors = new Dictionary<byte, Rgb24>();
 			Task.Run(() => AutoConnectAttempt());
 		}
 
@@ -233,7 +234,7 @@ namespace HueScreenAmbience.Hue
 			}
 		}
 
-		public async Task ChangeLightColorBasic(Color c)
+		public async Task ChangeLightColorBasic(Rgb24 c)
 		{
 			if (_sendingCommand)
 				return;
@@ -258,7 +259,6 @@ namespace HueScreenAmbience.Hue
 				g = _lastColor.G;
 			if (_lastColor.B >= c.B - _colorChangeThreshold && _lastColor.B <= c.B + _colorChangeThreshold)
 				b = _lastColor.B;
-			c = Color.FromArgb(255, (byte)r, (byte)g, (byte)b);
 			if (c == _lastColor)
 				return;
 			_lastColor = c;
@@ -293,7 +293,7 @@ namespace HueScreenAmbience.Hue
 				_sendingCommand = true;
 				var start = DateTime.UtcNow;
 				var (x, y) = (0, 0);
-				Color c;
+				Rgb24 c;
 				foreach (var light in _streamBaseLayer)
 				{
 					(x, y) = MapLightLocationToImage(light.LightLocation, width, height);
@@ -319,12 +319,12 @@ namespace HueScreenAmbience.Hue
 							g = lastColor.G;
 						if (lastColor.B >= b - _colorChangeThreshold && lastColor.B <= b + _colorChangeThreshold)
 							b = lastColor.B;
-						c = Color.FromArgb(255, (byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
+						c = new Rgb24((byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
 						_lastLightColors[light.Id] = c;
 					}
 					else
 					{
-						c = Color.FromArgb(255, (byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
+						c = new Rgb24((byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
 						_lastLightColors.Add(light.Id, c);
 					}
 

@@ -2,7 +2,6 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Net;
 
@@ -65,6 +64,9 @@ namespace HueScreenAmbience
 			_config.readResolutionReduce = Math.Clamp(_config.readResolutionReduce, 1.0f, 10.0f);
 			_config.screenReadFrameRate = Math.Max(1, _config.screenReadFrameRate);
 
+			if (_config.bitmapRect.HasValue)
+				_config.imageRect = new SixLabors.ImageSharp.Rectangle(_config.bitmapRect.Value.top, _config.bitmapRect.Value.left, _config.bitmapRect.Value.width, _config.bitmapRect.Value.height);
+
 			if (!IPAddress.TryParse(_config.lightStripSettings.remoteAddress, out _))
 			{
 				_config.lightStripSettings.remoteAddress = "127.0.0.1";
@@ -86,6 +88,14 @@ namespace HueScreenAmbience
 		Entertainment = 1
 	}
 
+	public struct JsonRect
+	{
+		public int top;
+		public int left;
+		public int width;
+		public int height;
+	}
+
 	[Serializable]
 	public class ConfigModel
 	{
@@ -98,12 +108,13 @@ namespace HueScreenAmbience
 		public int zoneColumns = 1;
 		public int zoneRows = 1;
 		public int screenReadFrameRate = 24;
-		public int pixelCount = 0;
 		public bool dumpPngs = false;
 		public string imageDumpLocation = "Images";
 		public bool intrinsicsEnabled;
 		public float readResolutionReduce = 2.0f;
-		public Rectangle? bitmapRect = null;
+		public JsonRect? bitmapRect = null;
+		[JsonIgnore]
+		public SixLabors.ImageSharp.Rectangle? imageRect = null;
 		public LightStripSettings lightStripSettings = new LightStripSettings();
 	}
 

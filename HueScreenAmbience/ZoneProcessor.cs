@@ -1,14 +1,13 @@
-﻿using BitmapZoneProcessor;
-using HueScreenAmbience.Hue;
-using HueScreenAmbience.LightStrip;
-using HueScreenAmbience.RGB;
-//using ImageMagick;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using BitmapZoneProcessor;
+using HueScreenAmbience.Hue;
+using HueScreenAmbience.LightStrip;
+using HueScreenAmbience.RGB;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace HueScreenAmbience
 {
@@ -84,7 +83,7 @@ namespace HueScreenAmbience
 				int avgR = zones.Sum(x => x.AvgR) / zones.Length;
 				int avgG = zones.Sum(x => x.AvgG) / zones.Length;
 				int avgB = zones.Sum(x => x.AvgB) / zones.Length;
-				var avgColor = Color.FromArgb(255, avgR, avgG, avgB);
+				var avgColor = new Rgb24((byte)Math.Clamp(avgR, 0, 255), (byte)Math.Clamp(avgG, 0, 255), (byte)Math.Clamp(avgB, 0, 255));
 
 				time = DateTime.UtcNow;
 
@@ -144,7 +143,7 @@ namespace HueScreenAmbience
 						time = DateTime.UtcNow;
 						var path = Path.Combine(_config.Model.imageDumpLocation, $"{frame.ToString().PadLeft(6, '0')}.png");
 						//_ = ImageHandler.WriteImageToFile(images.image, columns, rows, path, width, height);
-						_ = ImageHandler.WriteImageToFile(images.blurImage, newWidth, newHeight, path);
+						_ = ImageHandler.WriteImageToFile(images.blurImage, newWidth, newHeight, path, pixelFormat: PixelFormat.Rgb24);
 						//Console.WriteLine($"PostRead writeStream Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 					}
 					catch (Exception ex)

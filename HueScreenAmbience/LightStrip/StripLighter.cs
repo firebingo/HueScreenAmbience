@@ -1,22 +1,23 @@
-﻿using Iot.Device.Ws28xx;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Device.Spi;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Iot.Device.Ws28xx;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace HueScreenAmbience.LightStrip
 {
 	public class StripLighterLight
 	{
 		public PointF Location;
-		public Color Color;
-		public Color? LastColor;
+		public Rgb24 Color;
+		public Rgb24? LastColor;
 		//These are used to cache the lights x and y coordinates so I don't have to recalculate them every frame
 		public int Width;
 		public int Height;
@@ -46,12 +47,12 @@ namespace HueScreenAmbience.LightStrip
 		private int _packetColorSize;
 		private bool _started = false;
 		private bool _updating = false;
-		private readonly Color _resetColor = Color.FromArgb(0, 0, 0, 0);
+		private readonly Rgb24 _resetColor = new Rgb24(0, 0, 0);
 		private DateTime _lastChangeTime;
 		private TimeSpan _frameTimeSpan;
 
-		private SpiDevice? _device;
-		private Ws2812b? _lightStrip;
+		private SpiDevice _device;
+		private Ws2812b _lightStrip;
 
 		public StripLighter()
 		{
@@ -82,7 +83,7 @@ namespace HueScreenAmbience.LightStrip
 						_lights.Add(new StripLighterLight()
 						{
 							Location = new PointF(light.X, light.Y),
-							Color = Color.FromArgb(0, 0, 0),
+							Color = Color.FromRgb(0, 0, 0),
 							LastColor = null
 						});
 					}
@@ -163,7 +164,7 @@ namespace HueScreenAmbience.LightStrip
 				{
 					foreach (var light in _lights)
 					{
-						light.Color = Color.FromArgb(_resetColor.R, _resetColor.G, _resetColor.B);
+						light.Color = Color.FromRgb(_resetColor.R, _resetColor.G, _resetColor.B);
 						light.LastColor = light.Color;
 					}
 					_lightStrip?.Image?.Clear();
@@ -178,7 +179,7 @@ namespace HueScreenAmbience.LightStrip
 					SerializeLightMetadata(-1);
 					foreach (var light in _lights)
 					{
-						light.Color = Color.FromArgb(_resetColor.R, _resetColor.G, _resetColor.B);
+						light.Color = Color.FromRgb(_resetColor.R, _resetColor.G, _resetColor.B);
 						light.LastColor = light.Color;
 						SerializeLightColor(light.Color);
 					}
@@ -258,7 +259,7 @@ namespace HueScreenAmbience.LightStrip
 			for (var i = 0; i < _lights.Count; ++i)
 			{
 				UpdateLightColor(image, _lights[i], width, height);
-				_lightStrip?.Image?.SetPixel(i, 0, _lights[i].Color);
+				_lightStrip?.Image?.SetPixel(i, 0, System.Drawing.Color.FromArgb(_lights[i].Color.R, _lights[i].Color.G, _lights[i].Color.B));
 			}
 			_lightStrip?.Update();
 		}
@@ -293,7 +294,7 @@ namespace HueScreenAmbience.LightStrip
 					b = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.B, 2) + blendAmount * Math.Pow(b, 2));
 				}
 			}
-			light.Color = Color.FromArgb(255, (byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
+			light.Color = Color.FromRgba(255, (byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
 			if (_config.Model.lightStripSettings.saturateColors != 1.0f)
 				light.Color = ColorHelper.SaturateColor(light.Color, _config.Model.lightStripSettings.saturateColors);
 			light.LastColor = light.Color;
@@ -328,7 +329,7 @@ namespace HueScreenAmbience.LightStrip
 			}
 		}
 
-		private void SerializeLightColor(Color color)
+		private void SerializeLightColor(Rgb24 color)
 		{
 			var stream = _serializeStreams[_currentStream];
 			if ((stream.Position - _packetHeaderSize) + _colorByteCount > _packetColorSize)
