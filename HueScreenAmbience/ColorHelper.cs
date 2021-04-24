@@ -28,7 +28,7 @@ namespace HueScreenAmbience
 
 		public static string ColorToHex(Color c)
 		{
-			return c.ToHex();
+			return c.ToHex()[0..6];
 		}
 	}
 }
