@@ -294,7 +294,7 @@ namespace HueScreenAmbience.LightStrip
 					b = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.B, 2) + blendAmount * Math.Pow(b, 2));
 				}
 			}
-			light.Color = Color.FromRgba(255, (byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
+			light.Color = Color.FromRgb((byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
 			if (_config.Model.lightStripSettings.saturateColors != 1.0f)
 				light.Color = ColorHelper.SaturateColor(light.Color, _config.Model.lightStripSettings.saturateColors);
 			light.LastColor = light.Color;
