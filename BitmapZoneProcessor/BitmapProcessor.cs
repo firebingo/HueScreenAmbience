@@ -25,7 +25,7 @@ namespace BitmapZoneProcessor
 			// out what zone to add values to.
 			if (bitmapRect.HasValue)
 			{
-				useImage = ImageHandler.CropImageRect(useImage, width, height, cropStream, bitmapRect.Value);
+				useImage = ImageHandler.CropImageRect(useImage, width, height, cropStream, bitmapRect.Value, PixelFormat.Bgr32);
 				width = bitmapRect.Value.Width;
 				height = bitmapRect.Value.Height;
 			}
@@ -38,7 +38,7 @@ namespace BitmapZoneProcessor
 			// effectivly produce the same result as point sampling to a lower resolution first. This could save memory pressure from
 			// rescaling the image. But it may make determining what zone to add values to more complicated.
 			if (width != newWidth || height != newHeight)
-				useImage = ImageHandler.ResizeImage(useImage, width, height, resizeStream, newWidth, newHeight, pixelFormat: PixelFormat.Rgba32);
+				useImage = ImageHandler.ResizeImage(useImage, width, height, resizeStream, newWidth, newHeight, pixelFormat: PixelFormat.Bgr32);
 			//Console.WriteLine($"Resize Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 
 			//using (var fi = File.OpenWrite($"Images/{DateTime.Now.Ticks.ToString().PadLeft(5, '0')}.jpeg"))

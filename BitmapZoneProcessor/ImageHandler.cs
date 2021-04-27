@@ -19,7 +19,8 @@ namespace BitmapZoneProcessor
 	public enum PixelFormat
 	{
 		Rgb24,
-		Rgba32
+		Rgba32,
+		Bgr32,
 	}
 
 	public static class ImageHandler
@@ -38,6 +39,7 @@ namespace BitmapZoneProcessor
 			simage = pixelFormat switch
 			{
 				PixelFormat.Rgb24 => Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height),
+				PixelFormat.Bgr32 => Image.LoadPixelData<Bgra32>(image.GetBuffer(), width, height),
 				_ => Image.LoadPixelData<Rgba32>(image.GetBuffer(), width, height)
 			};
 			simage.Mutate(x => x.Crop(rect));
@@ -48,6 +50,13 @@ namespace BitmapZoneProcessor
 					{
 						newImage.Seek(0, SeekOrigin.Begin);
 						newImage.Write(MemoryMarshal.AsBytes(rgb24Span));
+					}
+					break;
+				case PixelFormat.Bgr32:
+					if (((Image<Bgra32>)simage).TryGetSinglePixelSpan(out var bgr32Span))
+					{
+						newImage.Seek(0, SeekOrigin.Begin);
+						newImage.Write(MemoryMarshal.AsBytes(bgr32Span));
 					}
 					break;
 				default:
@@ -97,6 +106,7 @@ namespace BitmapZoneProcessor
 			simage = pixelFormat switch
 			{
 				PixelFormat.Rgb24 => Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height),
+				PixelFormat.Bgr32 => Image.LoadPixelData<Bgra32>(image.GetBuffer(), width, height),
 				_ => Image.LoadPixelData<Rgba32>(image.GetBuffer(), width, height)
 			};
 			switch (filter)
@@ -116,6 +126,13 @@ namespace BitmapZoneProcessor
 					{
 						newImage.Seek(0, SeekOrigin.Begin);
 						newImage.Write(MemoryMarshal.AsBytes(rgb24Span));
+					}
+					break;
+				case PixelFormat.Bgr32:
+					if (((Image<Bgra32>)simage).TryGetSinglePixelSpan(out var bgr32Span))
+					{
+						newImage.Seek(0, SeekOrigin.Begin);
+						newImage.Write(MemoryMarshal.AsBytes(bgr32Span));
 					}
 					break;
 				default:
@@ -147,6 +164,7 @@ namespace BitmapZoneProcessor
 			simage = pixelFormat switch
 			{
 				PixelFormat.Rgb24 => Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height),
+				PixelFormat.Bgr32 => Image.LoadPixelData<Bgra32>(image.GetBuffer(), width, height),
 				_ => Image.LoadPixelData<Rgba32>(image.GetBuffer(), width, height)
 			};
 			if (resizeWidth.HasValue && resizeHeight.HasValue)

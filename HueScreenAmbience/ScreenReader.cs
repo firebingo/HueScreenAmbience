@@ -187,7 +187,7 @@ namespace HueScreenAmbience
 					var updatedFrame = false;
 					var t = start;
 					if (_config.Model.piCameraSettings.isPi)
-						updatedFrame = await _piCapture.GetFrame(frameStream);
+						updatedFrame = _piCapture.GetFrame(frameStream);
 					else
 						updatedFrame = _dxCapture.GetFrame(frameStream);
 					//Console.WriteLine($"Capture Time:        {(DateTime.UtcNow - start).TotalMilliseconds}");

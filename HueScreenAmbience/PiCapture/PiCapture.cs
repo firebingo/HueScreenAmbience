@@ -16,7 +16,7 @@ namespace HueScreenAmbience.PiCapture
 		private bool _isRunning = false;
 		private readonly int _frameLength = 0;
 		private readonly byte[] _frameBuffer;
-		private readonly SemaphoreSlim _readingSemaphore;
+		private bool _readLock;
 
 		private Thread _ffmpegThread;
 
@@ -31,7 +31,7 @@ namespace HueScreenAmbience.PiCapture
 			_frameRate = frameRate;
 			_frameLength = _width * _height * 4;
 			_frameBuffer = new byte[_frameLength];
-			_readingSemaphore = new SemaphoreSlim(1, 1);
+			_readLock = false;
 		}
 
 		//gpu_mem=256 /boot/config.txt
@@ -47,7 +47,8 @@ namespace HueScreenAmbience.PiCapture
 				_ffmpegProcess.StartInfo.RedirectStandardError = true;
 				_ffmpegProcess.StartInfo.RedirectStandardOutput = true;
 				_ffmpegProcess.StartInfo.FileName = "ffmpeg";
-				_ffmpegProcess.StartInfo.Arguments = $"-f v4l2 -input_format yuv420p -video_size {_width}x{_height} -i /dev/video0 -c:v rawvideo -pix_fmt bgr32 -r {_frameRate} -f rawvideo pipe:1";
+				//rgb32 and bgr32 are flipped for some reason??
+				_ffmpegProcess.StartInfo.Arguments = $"-f v4l2 -input_format yuv422p -framerate 60 -video_size {_width}x{_height} -i /dev/video0 -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -f rawvideo pipe:1";
 
 				_isRunning = true;
 				_ffmpegThread = new Thread(new ThreadStart(ReadLoop));
@@ -76,14 +77,20 @@ namespace HueScreenAmbience.PiCapture
 					do
 					{
 						//Console.WriteLine("FFMPEG Read Wait");
-						_readingSemaphore.Wait();
 						//Console.WriteLine("Begin FFMPEG Read");
 
+						do
+						{
+							Thread.Sleep(0);
+						}
+						while (_readLock);
+
+						_readLock = true;
 						if (frameBytesRead + rowSize > _frameLength)
 						{
 							if (!_isRunning)
 							{
-								_readingSemaphore.Release();
+								_readLock = false;
 								break;
 							}
 
@@ -104,7 +111,7 @@ namespace HueScreenAmbience.PiCapture
 						{
 							if (!_isRunning)
 							{
-								_readingSemaphore.Release();
+								_readLock = false;
 								break;
 							}
 
@@ -122,34 +129,38 @@ namespace HueScreenAmbience.PiCapture
 								frameBytesRead += bytesRead;
 							}
 						}
+						_readLock = false;
 						//Console.WriteLine("End FFMPEG Read");
-						_readingSemaphore.Release();
 					} while (_isRunning);
 				}
 			}
 		}
 
-		public async Task<bool> GetFrame(MemoryStream frameStream)
+		public bool GetFrame(MemoryStream frameStream)
 		{
 			try
 			{
 				var start = DateTime.UtcNow;
 				var frameData = frameStream.GetBuffer();
-				await _readingSemaphore.WaitAsync();
+				do
+				{
+					Thread.Sleep(0);
+				}
+				while (_readLock);
+				_readLock = true;
 				unsafe
 				{
 					var t = DateTime.UtcNow;
 					Buffer.BlockCopy(_frameBuffer, 0, frameData, 0, _frameLength);
 					//Console.WriteLine($"Buffer.BlockCopy: {(DateTime.UtcNow - t).TotalMilliseconds}");
-					_readingSemaphore.Release();
 				}
-
+				_readLock = false;
 				//Console.WriteLine($"GetFrame: {(DateTime.UtcNow - start).TotalMilliseconds}");
 				return true;
 			}
 			catch (Exception ex)
 			{
-				_ = Task.Run(() => _logger.WriteLog(ex.ToString()));
+				Task.Run(() => _logger.WriteLog(ex.ToString()));
 			}
 
 			return false;
