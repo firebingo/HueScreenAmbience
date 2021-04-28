@@ -140,7 +140,9 @@ namespace HueScreenAmbience
 		{
 			if (_config.Model.piCameraSettings.isPi)
 			{
-				_piCapture = new PiCapture.PiCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.piCameraSettings.frameRate, _logger);
+				_piCapture = new PiCapture.PiCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.piCameraSettings.inputWidth, _config.Model.piCameraSettings.inputHeight,
+					_config.Model.piCameraSettings.frameRate, _config.Model.piCameraSettings.inputSource, _config.Model.piCameraSettings.inputFormat, _config.Model.piCameraSettings.inputFrameRate,
+					_logger, _config.Model.piCameraSettings.ffmpegStdError);
 				_piCapture.Start();
 			}
 			else
@@ -238,12 +240,15 @@ namespace HueScreenAmbience
 					_averageValues[_averageIter] = dt.TotalMilliseconds;
 					//if (dt.TotalMilliseconds > 25)
 					//{
-					//Console.WriteLine($"Capture Time:     {captureTime}");
-					//Console.WriteLine($"Read Time:        {readTime}");
-					//Console.WriteLine($"PostRead Time:    {postReadTime}");
-					//Console.WriteLine($"Total Time:       {dt.TotalMilliseconds}");
-					//Console.WriteLine($"AverageDt:        {AverageDt}");
-					//Console.WriteLine("---------------------------------------");
+					if (_config.Model.debugTimings)
+					{
+						Console.WriteLine($"Capture Time:     {captureTime}");
+						Console.WriteLine($"Read Time:        {readTime}");
+						Console.WriteLine($"PostRead Time:    {postReadTime}");
+						Console.WriteLine($"Total Time:       {dt.TotalMilliseconds}");
+						Console.WriteLine($"AverageDt:        {AverageDt}");
+						Console.WriteLine("---------------------------------------");
+					}
 					//}
 					_frame++;
 				}

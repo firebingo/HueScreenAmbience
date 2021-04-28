@@ -112,6 +112,7 @@ namespace HueScreenAmbience
 		public string imageDumpLocation = "Images";
 		public bool intrinsicsEnabled;
 		public float readResolutionReduce = 2.0f;
+		public bool debugTimings = false;
 		public JsonRect? bitmapRect = null;
 		[JsonIgnore]
 		public SixLabors.ImageSharp.Rectangle? imageRect = null;
@@ -196,6 +197,12 @@ namespace HueScreenAmbience
 		public int width = 1280;
 		public int height = 720;
 		public int frameRate = 18;
-		public int skipFrames = 200;
+		public int skipFrames = 100;
+		public int inputWidth = 1280;
+		public int inputHeight = 720;
+		public int inputFrameRate = 60;
+		public string inputSource = "/dev/video0";
+		public string inputFormat = "yuv420p";
+		public bool ffmpegStdError = false;
 	}
 }

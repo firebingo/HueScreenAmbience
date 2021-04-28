@@ -30,12 +30,18 @@
     "updateFrameRate": 60 //Can be used to throttle rate that rgb devices are allowed to update at
   },
   "piCameraSettings": {
-    "isPi": false, //Whether or not we are running on a pi and taking in camera input from csi port.
+    "isPi": false, //Whether or not we are running on a pi and reading from a video input source.
     "lightsLocal": false, //Whether or not a light strip is connected to the pi to update or if it should send udp packets like a standard device.
-    "width": 1280, //Dimensions of image from camera input
-    "height": 720, //Recommended to keep at 1280x720 otherwise it may not be able to keep up with reading.
-    "frameRate": 18, //The frame rate to read the camera input. ffmpeg drops extra frames. recommended to keep below 20. Higher rates typically mean more delay in reading and updating lights.
-    "skipFrames": 200 //An amount of frames to skip before updating lights. This can be used to skip hdmi causing flashes while the connection is starting.
+    "width": 1280, //Dimensions of video for ffmpeg to output. This can be used to scale the video source in ffmpeg instead of using readResolutionReduce.
+    "height": 720, //This can be more efficent instead of scaling later as it can do format conversion at the same time. Set readResolutionReduce to 1.0 if using this.
+    "frameRate": 18, //The frame rate to read the video input. ffmpeg drops extra frames. recommended to keep below 20. Higher rates typically mean more delay in reading and updating lights.
+    "skipFrames": 200, //An amount of frames to skip before updating lights. This can be used to skip hdmi causing flashes while the connection is starting.
+	"inputWidth": 1280, //Dimensions of video from video input
+    "inputHeight": 720,
+    "inputFrameRate": 60, //The frame rate of the video source.
+    "inputSource": "/dev/video0", //The source of video to pull from.
+    "inputFormat": "yuv420p", //The format of the input for ffmpeg to read.
+    "ffmpegStdError": false //Whether or not to allow ffmpeg to dump its statistics to console. Useful for debugging.
   },
   "adapterId": 0, //The id of the graphics adapter to use.
   "monitorId": 0, //The id of the monitor to read.
@@ -46,6 +52,7 @@
   "imageDumpLocation": "", //Path to dump images in
   "intrinsicsEnabled": false, //currently does nothing
   "readResolutionReduce": 2.0, //Reduce captured screen image size (ex. 2.0 is res * 0.5, 1920x1080->960x540). Adjust value based on screen resolution. getting image size to around 720p or lower is recommended.
+  "debugTimings": false, //Whether or not to ouput timings of processing loop to console. Useful for debugging.
   "bitmapRect": null, //A rect to cut out of the captured screen for use. format is {"top": 0,"left": 0,"width": 1280,"height": 720}.
   "lightStripSettings": {
     "useLightStrip": true, //Whether or not to use a light strip

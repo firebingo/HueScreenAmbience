@@ -14,9 +14,12 @@ namespace HueScreenAmbience
 		private ScreenReader _screen;
 		private HueCore _hueClient;
 
-		public void Start()
+		public async Task Start(bool waitHueStart)
 		{
-			_hueClient.Start();
+			if (waitHueStart)
+				await _hueClient.Start();
+			else
+				_ = _hueClient.Start();
 		}
 
 		public void InstallServices(IServiceProvider map)

@@ -88,7 +88,7 @@ namespace HueScreenAmbience
 				_stripLighter.InstallServices(_map);
 
 				inputThread?.Start();
-				_core.Start();
+				await _core.Start(isHeadless);
 				_screen.Start();
 
 				AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;

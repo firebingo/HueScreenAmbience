@@ -47,7 +47,7 @@ namespace HueScreenAmbience.Hue
 			_logger = map.GetService(typeof(FileLogger)) as FileLogger;
 		}
 
-		public void Start()
+		public async Task Start()
 		{
 			_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.hueSettings.updateFrameRate);
 			_lastColor = new Rgb24(255, 255, 255);
@@ -56,7 +56,7 @@ namespace HueScreenAmbience.Hue
 				_lastLightColors.Clear();
 			else
 				_lastLightColors = new Dictionary<byte, Rgb24>();
-			Task.Run(() => AutoConnectAttempt());
+			await AutoConnectAttempt();
 		}
 
 		public async Task<bool> AutoConnectAttempt()

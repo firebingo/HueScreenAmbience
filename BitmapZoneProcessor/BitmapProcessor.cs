@@ -41,8 +41,7 @@ namespace BitmapZoneProcessor
 				useImage = ImageHandler.ResizeImage(useImage, width, height, resizeStream, newWidth, newHeight, pixelFormat: PixelFormat.Bgr32);
 			//Console.WriteLine($"Resize Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 
-			//using (var fi = File.OpenWrite($"Images/{DateTime.Now.Ticks.ToString().PadLeft(5, '0')}.jpeg"))
-			//	bmp.Save(fi, ImageFormat.Jpeg);
+			//System.Threading.Tasks.Task.Run(() => ImageHandler.WriteImageToFile(useImage, newWidth, newHeight, $"Images/{DateTime.Now.Ticks.ToString().PadLeft(5, '0')}.png", pixelFormat: PixelFormat.Bgr32));
 
 			t = DateTime.UtcNow;
 
