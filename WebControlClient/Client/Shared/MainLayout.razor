@@ -1,0 +1,58 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager NavManager
+
+<div id="main-window" class="window">
+	<div class="title-bar">
+		<div class="title-bar-text">Screen Ambience</div>
+	</div>
+	<div class="window-body">
+		<section class="tabs">
+			<menu role="tablist" aria-label="Page Navigation Tabs">
+				<button role="tab" @ref="_SAStatus" id="SAStatus" aria-selected="@((_selectedTab == _SAStatus.Id).ToString().ToLower())" @onclick="@(() =>ChangeTab(_SAStatus))">Screen Ambience Status</button>
+				<button role="tab" @ref="_LSCStatus" id="LSCStatus" aria-selected="@((_selectedTab == _LSCStatus.Id).ToString().ToLower())" @onclick="@(() =>ChangeTab(_LSCStatus))">Light Strip Client Status</button>
+			</menu>
+			<!-- the tab content -->
+			<article role="tabpanel">
+				@Body
+			</article>
+		</section>
+
+	</div>
+</div>
+
+@code {
+	private ElementReference _SAStatus;
+	private ElementReference _LSCStatus;
+
+	public string _selectedTab { get; set; }
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		var prevSelectedTab = _selectedTab;
+		var rel = NavManager.ToBaseRelativePath(NavManager.Uri);
+		_selectedTab = rel.ToUpperInvariant() switch
+		{
+			"SCREENAMBIENCE" => _SAStatus.Id,
+			"LIGHTSTRIPCLIENT" => _LSCStatus.Id,
+			_ => _SAStatus.Id
+		};
+
+		if (prevSelectedTab == null || !prevSelectedTab.Equals(_selectedTab))
+			StateHasChanged();
+
+		await base.OnAfterRenderAsync(firstRender);
+	}
+
+	private void ChangeTab(ElementReference element)
+	{
+		_selectedTab = element.Id;
+		if (element.Id == _SAStatus.Id)
+		{
+			NavManager.NavigateTo("/ScreenAmbience");
+		}
+		else if (element.Id == _LSCStatus.Id)
+		{
+			NavManager.NavigateTo("/LightStripClient");
+		}
+	}
+}

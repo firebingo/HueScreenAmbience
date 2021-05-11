@@ -177,7 +177,7 @@ namespace HueScreenAmbience
 					if (_hueClient.UseRoom != null)
 						Console.WriteLine($"Using room: {_hueClient.UseRoom.Name}");
 					if (_screen.Screen != null)
-						Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate}");
+						Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
 					if (_config.Model.piCameraSettings.isPi)
 						Console.WriteLine($"Using pi camera input: {_config.Model.piCameraSettings.width}x{_config.Model.piCameraSettings.height}x{_config.Model.piCameraSettings.frameRate}");
 					Console.WriteLine("Use -h for help");
@@ -192,7 +192,7 @@ namespace HueScreenAmbience
 				if (_hueClient.UseRoom != null)
 					Console.WriteLine($"Using room: {_hueClient.UseRoom.Name}");
 				if (_screen.Screen != null)
-					Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate}");
+					Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
 				if (_config.Model.piCameraSettings.isPi)
 					Console.WriteLine($"Using pi camera input: {_config.Model.piCameraSettings.width}x{_config.Model.piCameraSettings.height}x{_config.Model.piCameraSettings.frameRate}");
 				if (_screen.IsRunning)

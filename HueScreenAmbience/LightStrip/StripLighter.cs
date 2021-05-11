@@ -259,7 +259,7 @@ namespace HueScreenAmbience.LightStrip
 			for (var i = 0; i < _lights.Count; ++i)
 			{
 				UpdateLightColor(image, _lights[i], width, height);
-				_lightStrip?.Image?.SetPixel(i, 0, System.Drawing.Color.FromArgb(_lights[i].Color.R, _lights[i].Color.G, _lights[i].Color.B));
+				_lightStrip?.Image?.SetPixel(i, 0, _lights[i].Color);
 			}
 			_lightStrip?.Update();
 		}

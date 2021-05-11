@@ -1,0 +1,78 @@
+﻿<div id="message-modal" style="@(Open ? "display: flex;" : "display: none;")">
+	<div class="window">
+		<div class="title-bar">
+			<div class="title-bar-text">@Title</div>
+			<div class="title-bar-controls">
+				<button hidden="@HideClose" @onclick="(() => OnClose?.Invoke())" aria-label="Close"></button>
+			</div>
+		</div>
+		<div class="window-body">
+			<div style="display: flex; align-items: center;">
+				@{
+					switch (Type)
+					{
+						case ModalType.Info:
+							<img src="/images/IconInfo.png" />
+							break;
+						case ModalType.Error:
+							<img src="/images/IconError.png" />
+							break;
+						case ModalType.Warning:
+							<img src="/images/IconWarning.png" />
+							break;
+						default:
+							break;
+					}
+				}
+				<p>@Body</p>
+			</div>
+			<section class="field-row" style="@(Buttons?.Count > 1 ? "justify-content: flex-end": "justify-content: center")">
+				@if (Buttons != null)
+				{
+					@foreach (var button in Buttons)
+					{
+						<button @onclick="@(() => button.OnClick?.Invoke())">@button.Text</button>
+					}
+				}
+			</section>
+		</div>
+	</div>
+</div>
+
+@code {
+	private bool _open;
+	[Parameter]
+	public bool Open
+	{
+		get { return _open; }
+		set
+		{
+			_open = value;
+			if (_open)
+			{
+				if (Buttons == null)
+					Buttons = new List<ModalButton>();
+				if (Buttons.Count == 0)
+				{
+					Buttons.Add(new ModalButton()
+					{
+						Text = "Ok",
+						OnClick = OnClose
+					});
+				}
+			}
+		}
+	}
+	[Parameter]
+	public string Title { get; set; }
+	[Parameter]
+	public string Body { get; set; }
+	[Parameter]
+	public ModalType Type { get; set; } = ModalType.None;
+	[Parameter]
+	public bool HideClose { get; set; } = false;
+	[Parameter]
+	public List<ModalButton> Buttons { get; set; } = null;
+	[Parameter]
+	public Action OnClose { get; set; }
+}

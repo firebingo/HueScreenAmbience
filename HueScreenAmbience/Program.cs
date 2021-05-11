@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.RGB;
+using HueScreenAmbience.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HueScreenAmbience
@@ -18,6 +20,7 @@ namespace HueScreenAmbience
 		private HueCore _hueClient = null;
 		private RGBLighter _rgbLighter = null;
 		private StripLighter _stripLighter = null;
+		private SocketServer _socketServer = null;
 		private IServiceProvider _map = null;
 
 		static async Task Main(string[] args)
@@ -86,10 +89,12 @@ namespace HueScreenAmbience
 				_zoneProcesser.InstallServices(_map);
 				_rgbLighter.InstallServices(_map);
 				_stripLighter.InstallServices(_map);
+				_socketServer.InstallServices(_map);
 
 				inputThread?.Start();
 				await _core.Start(isHeadless);
 				_screen.Start();
+				await _socketServer.Start();
 
 				AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
 
@@ -123,12 +128,10 @@ namespace HueScreenAmbience
 		{
 			Console.WriteLine("closing");
 			_input.StopInput();
-			var task = _core.StopScreenReading();
-			do
-			{
-				Thread.Sleep(0);
-			}
-			while (!task.IsCompleted);
+			var tasks = new List<Task>();
+			tasks.Add(_socketServer.Stop());
+			tasks.Add(_core.StopScreenReading());
+			Task.WaitAll(tasks.ToArray(), 5000);
 		}
 
 		private IServiceProvider ConfigureServices(bool isHeadless)
@@ -141,6 +144,7 @@ namespace HueScreenAmbience
 			_hueClient = new HueCore();
 			_rgbLighter = new RGBLighter();
 			_stripLighter = new StripLighter();
+			_socketServer = new SocketServer();
 
 			var services = new ServiceCollection();
 			if (_config.Model.piCameraSettings.isPi)
@@ -153,7 +157,8 @@ namespace HueScreenAmbience
 				.AddSingleton(_hueClient)
 				.AddSingleton(_screen)
 				.AddSingleton(_zoneProcesser)
-				.AddSingleton(_stripLighter);
+				.AddSingleton(_stripLighter)
+				.AddSingleton(_socketServer);
 			}
 			else
 			{
@@ -166,7 +171,8 @@ namespace HueScreenAmbience
 				.AddSingleton(_screen)
 				.AddSingleton(_zoneProcesser)
 				.AddSingleton(_rgbLighter)
-				.AddSingleton(_stripLighter);
+				.AddSingleton(_stripLighter)
+				.AddSingleton(_socketServer);
 			}
 			var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
 			return provider;

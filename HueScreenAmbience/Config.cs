@@ -63,6 +63,7 @@ namespace HueScreenAmbience
 			_config.zoneRows = Math.Max(1, _config.zoneRows);
 			_config.readResolutionReduce = Math.Clamp(_config.readResolutionReduce, 1.0f, 10.0f);
 			_config.screenReadFrameRate = Math.Max(1, _config.screenReadFrameRate);
+			_config.socketSettings.listenPort = Math.Clamp(_config.socketSettings.listenPort, 1, 65535);
 
 			if (_config.bitmapRect.HasValue)
 				_config.imageRect = new SixLabors.ImageSharp.Rectangle(_config.bitmapRect.Value.top, _config.bitmapRect.Value.left, _config.bitmapRect.Value.width, _config.bitmapRect.Value.height);
@@ -72,6 +73,12 @@ namespace HueScreenAmbience
 				_config.lightStripSettings.remoteAddress = "127.0.0.1";
 			}
 			_ = _config.lightStripSettings.remoteAddressIp;
+
+			if (!IPAddress.TryParse(_config.socketSettings.listenAddress, out _))
+			{
+				_config.socketSettings.listenAddress = "0.0.0.0";
+			}
+			_ = _config.socketSettings.listenIp;
 
 			for (var i = 0; i < _config.lightStripSettings.lights.Count; ++i)
 			{
@@ -103,6 +110,7 @@ namespace HueScreenAmbience
 		public ZoneProcessSettings zoneProcessSettings = new ZoneProcessSettings();
 		public RGBDeviceSettings rgbDeviceSettings = new RGBDeviceSettings();
 		public PiCameraSettings piCameraSettings = new PiCameraSettings();
+		public SocketSettings socketSettings = new SocketSettings();
 		public int adapterId = 0;
 		public int monitorId = 0;
 		public int zoneColumns = 1;
@@ -204,5 +212,23 @@ namespace HueScreenAmbience
 		public string inputSource = "/dev/video0";
 		public string inputFormat = "yuv420p";
 		public bool ffmpegStdError = false;
+	}
+
+	public class SocketSettings
+	{
+		public bool enableHubSocket = false;
+		public int listenPort = 34780;
+		public string listenAddress = "0.0.0.0";
+		private IPAddress _listenIp;
+		[JsonIgnore]
+		public IPAddress listenIp
+		{
+			get
+			{
+				if (_listenIp == null)
+					_listenIp = IPAddress.Parse(listenAddress);
+				return _listenIp;
+			}
+		}
 	}
 }

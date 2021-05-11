@@ -9,6 +9,8 @@ namespace HueScreenAmbience
 {
 	public class Core
 	{
+		private bool _isScreenStarted = false;
+
 		private Config _config;
 		private InputHandler _input;
 		private ScreenReader _screen;
@@ -254,7 +256,7 @@ namespace HueScreenAmbience
 				Console.WriteLine($"Found monitors:");
 				foreach (var display in displays)
 				{
-					Console.WriteLine($"{display.OutputId}: Name: {display.Name}, Info: {display.Width}x{display.Height}x{display.RefreshRate} Format: {display.Format}");
+					Console.WriteLine($"{display.OutputId}: Name: {display.Name}, Info: {display.Width}x{display.Height}x{display.RefreshRate:0.##} Format: {display.Format}");
 				}
 				Console.WriteLine("Input a display(#) to connect to: ");
 				var read = Console.ReadLine();
@@ -277,6 +279,9 @@ namespace HueScreenAmbience
 
 		public async Task StartScreenReading()
 		{
+			if (_isScreenStarted)
+				return;
+
 			if (_config.Model.hueSettings.useHue)
 			{
 				if (!_hueClient.IsConnectedToBridge || _hueClient.UseRoom == null)
@@ -299,6 +304,7 @@ namespace HueScreenAmbience
 			if (_config.Model.hueSettings.useHue)
 				await _hueClient.OnStartReading();
 
+			_isScreenStarted = true;
 			_ = Task.Run(() => _screen.ReadScreenLoopDx());
 			_input.ResetConsole();
 		}
@@ -313,7 +319,7 @@ namespace HueScreenAmbience
 			_screen.StopScreenLoop();
 
 			await _hueClient.OnStopReading();
-
+			_isScreenStarted = false;
 			_input.ResetConsole();
 		}
 	}

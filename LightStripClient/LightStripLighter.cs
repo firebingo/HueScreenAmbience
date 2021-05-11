@@ -1,8 +1,8 @@
 ﻿using Iot.Device.Ws28xx;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.Device.Spi;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -41,7 +41,7 @@ namespace LightStripClient
 		private long _currentFrame = -1;
 		private byte _packetCount;
 		private byte _frameReceivedPackets;
-		private Dictionary<byte, List<Color>>? _packets;
+		private Dictionary<byte, List<Rgb24>>? _packets;
 
 		public LightStripLighter(Config config, FileLogger logger)
 		{
@@ -84,7 +84,7 @@ namespace LightStripClient
 
 			_buffer = new byte[_packetMaxSize];
 
-			_packets = new Dictionary<byte, List<Color>>();
+			_packets = new Dictionary<byte, List<Rgb24>>();
 
 			var settings = new SpiConnectionSettings(0, 0)
 			{
@@ -98,7 +98,7 @@ namespace LightStripClient
 				_device = SpiDevice.Create(settings);
 				_lightStrip = new Ws2812b(_device, _config.Model.LightCount);
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				_device = null;
 				_lightStrip = null;
@@ -137,7 +137,7 @@ namespace LightStripClient
 						break;
 
 					var header = ReadPacketHeader();
-					
+
 					_packetCount = header.SequenceCount;
 					//If we get a -1 reset lights.
 					if (header.FrameCount == -1)
@@ -154,7 +154,7 @@ namespace LightStripClient
 						_packets.Clear();
 						for (byte i = 0; i < _packetCount; ++i)
 						{
-							_packets.Add(i, new List<Color>());
+							_packets.Add(i, new List<Rgb24>());
 						}
 					}
 					//If we get a previous frame just ignore it
@@ -172,7 +172,7 @@ namespace LightStripClient
 
 					if (_packetCount == _frameReceivedPackets)
 					{
-						if(_config?.Model.LightCount != _packets.Sum(x => x.Value.Count))
+						if (_config?.Model.LightCount != _packets.Sum(x => x.Value.Count))
 						{
 							Console.WriteLine($"Light count received does not match configured count ({_config?.Model.LightCount}), received ({_packets.Sum(x => x.Value.Count)})");
 							continue;
@@ -284,7 +284,7 @@ namespace LightStripClient
 				var r = (byte)_readStream.ReadByte();
 				var g = (byte)_readStream.ReadByte();
 				var b = (byte)_readStream.ReadByte();
-				_packets[sequence].Add(Color.FromArgb(255, r, g, b));
+				_packets[sequence].Add(new Rgb24(r, g, b));
 			}
 		}
 

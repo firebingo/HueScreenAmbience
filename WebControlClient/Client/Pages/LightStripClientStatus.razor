@@ -1,0 +1,49 @@
+﻿@page "/LightStripClient"
+
+<div>
+	<div class="field-row-stacked" style="width: 200px">
+		<label for="lsc-address">IP</label>
+		<input id="lsc-address" type="text" value="@IpValue" @onchange="@(OnIpValueChanged)" />
+	</div>
+	<div class="field-row-stacked" style="width: 50px">
+		<label for="lsc-port">Port</label>
+		<input id="lsc-port" type="text" value="@PortValue" @onchange="@(OnPortValueChanged)" />
+	</div>
+	<button>Connect</button>
+</div>
+
+@code {
+	private IPAddress _ipValue { get; set; }
+	private string IpValue { get; set; }
+	private bool IpValid { get; set; }
+
+	private int _portValue { get; set; }
+	private string PortValue { get; set; }
+	private bool PortValid = true;
+
+	private void OnIpValueChanged(ChangeEventArgs e)
+	{
+		IpValue = e.Value.ToString();
+		if (IPAddress.TryParse(IpValue, out var Ip))
+		{
+			_ipValue = Ip;
+			IpValid = true;
+		}
+		else
+			IpValid = false;
+	}
+
+	private void OnPortValueChanged(ChangeEventArgs e)
+	{
+		PortValue = e.Value.ToString();
+		if (PortValue.Length > 5)
+			return;
+		if (int.TryParse(PortValue, out var i) && i > -1 && i < 65536)
+		{
+			_portValue = i;
+			PortValid = true;
+		}
+		else
+			PortValid = false;
+	}
+}

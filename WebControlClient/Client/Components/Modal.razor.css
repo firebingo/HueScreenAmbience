@@ -1,0 +1,22 @@
+﻿#message-modal {
+    position: fixed;
+    z-index: 15;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+}
+
+img {
+    width: 32px;
+    height: 32px;
+    padding-right: 10px;
+}
+
+
+@media screen and (max-width: 500px) {
+    #message-modal {
+        left: 10%;
+        right: 10%;
+        transform: unset;
+    }
+}

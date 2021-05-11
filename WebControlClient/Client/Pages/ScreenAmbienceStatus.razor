@@ -1,0 +1,319 @@
+﻿@page "/ScreenAmbience"
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@using WebControlClient.Client.Components
+@using WebControlClient.Client.Sockets
+@implements IAsyncDisposable
+
+@if (_socketClient == null || _socketClient.IsClosed)
+{
+<div>
+	<section class="field-row">
+		<div class="field-row-stacked" style="width: 200px">
+			<label for="lsc-address">IP</label>
+			<input id="lsc-address" type="text" @bind="IpValue" @bind:event="onchange" />
+		</div>
+	</section>
+	<section class="field-row">
+		<div class="field-row-stacked" style="width: 50px">
+			<label for="lsc-port">Port</label>
+			<input id="lsc-port" type="text" @bind="PortValue" @bind:event="oninput" />
+		</div>
+	</section>
+	<section class="field-row">
+		<button @onclick="OnConnectClick" disabled="@IsConnecting">@(IsConnecting ? "Connecting..." : "Connect")</button>
+		<div>
+			<input @bind="AutoConnect" type="checkbox" id="auto-connect">
+			<label for="auto-connect">auto-connect</label>
+		</div>
+	</section>
+</div>
+}
+else
+{
+<div>
+	<fieldset>
+		<legend>Stats</legend>
+		<p>
+			<span>Monitor:</span>&nbsp;<span>@(ServerStatus?.ScreenInfo != null ? $"{ServerStatus.ScreenInfo.Id} - {ServerStatus.ScreenInfo.RealWidth}x{ServerStatus.ScreenInfo.RealHeight}@{ServerStatus.ScreenInfo.Rate} ({ServerStatus.ScreenInfo.Width}x{ServerStatus.ScreenInfo.Height})" : string.Empty)</span>
+		</p>
+		<p>
+			<span>Frame:</span>&nbsp;<span>@((ServerStatus?.Frame ?? 0).ToString())</span>
+		</p>
+		<p>
+			<span>Average Delta:</span>&nbsp;<span>@((ServerStatus?.AverageDeltaTime ?? 0.0).ToString("0.##"))ms</span>
+		</p>
+	</fieldset>
+	<fieldset>
+		<legend>Config</legend>
+		<p>
+			<span>Using Hue:</span>&nbsp;<span>@((ServerStatus?.UsingHue ?? false) ? "True" : "False")</span>
+		</p>
+		<p>
+			<span>Hue Connected:</span>&nbsp;<span>@((ServerStatus?.IsHueConnected ?? false) ? "True" : "False")</span>
+		</p>
+		<p>
+			<span>Using Rgb:</span>&nbsp;<span>@((ServerStatus?.UsingRgb ?? false) ? "True" : "False")</span>
+		</p>
+		<p>
+			<span>Using Light Strip:</span>&nbsp;<span>@((ServerStatus?.UsingLightStrip ?? false) ? "True" : "False")</span>
+		</p>
+	</fieldset>
+	<section class="field-row">
+		<button @onclick="OnStartClicked" disabled="@BlockStart">@((ServerStatus?.IsStarted ?? false) ? "Stop" : "Start")</button>
+	</section>
+</div>
+}
+<Modal Open="@ShowModal" Title="@ModalTitle" Body="@ModalBody" Buttons="@ModalButtons" Type="@ModalType" OnClose="@ModalOnClose" />
+
+@code {
+	private CancellationTokenSource _cancelSource;
+	private bool IsConnecting { get; set; }
+
+	private bool ShowModal { get; set; }
+	private string ModalTitle { get; set; }
+	private string ModalBody { get; set; }
+	private ModalType ModalType { get; set; }
+	private List<ModalButton> ModalButtons { get; set; }
+
+	private SocketClient _socketClient;
+	private System.Timers.Timer _updateStatusTimer;
+
+	private WebControlClient.Shared.ScreenAmbienceStatus ServerStatus { get; set; }
+	//Used to disable the start/stop button until we get another server status back.
+	private bool BlockStart { get; set; }
+
+	private IPAddress _ipValueIp;
+	private string _ipValue;
+	private string IpValue
+	{
+		get
+		{
+			return _ipValue;
+		}
+		set
+		{
+			if (value == null)
+				return;
+
+			_ipValue = value;
+			if (IPAddress.TryParse(IpValue, out var Ip))
+			{
+				_ipValueIp = Ip;
+				IpValid = true;
+			}
+			else
+				IpValid = false;
+		}
+	}
+	private bool IpValid { get; set; }
+
+	private int _portValueNum;
+	private string _portValue;
+	private string PortValue
+	{
+		get
+		{
+			return _portValue;
+		}
+		set
+		{
+			if (value == null || value.Length > 5)
+				return;
+
+			_portValue = value;
+			if (int.TryParse(_portValue, out var i) && i > -1 && i < 65536)
+			{
+				_portValueNum = i;
+				PortValid = true;
+			}
+			else
+				PortValid = false;
+		}
+	}
+	private bool PortValid = true;
+
+	private bool AutoConnect { get; set; }
+
+	protected override void OnInitialized()
+	{
+		ServerStatus = new WebControlClient.Shared.ScreenAmbienceStatus();
+		_cancelSource = new CancellationTokenSource();
+		IpValue = "127.0.0.1";
+		PortValue = "0";
+		ModalButtons = new List<ModalButton>();
+
+		_updateStatusTimer = new System.Timers.Timer();
+		_updateStatusTimer.Elapsed += OnStatusUpdateTimer;
+		_updateStatusTimer.Interval = 5 * 1000;
+		_updateStatusTimer.Start();
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			if (bool.TryParse((await localStorage.GetItemAsStringAsync("saautoconnect")), out var auto))
+				AutoConnect = auto;
+			var ips = await localStorage.GetItemAsStringAsync("saipadd");
+			if (!string.IsNullOrWhiteSpace(ips))
+				IpValue = ips;
+			var ports = await localStorage.GetItemAsStringAsync("saipport");
+			if (!string.IsNullOrWhiteSpace(ports))
+				PortValue = ports;
+			if (AutoConnect)
+				await OnConnectClick();
+		}
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		_updateStatusTimer.Stop();
+		_updateStatusTimer.Dispose();
+		await _socketClient?.Close();
+		_cancelSource.Cancel();
+	}
+
+	private async void OnStatusUpdateTimer(object sender, System.Timers.ElapsedEventArgs e)
+	{
+		try
+		{
+			if (_socketClient == null || _socketClient.IsClosed)
+				return;
+			await _socketClient.Send(new ClientMessage() { ActionType = ClientMessageType.GetSAState });
+		}
+		catch (Exception ex)
+		{
+			ModalType = ModalType.Error;
+			ModalTitle = "Exception";
+			ModalBody = ex.Message;
+			ShowModal = true;
+		}
+	}
+
+	private async Task OnConnectClick()
+	{
+		if (IsConnecting || (_socketClient != null && !_socketClient.IsClosed))
+			return;
+		if (!IpValid)
+		{
+			ModalType = ModalType.Warning;
+			ModalTitle = "Invalid Input";
+			ModalBody = "Ip address is invalid. Must be in a parsable IPv4 or IPv6 format.";
+			ShowModal = true;
+			return;
+		}
+		if (!PortValid)
+		{
+			ModalType = ModalType.Warning;
+			ModalTitle = "Invalid Input";
+			ModalBody = "Port is invalid. Must be in a number between 0 and 65535.";
+			ShowModal = true;
+			return;
+		}
+
+		await localStorage.SetItemAsync<string>("saautoconnect", AutoConnect.ToString());
+		if (AutoConnect)
+		{
+			await localStorage.SetItemAsync<string>("saipadd", IpValue.ToString());
+			await localStorage.SetItemAsync<string>("saipport", PortValue.ToString());
+		}
+
+		IsConnecting = true;
+		_ = Task.Run(() => OnConnect());
+	}
+
+	private async Task OnConnect()
+	{
+		try
+		{
+			_socketClient = new SocketClient(_ipValueIp.ToString(), _portValueNum, _cancelSource.Token);
+			_socketClient.OnClientResponse += OnSocketClientResponse;
+			await _socketClient.Connect();
+			var requestMessage = new ClientMessage()
+			{
+				ActionType = ClientMessageType.GetSAState
+			};
+			await _socketClient.Send(requestMessage);
+		}
+		catch (Exception ex)
+		{
+			ModalType = ModalType.Error;
+			ModalTitle = "Exception";
+			ModalBody = ex.Message;
+			ShowModal = true;
+		}
+		finally
+		{
+			IsConnecting = false;
+			await InvokeAsync(StateHasChanged);
+		}
+	}
+
+	private async Task OnSocketClientResponse(object sender, SocketClientResponseEventArgs e)
+	{
+		try
+		{
+			switch (e.Response.Type)
+			{
+				case ClientResponseType.SAData:
+					{
+						if (e.Response is ClientResponse<WebControlClient.Shared.ScreenAmbienceStatus> res)
+						{
+							ServerStatus.CopyFrom(res.Data);
+							BlockStart = false;
+						}
+						break;
+					}
+			}
+		}
+		catch (Exception ex)
+		{
+			ModalType = ModalType.Error;
+			ModalTitle = "Exception";
+			ModalBody = ex.Message;
+			ShowModal = true;
+		}
+		await InvokeAsync(StateHasChanged);
+	}
+
+	private async Task OnStartClicked()
+	{
+		try
+		{
+			if (_socketClient.IsClosed || !ServerStatus.IsStarted.HasValue)
+				return;
+			BlockStart = true;
+			if (ServerStatus.IsStarted.Value)
+			{
+				await _socketClient.Send(new ClientMessage()
+				{
+					ActionType = ClientMessageType.StopReader
+				});
+			}
+			else
+			{
+				await _socketClient.Send(new ClientMessage()
+				{
+					ActionType = ClientMessageType.StartReader
+				});
+			}
+		}
+		catch (Exception ex)
+		{
+			ModalType = ModalType.Error;
+			ModalTitle = "Exception";
+			ModalBody = ex.Message;
+			ShowModal = true;
+		}
+	}
+
+	private void ModalOnClose()
+	{
+		ShowModal = false;
+		ModalButtons.Clear();
+		ModalBody = string.Empty;
+		ModalTitle = string.Empty;
+		ModalType = ModalType.None;
+		StateHasChanged();
+	}
+}

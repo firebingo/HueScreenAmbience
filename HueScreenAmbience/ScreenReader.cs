@@ -24,6 +24,7 @@ namespace HueScreenAmbience
 		private PiCapture.PiCapture _piCapture;
 		private DateTime _lastPostReadTime;
 		private long _frame;
+		public long Frame { get => _frame; }
 		public bool IsRunning { get; private set; } = false;
 		public double AverageDt
 		{
@@ -46,6 +47,8 @@ namespace HueScreenAmbience
 			{
 				ScreenInfo = new ScreenDimensions()
 				{
+					Source = "Capture",
+					Rate = _config.Model.piCameraSettings.inputFrameRate,
 					RealWidth = _config.Model.piCameraSettings.width,
 					RealHeight = _config.Model.piCameraSettings.height,
 					SizeReduction = _config.Model.readResolutionReduce
@@ -83,6 +86,8 @@ namespace HueScreenAmbience
 				Screen = monitor ?? throw new Exception("No primary monitor");
 				ScreenInfo = new ScreenDimensions
 				{
+					Source = $"[{monitor.OutputId}] {monitor.Name}",
+					Rate = monitor.RefreshRate,
 					RealWidth = monitor.Width,
 					RealHeight = monitor.Height,
 					SizeReduction = _config.Model.readResolutionReduce
@@ -294,6 +299,8 @@ namespace HueScreenAmbience
 
 		public class ScreenDimensions
 		{
+			public string Source;
+			public double Rate;
 			public int RealWidth;
 			public int RealHeight;
 			public float SizeReduction;
