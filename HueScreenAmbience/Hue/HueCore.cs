@@ -16,6 +16,7 @@ using Q42.HueApi.Streaming.Extensions;
 using Q42.HueApi.Streaming.Effects;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using LightsShared;
 
 namespace HueScreenAmbience.Hue
 {

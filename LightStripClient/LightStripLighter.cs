@@ -1,4 +1,5 @@
 ﻿using Iot.Device.Ws28xx;
+using LightsShared;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;

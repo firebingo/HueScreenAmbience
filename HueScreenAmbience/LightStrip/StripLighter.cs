@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Iot.Device.Ws28xx;
+using LightsShared;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 

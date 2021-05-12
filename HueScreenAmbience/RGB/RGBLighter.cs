@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.IO;
 using BitmapZoneProcessor;
+using LightsShared;
 
 namespace HueScreenAmbience.RGB
 {

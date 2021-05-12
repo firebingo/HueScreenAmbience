@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
@@ -113,24 +114,38 @@ namespace WebControlClient.Client.Sockets
 					break;
 				}
 
+				var invokeList = new List<Task>();
 				var model = JsonSerializer.Deserialize<ClientResponse>(data, DefaultJsonOptions.JsonOptions);
 				switch (model.Type)
 				{
 					case ClientResponseType.SAData:
-						OnClientResponse?.Invoke(this, new SocketClientResponseEventArgs()
 						{
-							Response = JsonSerializer.Deserialize<ClientResponse<ScreenAmbienceStatus>>(data, DefaultJsonOptions.JsonOptions)
-						});
-						break;
+							var eventArgs = new SocketClientResponseEventArgs()
+							{
+								Response = JsonSerializer.Deserialize<ClientResponse<ScreenAmbienceStatus>>(data, DefaultJsonOptions.JsonOptions)
+							};
+							foreach (var i in OnClientResponse.GetInvocationList())
+							{
+								invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
+							}
+							break;
+						}
 					case ClientResponseType.Pong:
 						break;
 					default:
-						OnClientResponse?.Invoke(this, new SocketClientResponseEventArgs()
 						{
-							Response = model
-						});
-						break;
+							var eventArgs = new SocketClientResponseEventArgs()
+							{
+								Response = model
+							};
+							foreach (var i in OnClientResponse.GetInvocationList())
+							{
+								invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
+							}
+							break;
+						}
 				}
+				await Task.WhenAll(invokeList);
 			} while (!_cancelToken.IsCancellationRequested);
 		}
 

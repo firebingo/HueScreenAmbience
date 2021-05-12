@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HueScreenAmbience.LightStrip;
 using System.IO;
+using LightsShared;
 
 namespace HueScreenAmbience
 {

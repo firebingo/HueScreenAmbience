@@ -31,8 +31,6 @@
 
   <ItemGroup>
     <PackageReference Include="HidSharp" Version="2.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.2.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Q42.HueApi" Version="3.17.0" />
@@ -48,6 +46,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BitmapZoneProcessor\BitmapZoneProcessor.csproj" />
     <ProjectReference Include="..\Iot.Device.Bindings\Iot.Device.Bindings.csproj" />
+    <ProjectReference Include="..\LightsShared\LightsShared.csproj" />
     <ProjectReference Include="..\WebControlClient\Shared\WebControlClient.Shared.csproj" />
   </ItemGroup>
 

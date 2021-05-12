@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Iot.Device.Bindings\Iot.Device.Bindings.csproj" />
+    <ProjectReference Include="..\LightsShared\LightsShared.csproj" />
   </ItemGroup>
 
 </Project>

@@ -6,6 +6,7 @@ using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.RGB;
 using HueScreenAmbience.Sockets;
+using LightsShared;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HueScreenAmbience
@@ -20,7 +21,7 @@ namespace HueScreenAmbience
 		private HueCore _hueClient = null;
 		private RGBLighter _rgbLighter = null;
 		private StripLighter _stripLighter = null;
-		private SocketServer _socketServer = null;
+		private SocketHandler _socketServer = null;
 		private IServiceProvider _map = null;
 
 		static async Task Main(string[] args)
@@ -144,7 +145,7 @@ namespace HueScreenAmbience
 			_hueClient = new HueCore();
 			_rgbLighter = new RGBLighter();
 			_stripLighter = new StripLighter();
-			_socketServer = new SocketServer();
+			_socketServer = new SocketHandler();
 
 			var services = new ServiceCollection();
 			if (_config.Model.piCameraSettings.isPi)

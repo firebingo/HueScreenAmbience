@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LightsShared;
+using System;
 
 namespace LightStripClient
 {

@@ -7,6 +7,7 @@ using BitmapZoneProcessor;
 using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.RGB;
+using LightsShared;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace HueScreenAmbience

@@ -1,4 +1,5 @@
-﻿using SharpDX;
+﻿using LightsShared;
+using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System;
