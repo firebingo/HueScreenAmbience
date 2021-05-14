@@ -12,9 +12,9 @@ namespace LightStripClient
 
 		static async Task Main()
 		{
-			Config config = new Config();
+			var config = new Config();
 			config.LoadConfig();
-			FileLogger logger = new FileLogger();
+			var logger = new FileLogger();
 
 			_lighter = new LightStripLighter(config, logger);
 			_lighter.Start();

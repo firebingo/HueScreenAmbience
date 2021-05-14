@@ -82,8 +82,8 @@ namespace LightStripCalculator
 
 				var rect = Rectangle.FromLTRB(0, 0, bottomRight.Value.X, bottomRight.Value.Y);
 				var bigRect = Rectangle.FromLTRB(0, 0, (int)Math.Floor(bottomRight.Value.X * borderDecrease), (int)Math.Floor(bottomRight.Value.Y * borderDecrease));
-				Dictionary<int, LightCoord> dictInt = new Dictionary<int, LightCoord>();
-				Dictionary<int, LightCoordF> dictFloat = new Dictionary<int, LightCoordF>();
+				var dictInt = new Dictionary<int, LightCoord>();
+				var dictFloat = new Dictionary<int, LightCoordF>();
 
 				//This circles around the edge of the rectangle counting the start light as 0,0 then filling the coordinates for each light until we hit the light count.
 				// Then it goes back to light 0 and keeps filling.
@@ -130,7 +130,7 @@ namespace LightStripCalculator
 					float y = dictInt[i].Y + yDif;
 					x /= bigRect.Width;
 					y /= bigRect.Height;
-					if(flipX)
+					if (flipX)
 						x = 1.0f - x;
 					if (flipY)
 						y = 1.0f - y;

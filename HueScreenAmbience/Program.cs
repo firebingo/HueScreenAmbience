@@ -129,9 +129,11 @@ namespace HueScreenAmbience
 		{
 			Console.WriteLine("closing");
 			_input.StopInput();
-			var tasks = new List<Task>();
-			tasks.Add(_socketServer.Stop());
-			tasks.Add(_core.StopScreenReading());
+			var tasks = new List<Task>
+			{
+				_socketServer.Stop(),
+				_core.StopScreenReading()
+			};
 			Task.WaitAll(tasks.ToArray(), 5000);
 		}
 

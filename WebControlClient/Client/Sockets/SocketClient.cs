@@ -19,8 +19,8 @@ namespace WebControlClient.Client.Sockets
 	public class SocketClient
 	{
 		private readonly Uri _url;
-		private ClientWebSocket _socket;
-		private CancellationToken _cancelToken;
+		private readonly ClientWebSocket _socket;
+		private readonly CancellationToken _cancelToken;
 		public bool IsClosed { get; private set; } = true;
 
 		public delegate Task OnClientResponseEventHandler(object sender, SocketClientResponseEventArgs e);

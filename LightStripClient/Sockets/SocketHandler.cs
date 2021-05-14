@@ -12,9 +12,9 @@ namespace LightStripClient.Sockets
 	{
 		private bool _isRunning = false;
 
-		private Config _config;
-		private FileLogger _logger;
-		private LightStripLighter _lighter;
+		private readonly Config _config;
+		private readonly FileLogger _logger;
+		private readonly LightStripLighter _lighter;
 		private SocketServer? _socketServer;
 
 

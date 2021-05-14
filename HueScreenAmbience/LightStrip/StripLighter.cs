@@ -220,7 +220,7 @@ namespace HueScreenAmbience.LightStrip
 
 				_updating = true;
 				if (_config.Model.piCameraSettings.isPi && _config.Model.piCameraSettings.lightsLocal)
-					UpdateImagePi(image, width, height, frame);
+					UpdateImagePi(image, width, height);
 				else
 					UpdateImageServer(image, width, height, frame);
 
@@ -255,7 +255,7 @@ namespace HueScreenAmbience.LightStrip
 			_lastChangeTime = DateTime.UtcNow;
 		}
 
-		public void UpdateImagePi(MemoryStream image, int width, int height, long frame)
+		public void UpdateImagePi(MemoryStream image, int width, int height)
 		{
 			for (var i = 0; i < _lights.Count; ++i)
 			{
