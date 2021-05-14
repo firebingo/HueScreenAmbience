@@ -44,6 +44,26 @@ namespace LightStripClient
 		private byte _frameReceivedPackets;
 		private Dictionary<byte, List<Rgb24>>? _packets;
 
+		public long Frame { get => _currentFrame; }
+		public string BoundIp
+		{
+			get
+			{
+				if (_lightServerEndpoint != null)
+					return _lightServerEndpoint.Address.ToString();
+				return string.Empty;
+			}
+		}
+		public string BoundPort
+		{
+			get
+			{
+				if (_lightServerEndpoint != null)
+					return _lightServerEndpoint.Port.ToString();
+				return string.Empty;
+			}
+		}
+
 		public LightStripLighter(Config config, FileLogger logger)
 		{
 			_config = config;

@@ -76,7 +76,7 @@ namespace HueScreenAmbience
 
 			if (!IPAddress.TryParse(_config.socketSettings.listenAddress, out _))
 			{
-				_config.socketSettings.listenAddress = "0.0.0.0";
+				_config.socketSettings.listenAddress = IPAddress.Any.ToString();
 			}
 			_ = _config.socketSettings.listenIp;
 
@@ -218,7 +218,7 @@ namespace HueScreenAmbience
 	{
 		public bool enableHubSocket = false;
 		public int listenPort = 34780;
-		public string listenAddress = "0.0.0.0";
+		public string listenAddress = IPAddress.Any.ToString();
 		private IPAddress _listenIp;
 		[JsonIgnore]
 		public IPAddress listenIp

@@ -21,7 +21,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebControlClient.Shared", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Iot.Device.Bindings", "Iot.Device.Bindings\Iot.Device.Bindings.csproj", "{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LightsShared", "LightsShared\LightsShared.csproj", "{F6382746-A155-447A-BB72-2BDF24A3DB9D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LightsShared", "LightsShared\LightsShared.csproj", "{F6382746-A155-447A-BB72-2BDF24A3DB9D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -91,16 +91,16 @@ Global
 		{3A9FB31D-9722-47FB-9F4D-86D34D4FB918}.Release|x64.Build.0 = Release|Any CPU
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|ARM.ActiveCfg = Debug|Any CPU
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|ARM.Build.0 = Debug|Any CPU
-		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|x64.ActiveCfg = Debug|x64
-		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|x64.Build.0 = Debug|x64
+		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|x64.Build.0 = Debug|Any CPU
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Release|ARM.ActiveCfg = Release|Any CPU
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Release|ARM.Build.0 = Release|Any CPU
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Release|x64.ActiveCfg = Release|x64
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Release|x64.Build.0 = Release|x64
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|ARM.ActiveCfg = Debug|Any CPU
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|ARM.Build.0 = Debug|Any CPU
-		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|x64.ActiveCfg = Debug|x64
-		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|x64.Build.0 = Debug|x64
+		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|x64.Build.0 = Debug|Any CPU
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|ARM.ActiveCfg = Release|Any CPU
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|ARM.Build.0 = Release|Any CPU
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|x64.ActiveCfg = Release|x64

@@ -1,49 +1,282 @@
 ﻿@page "/LightStripClient"
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@using WebControlClient.Client.Components
+@using WebControlClient.Client.Sockets
+@implements IAsyncDisposable
 
-<div>
-	<div class="field-row-stacked" style="width: 200px">
-		<label for="lsc-address">IP</label>
-		<input id="lsc-address" type="text" value="@IpValue" @onchange="@(OnIpValueChanged)" />
+@if (_socketClient == null || _socketClient.IsClosed)
+{
+	<div>
+		<section class="field-row">
+			<div class="field-row-stacked" style="width: 200px">
+				<label for="lsc-address">IP</label>
+				<input id="lsc-address" type="text" @bind="IpValue" @bind:event="onchange" />
+			</div>
+		</section>
+		<section class="field-row">
+			<div class="field-row-stacked" style="width: 50px">
+				<label for="lsc-port">Port</label>
+				<input id="lsc-port" type="text" @bind="PortValue" @bind:event="oninput" />
+			</div>
+		</section>
+		<section class="field-row">
+			<button @onclick="OnConnectClick" disabled="@IsConnecting">@(IsConnecting ? "Connecting..." : "Connect")</button>
+			<div>
+				<input @bind="AutoConnect" type="checkbox" id="auto-connect">
+				<label for="auto-connect">auto-connect</label>
+			</div>
+		</section>
 	</div>
-	<div class="field-row-stacked" style="width: 50px">
-		<label for="lsc-port">Port</label>
-		<input id="lsc-port" type="text" value="@PortValue" @onchange="@(OnPortValueChanged)" />
+}
+else
+{
+	<div>
+		<fieldset>
+			<legend>Stats</legend>
+			<p>
+				<span>Bound IP:</span>&nbsp;<span>@(ServerStatus?.BoundIp != null ? ServerStatus?.BoundIp : string.Empty)</span>
+			</p>
+			<p>
+				<span>Bound Port:</span>&nbsp;<span>@(ServerStatus?.BoundIp != null ? ServerStatus?.BoundPort : string.Empty)</span>
+			</p>
+			<p>
+				<span>Frame:</span>&nbsp;<span>@((ServerStatus?.Frame ?? 0).ToString())</span>
+			</p>
+		</fieldset>
+		@if (ServerStatus != null)
+		{
+			<fieldset>
+				<legend>IPs</legend>
+				@foreach (var n in ServerStatus.NetworkInterfaces)
+				{
+					<p>
+						<span>@(n.Name)</span>&nbsp;<span>@(n.Ip.ToString())</span>
+					</p>
+				}
+			</fieldset>
+		}
 	</div>
-	<button>Connect</button>
-</div>
+}
+<Modal Open="@ShowModal" Title="@ModalTitle" Body="@ModalBody" Buttons="@ModalButtons" Type="@ModalType" OnClose="@ModalOnClose" />
 
 @code {
-	private IPAddress _ipValue { get; set; }
-	private string IpValue { get; set; }
+	private CancellationTokenSource _cancelSource;
+	private bool IsConnecting { get; set; }
+
+	private bool ShowModal { get; set; }
+	private string ModalTitle { get; set; }
+	private string ModalBody { get; set; }
+	private ModalType ModalType { get; set; }
+	private List<ModalButton> ModalButtons { get; set; }
+
+	private SocketClient _socketClient;
+	private System.Timers.Timer _updateStatusTimer;
+
+	private WebControlClient.Shared.LightStripStatus ServerStatus { get; set; }
+	//Used to disable the start/stop button until we get another server status back.
+	private bool BlockStart { get; set; }
+
+	private IPAddress _ipValueIp;
+	private string _ipValue;
+	private string IpValue
+	{
+		get
+		{
+			return _ipValue;
+		}
+		set
+		{
+			if (value == null)
+				return;
+
+			_ipValue = value;
+			if (IPAddress.TryParse(IpValue, out var Ip))
+			{
+				_ipValueIp = Ip;
+				IpValid = true;
+			}
+			else
+				IpValid = false;
+		}
+	}
 	private bool IpValid { get; set; }
 
-	private int _portValue { get; set; }
-	private string PortValue { get; set; }
+	private int _portValueNum;
+	private string _portValue;
+	private string PortValue
+	{
+		get
+		{
+			return _portValue;
+		}
+		set
+		{
+			if (value == null || value.Length > 5)
+				return;
+
+			_portValue = value;
+			if (int.TryParse(_portValue, out var i) && i > -1 && i < 65536)
+			{
+				_portValueNum = i;
+				PortValid = true;
+			}
+			else
+				PortValid = false;
+		}
+	}
 	private bool PortValid = true;
 
-	private void OnIpValueChanged(ChangeEventArgs e)
+	private bool AutoConnect { get; set; }
+
+	protected override void OnInitialized()
 	{
-		IpValue = e.Value.ToString();
-		if (IPAddress.TryParse(IpValue, out var Ip))
-		{
-			_ipValue = Ip;
-			IpValid = true;
-		}
-		else
-			IpValid = false;
+		ServerStatus = new WebControlClient.Shared.LightStripStatus();
+		_cancelSource = new CancellationTokenSource();
+		IpValue = "127.0.0.1";
+		PortValue = "0";
+		ModalButtons = new List<ModalButton>();
+
+		_updateStatusTimer = new System.Timers.Timer();
+		_updateStatusTimer.Elapsed += OnStatusUpdateTimer;
+		_updateStatusTimer.Interval = 5 * 1000;
+		_updateStatusTimer.Start();
 	}
 
-	private void OnPortValueChanged(ChangeEventArgs e)
+	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
-		PortValue = e.Value.ToString();
-		if (PortValue.Length > 5)
-			return;
-		if (int.TryParse(PortValue, out var i) && i > -1 && i < 65536)
+		if (firstRender)
 		{
-			_portValue = i;
-			PortValid = true;
+			if (bool.TryParse((await localStorage.GetItemAsStringAsync("saautoconnect")), out var auto))
+				AutoConnect = auto;
+			var ips = await localStorage.GetItemAsStringAsync("saipadd");
+			if (!string.IsNullOrWhiteSpace(ips))
+				IpValue = ips;
+			var ports = await localStorage.GetItemAsStringAsync("saipport");
+			if (!string.IsNullOrWhiteSpace(ports))
+				PortValue = ports;
+			if (AutoConnect)
+				await OnConnectClick();
 		}
-		else
-			PortValid = false;
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		_updateStatusTimer.Stop();
+		_updateStatusTimer.Dispose();
+		await _socketClient?.Close();
+		_cancelSource.Cancel();
+	}
+
+	private async void OnStatusUpdateTimer(object sender, System.Timers.ElapsedEventArgs e)
+	{
+		try
+		{
+			if (_socketClient == null || _socketClient.IsClosed)
+				return;
+			await _socketClient.Send(new ClientMessage() { ActionType = ClientMessageType.GetLSCState });
+		}
+		catch (Exception ex)
+		{
+			ModalType = ModalType.Error;
+			ModalTitle = "Exception";
+			ModalBody = ex.Message;
+			ShowModal = true;
+		}
+	}
+
+	private async Task OnConnectClick()
+	{
+		if (IsConnecting || (_socketClient != null && !_socketClient.IsClosed))
+			return;
+		if (!IpValid)
+		{
+			ModalType = ModalType.Warning;
+			ModalTitle = "Invalid Input";
+			ModalBody = "Ip address is invalid. Must be in a parsable IPv4 or IPv6 format.";
+			ShowModal = true;
+			return;
+		}
+		if (!PortValid)
+		{
+			ModalType = ModalType.Warning;
+			ModalTitle = "Invalid Input";
+			ModalBody = "Port is invalid. Must be in a number between 0 and 65535.";
+			ShowModal = true;
+			return;
+		}
+
+		await localStorage.SetItemAsync<string>("lscautoconnect", AutoConnect.ToString());
+		if (AutoConnect)
+		{
+			await localStorage.SetItemAsync<string>("lscipadd", IpValue.ToString());
+			await localStorage.SetItemAsync<string>("lscipport", PortValue.ToString());
+		}
+
+		IsConnecting = true;
+		_ = Task.Run(() => OnConnect());
+	}
+
+	private async Task OnConnect()
+	{
+		try
+		{
+			_socketClient = new SocketClient(_ipValueIp.ToString(), _portValueNum, _cancelSource.Token);
+			_socketClient.OnClientResponse += OnSocketClientResponse;
+			await _socketClient.Connect();
+			var requestMessage = new ClientMessage()
+			{
+				ActionType = ClientMessageType.GetSAState
+			};
+			await _socketClient.Send(requestMessage);
+		}
+		catch (Exception ex)
+		{
+			ModalType = ModalType.Error;
+			ModalTitle = "Exception";
+			ModalBody = ex.Message;
+			ShowModal = true;
+		}
+		finally
+		{
+			IsConnecting = false;
+			await InvokeAsync(StateHasChanged);
+		}
+	}
+
+	private async Task OnSocketClientResponse(object sender, SocketClientResponseEventArgs e)
+	{
+		try
+		{
+			switch (e.Response.Type)
+			{
+				case ClientResponseType.SAData:
+					{
+						if (e.Response is ClientResponse<WebControlClient.Shared.LightStripStatus> res)
+						{
+							ServerStatus.CopyFrom(res.Data);
+							BlockStart = false;
+						}
+						break;
+					}
+			}
+		}
+		catch (Exception ex)
+		{
+			ModalType = ModalType.Error;
+			ModalTitle = "Exception";
+			ModalBody = ex.Message;
+			ShowModal = true;
+		}
+		await InvokeAsync(StateHasChanged);
+	}
+
+	private void ModalOnClose()
+	{
+		ShowModal = false;
+		ModalButtons.Clear();
+		ModalBody = string.Empty;
+		ModalTitle = string.Empty;
+		ModalType = ModalType.None;
+		StateHasChanged();
 	}
 }

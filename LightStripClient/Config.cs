@@ -59,9 +59,16 @@ namespace LightStripClient
 		private void ValidateConfig()
 		{
 			_config.ReceivePort = Math.Clamp(_config.ReceivePort, 1, 65535);
-			if(_config.RemoteAddress != null && !IPAddress.TryParse(_config.RemoteAddress, out _))
+			if (_config.RemoteAddress != null && !IPAddress.TryParse(_config.RemoteAddress, out _))
 				_config.RemoteAddress = null;
 			_ = _config.RemoteAddressIp;
+
+			_config.SocketSettings.ListenPort = Math.Clamp(_config.SocketSettings.ListenPort, 1, 65535);
+			if (!IPAddress.TryParse(_config.SocketSettings.ListenAddress, out _))
+			{
+				_config.SocketSettings.ListenAddress = IPAddress.Any.ToString();
+			}
+			_ = _config.SocketSettings.ListenIp;
 		}
 	}
 
@@ -84,5 +91,24 @@ namespace LightStripClient
 		public int ReceivePort { get; set; } = 9250;
 		public int ReceiveTimeout { get; set; } = 10000;
 		public int LightCount { get; set; } = 0;
+		public SocketSettings SocketSettings = new SocketSettings();
+	}
+
+	public class SocketSettings
+	{
+		public bool EnableHubSocket = false;
+		public int ListenPort = 34780;
+		public string ListenAddress = IPAddress.Any.ToString();
+		private IPAddress? _listenIp;
+		[JsonIgnore]
+		public IPAddress ListenIp
+		{
+			get
+			{
+				if (_listenIp == null)
+					_listenIp = IPAddress.Parse(ListenAddress);
+				return _listenIp;
+			}
+		}
 	}
 }

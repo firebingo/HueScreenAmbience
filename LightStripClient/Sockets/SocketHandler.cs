@@ -1,45 +1,39 @@
 ﻿using System;
 using System.Threading.Tasks;
-using HueScreenAmbience.Hue;
 using WebControlClient.Client.Shared;
 using WebControlClient.Shared;
 using LightsShared.Sockets;
 using LightsShared;
-using System.Text;
 using System.Text.Json;
 
-namespace HueScreenAmbience.Sockets
+namespace LightStripClient.Sockets
 {
 	public class SocketHandler
 	{
 		private bool _isRunning = false;
 
-		private Core _core;
-		private ScreenReader _screen;
-		private HueCore _hueCore;
 		private Config _config;
 		private FileLogger _logger;
+		private LightStripLighter _lighter;
+		private SocketServer? _socketServer;
 
-		private SocketServer _socketServer;
 
-		public void InstallServices(IServiceProvider map)
+		public SocketHandler(Config config, FileLogger logger, LightStripLighter lighter)
 		{
-			_core = map.GetService(typeof(Core)) as Core;
-			_hueCore = map.GetService(typeof(HueCore)) as HueCore;
-			_screen = map.GetService(typeof(ScreenReader)) as ScreenReader;
-			_config = map.GetService(typeof(Config)) as Config;
-			_logger = map.GetService(typeof(FileLogger)) as FileLogger;
+			_config = config;
+			_logger = logger;
+			_lighter = lighter;
 		}
 
 		public async Task Start()
 		{
-			if (!_config.Model.socketSettings.enableHubSocket || _isRunning)
+			if (!_config.Model.SocketSettings.EnableHubSocket || _isRunning)
 				return;
 
 			try
 			{
 				_socketServer = new SocketServer(_logger);
-				await _socketServer.Start(_config.Model.socketSettings.listenIp.ToString(), _config.Model.socketSettings.listenPort.ToString());
+				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort.ToString());
 				_socketServer.OnClientMessage += HandleClientCommand;
 				_isRunning = true;
 			}
@@ -51,7 +45,7 @@ namespace HueScreenAmbience.Sockets
 
 		public async Task Stop()
 		{
-			if (!_isRunning)
+			if (!_isRunning || _socketServer == null)
 				return;
 
 			_socketServer.OnClientMessage -= HandleClientCommand;
@@ -69,39 +63,21 @@ namespace HueScreenAmbience.Sockets
 					case ClientMessageType.Ping:
 						response.Type = ClientResponseType.Pong;
 						break;
-					case ClientMessageType.StartReader:
-						await _core.StartScreenReading();
-						break;
-					case ClientMessageType.StopReader:
-						await _core.StopScreenReading();
-						break;
-					case ClientMessageType.GetSAState:
-						response = new ClientResponse<ScreenAmbienceStatus>()
+					case ClientMessageType.GetLSCState:
+						response = new ClientResponse<LightStripStatus>()
 						{
 							Success = true,
 							Message = string.Empty,
 							Type = ClientResponseType.SAData,
-							Data = new ScreenAmbienceStatus()
+							Data = new LightStripStatus()
 							{
-								IsStarted = _screen.IsRunning,
-								Frame = _screen.Frame,
-								AverageDeltaTime = _screen.AverageDt,
-								IsHueConnected = _hueCore.IsConnectedToBridge,
-								UsingHue = _config.Model.hueSettings.useHue,
-								UsingRgb = _config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice || _config.Model.rgbDeviceSettings.useMotherboard,
-								UsingLightStrip = _config.Model.lightStripSettings.useLightStrip,
-								ScreenInfo = new ScreenInfo()
-								{
-									Id = _screen.ScreenInfo.Source,
-									RealHeight = _screen.ScreenInfo.RealHeight,
-									RealWidth = _screen.ScreenInfo.RealWidth,
-									Height = _screen.ScreenInfo.Height,
-									Width = _screen.ScreenInfo.Width,
-									Rate = _screen.ScreenInfo.Rate
-								}
+								Frame = _lighter.Frame,
+								BoundIp = _lighter.BoundIp,
+								BoundPort = _lighter.BoundPort,
+								NetworkInterfaces = NetworkAddresses.GetNetworkAddresses()
 							}
 						};
-						await SendResponse<ScreenAmbienceStatus>(model.ClientId, response);
+						await SendResponse<LightStripStatus>(model.ClientId, response);
 						break;
 				}
 			}
@@ -117,6 +93,9 @@ namespace HueScreenAmbience.Sockets
 
 		private async Task SendResponse(Guid clientId, ClientResponse res)
 		{
+			if (_socketServer == null)
+				return;
+
 			try
 			{
 				var responseJson = JsonSerializer.Serialize(res, DefaultJsonOptions.JsonOptions);
@@ -130,6 +109,9 @@ namespace HueScreenAmbience.Sockets
 
 		private async Task SendResponse<T>(Guid clientId, ClientResponse res)
 		{
+			if (_socketServer == null)
+				return;
+
 			try
 			{
 				var responseJson = JsonSerializer.Serialize(res as ClientResponse<T>, DefaultJsonOptions.JsonOptions);
