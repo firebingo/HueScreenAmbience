@@ -65,9 +65,7 @@ namespace LightStripClient
 
 			_config.SocketSettings.ListenPort = Math.Clamp(_config.SocketSettings.ListenPort, 1, 65535);
 			if (!IPAddress.TryParse(_config.SocketSettings.ListenAddress, out _))
-			{
 				_config.SocketSettings.ListenAddress = IPAddress.Any.ToString();
-			}
 			_ = _config.SocketSettings.ListenIp;
 		}
 	}
