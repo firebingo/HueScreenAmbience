@@ -43,6 +43,12 @@
     "inputFormat": "yuv420p", //The format of the input for ffmpeg to read.
     "ffmpegStdError": false //Whether or not to allow ffmpeg to dump its statistics to console. Useful for debugging.
   },
+  "socketSettings": {
+    "enableHubSocket": true, //Whether to enable websocket server. This is used by WebControlClient to display running stats and config.
+    "aspnetConsoleLog": false, //Enable logging of websocket server to console
+    "listenPort": 34780, //Port for server to listen on.
+    "listenAddress": "0.0.0.0" //Ip to bind server to.
+  },
   "adapterId": 0, //The id of the graphics adapter to use.
   "monitorId": 0, //The id of the monitor to read.
   "zoneColumns": 9, //How many columns to split image into. If you are using a keyboard for lighting generally higher values are better.

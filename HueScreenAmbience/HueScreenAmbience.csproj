@@ -37,9 +37,9 @@
     <PackageReference Include="HidSharp" Version="2.1.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="Q42.HueApi" Version="3.17.0" />
-    <PackageReference Include="Q42.HueApi.ColorConverters" Version="3.14.0" />
-    <PackageReference Include="Q42.HueApi.Entertainment" Version="3.15.0" />
+    <PackageReference Include="Q42.HueApi" Version="3.18.1" />
+    <PackageReference Include="Q42.HueApi.ColorConverters" Version="3.18.1" />
+    <PackageReference Include="Q42.HueApi.Entertainment" Version="3.18.1" />
     <PackageReference Include="RGB.NET.Resources.Asus" Version="0.3.0" />
     <PackageReference Include="RGB.NET.Resources.Corsair" Version="0.3.0.361" />
     <PackageReference Include="RGB.NET.Resources.Logitech" Version="0.3.0" />

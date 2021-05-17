@@ -39,7 +39,7 @@ namespace HueScreenAmbience.Sockets
 			try
 			{
 				_socketServer = new SocketServer(_logger);
-				await _socketServer.Start(_config.Model.socketSettings.listenIp.ToString(), _config.Model.socketSettings.listenPort.ToString());
+				await _socketServer.Start(_config.Model.socketSettings.listenIp.ToString(), _config.Model.socketSettings.listenPort.ToString(), _config.Model.socketSettings.aspnetConsoleLog);
 				_socketServer.OnClientMessage += HandleClientCommand;
 				_isRunning = true;
 			}

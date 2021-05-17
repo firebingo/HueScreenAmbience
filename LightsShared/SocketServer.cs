@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -40,7 +41,7 @@ namespace LightsShared.Sockets
 			_logger = logger;
 		}
 
-		public async Task Start(string listenIp, string listenPort)
+		public async Task Start(string listenIp, string listenPort, bool log = false)
 		{
 			if (_cancelSource != null)
 			{
@@ -69,6 +70,15 @@ namespace LightsShared.Sockets
 					app.Use(OnHttpRequest);
 				})
 				.UseUrls(new string[] { url, localurl })
+				.ConfigureLogging((context, logging) =>
+				{
+					logging.ClearProviders();
+					if (log)
+					{
+						logging.AddConsole();
+						logging.AddDebug();
+					}
+				})
 				.Build();
 			_cleanThread = new Thread(SocketCleanLoop)
 			{

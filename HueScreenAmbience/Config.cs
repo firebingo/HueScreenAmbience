@@ -217,6 +217,7 @@ namespace HueScreenAmbience
 	public class SocketSettings
 	{
 		public bool enableHubSocket = false;
+		public bool aspnetConsoleLog = false;
 		public int listenPort = 34780;
 		public string listenAddress = IPAddress.Any.ToString();
 		private IPAddress _listenIp;

@@ -95,6 +95,7 @@ namespace LightStripClient
 	public class SocketSettings
 	{
 		public bool EnableHubSocket = false;
+		public bool AspnetConsoleLog = false;
 		public int ListenPort = 34780;
 		public string ListenAddress = IPAddress.Any.ToString();
 		private IPAddress? _listenIp;

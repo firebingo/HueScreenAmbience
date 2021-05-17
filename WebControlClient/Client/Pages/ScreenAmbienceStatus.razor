@@ -6,62 +6,62 @@
 
 @if (_socketClient == null || _socketClient.IsClosed)
 {
-<div>
-	<section class="field-row">
-		<div class="field-row-stacked" style="width: 200px">
-			<label for="lsc-address">IP</label>
-			<input id="lsc-address" type="text" @bind="IpValue" @bind:event="onchange" />
-		</div>
-	</section>
-	<section class="field-row">
-		<div class="field-row-stacked" style="width: 50px">
-			<label for="lsc-port">Port</label>
-			<input id="lsc-port" type="text" @bind="PortValue" @bind:event="oninput" />
-		</div>
-	</section>
-	<section class="field-row">
-		<button @onclick="OnConnectClick" disabled="@IsConnecting">@(IsConnecting ? "Connecting..." : "Connect")</button>
-		<div>
-			<input @bind="AutoConnect" type="checkbox" id="auto-connect">
-			<label for="auto-connect">auto-connect</label>
-		</div>
-	</section>
-</div>
+	<div>
+		<section class="field-row">
+			<div class="field-row-stacked" style="width: 200px">
+				<label for="lsc-address">IP</label>
+				<input id="lsc-address" type="text" @bind="IpValue" @bind:event="onchange" />
+			</div>
+		</section>
+		<section class="field-row">
+			<div class="field-row-stacked" style="width: 50px">
+				<label for="lsc-port">Port</label>
+				<input id="lsc-port" type="text" @bind="PortValue" @bind:event="oninput" />
+			</div>
+		</section>
+		<section class="field-row">
+			<button @onclick="OnConnectClick" disabled="@IsConnecting">@(IsConnecting ? "Connecting..." : "Connect")</button>
+			<div>
+				<input @bind="AutoConnect" type="checkbox" id="auto-connect">
+				<label for="auto-connect">auto-connect</label>
+			</div>
+		</section>
+	</div>
 }
 else
 {
-<div>
-	<fieldset>
-		<legend>Stats</legend>
-		<p>
-			<span>Monitor:</span>&nbsp;<span>@(ServerStatus?.ScreenInfo != null ? $"{ServerStatus.ScreenInfo.Id} - {ServerStatus.ScreenInfo.RealWidth}x{ServerStatus.ScreenInfo.RealHeight}@{ServerStatus.ScreenInfo.Rate} ({ServerStatus.ScreenInfo.Width}x{ServerStatus.ScreenInfo.Height})" : string.Empty)</span>
-		</p>
-		<p>
-			<span>Frame:</span>&nbsp;<span>@((ServerStatus?.Frame ?? 0).ToString())</span>
-		</p>
-		<p>
-			<span>Average Delta:</span>&nbsp;<span>@((ServerStatus?.AverageDeltaTime ?? 0.0).ToString("0.##"))ms</span>
-		</p>
-	</fieldset>
-	<fieldset>
-		<legend>Config</legend>
-		<p>
-			<span>Using Hue:</span>&nbsp;<span>@((ServerStatus?.UsingHue ?? false) ? "True" : "False")</span>
-		</p>
-		<p>
-			<span>Hue Connected:</span>&nbsp;<span>@((ServerStatus?.IsHueConnected ?? false) ? "True" : "False")</span>
-		</p>
-		<p>
-			<span>Using Rgb:</span>&nbsp;<span>@((ServerStatus?.UsingRgb ?? false) ? "True" : "False")</span>
-		</p>
-		<p>
-			<span>Using Light Strip:</span>&nbsp;<span>@((ServerStatus?.UsingLightStrip ?? false) ? "True" : "False")</span>
-		</p>
-	</fieldset>
-	<section class="field-row">
-		<button @onclick="OnStartClicked" disabled="@BlockStart">@((ServerStatus?.IsStarted ?? false) ? "Stop" : "Start")</button>
-	</section>
-</div>
+	<div>
+		<fieldset>
+			<legend>Stats</legend>
+			<p>
+				<span>Monitor:</span>&nbsp;<span>@(ServerStatus?.ScreenInfo != null ? $"{ServerStatus.ScreenInfo.Id} - {ServerStatus.ScreenInfo.RealWidth}x{ServerStatus.ScreenInfo.RealHeight}@{ServerStatus.ScreenInfo.Rate} ({ServerStatus.ScreenInfo.Width}x{ServerStatus.ScreenInfo.Height})" : string.Empty)</span>
+			</p>
+			<p>
+				<span>Frame:</span>&nbsp;<span>@((ServerStatus?.Frame ?? 0).ToString())</span>
+			</p>
+			<p>
+				<span>Average Delta:</span>&nbsp;<span>@((ServerStatus?.AverageDeltaTime ?? 0.0).ToString("0.##"))ms</span>
+			</p>
+		</fieldset>
+		<fieldset>
+			<legend>Config</legend>
+			<p>
+				<span>Using Hue:</span>&nbsp;<span>@((ServerStatus?.UsingHue ?? false) ? "True" : "False")</span>
+			</p>
+			<p>
+				<span>Hue Connected:</span>&nbsp;<span>@((ServerStatus?.IsHueConnected ?? false) ? "True" : "False")</span>
+			</p>
+			<p>
+				<span>Using Rgb:</span>&nbsp;<span>@((ServerStatus?.UsingRgb ?? false) ? "True" : "False")</span>
+			</p>
+			<p>
+				<span>Using Light Strip:</span>&nbsp;<span>@((ServerStatus?.UsingLightStrip ?? false) ? "True" : "False")</span>
+			</p>
+		</fieldset>
+		<section class="field-row">
+			<button @onclick="OnStartClicked" disabled="@BlockStart">@((ServerStatus?.IsStarted ?? false) ? "Stop" : "Start")</button>
+		</section>
+	</div>
 }
 <Modal Open="@ShowModal" Title="@ModalTitle" Body="@ModalBody" Buttons="@ModalButtons" Type="@ModalType" OnClose="@ModalOnClose" />
 
@@ -211,11 +211,11 @@ else
 			return;
 		}
 
-		await localStorage.SetItemAsync<string>("saautoconnect", AutoConnect.ToString());
+		await localStorage.SetItemAsStringAsync("saautoconnect", AutoConnect.ToString());
 		if (AutoConnect)
 		{
-			await localStorage.SetItemAsync<string>("saipadd", IpValue.ToString());
-			await localStorage.SetItemAsync<string>("saipport", PortValue.ToString());
+			await localStorage.SetItemAsStringAsync("saipadd", IpValue.ToString());
+			await localStorage.SetItemAsStringAsync("saipport", PortValue.ToString());
 		}
 
 		IsConnecting = true;

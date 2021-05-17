@@ -33,7 +33,7 @@ namespace LightStripClient.Sockets
 			try
 			{
 				_socketServer = new SocketServer(_logger);
-				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort.ToString());
+				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort.ToString(), _config.Model.SocketSettings.AspnetConsoleLog);
 				_socketServer.OnClientMessage += HandleClientCommand;
 				_isRunning = true;
 			}
