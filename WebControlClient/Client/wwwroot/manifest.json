@@ -1,15 +1,21 @@
 {
-  "name": "WebControlClient",
-  "short_name": "WebControlClient",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#03173d",
-  "icons": [
-    {
-      "src": "icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ]
+	"name": "Screen Ambience Status Monitor",
+	"short_name": "Screen Ambience",
+	"start_url": "./ScreenAmbience",
+	"display": "standalone",
+	"background_color": "#000000",
+	"theme_color": "#0056ea",
+	"icons": [
+		{
+			"src": "icon-512.png",
+			"type": "image/png",
+			"sizes": "512x512"
+		},
+		{
+			"src": "maskable-icon-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any maskable"
+		}
+	]
 }

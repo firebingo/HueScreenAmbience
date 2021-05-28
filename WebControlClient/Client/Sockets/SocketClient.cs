@@ -26,9 +26,12 @@ namespace WebControlClient.Client.Sockets
 		public delegate Task OnClientResponseEventHandler(object sender, SocketClientResponseEventArgs e);
 		public event OnClientResponseEventHandler OnClientResponse;
 
-		public SocketClient(string ip, int port, CancellationToken cancelToken)
+		public SocketClient(string ip, int port, bool ssl, CancellationToken cancelToken)
 		{
-			_url = new Uri($"ws://{ip}:{port}");
+			if (!ssl)
+				_url = new Uri($"ws://{ip}:{port}");
+			else
+				_url = new Uri($"wss://{ip}:{port}");
 			_cancelToken = cancelToken;
 			_socket = new ClientWebSocket();
 		}

@@ -1,5 +1,6 @@
 ﻿@page "/LightStripClient"
 @inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject NavigationManager NavManager
 @using WebControlClient.Client.Components
 @using WebControlClient.Client.Sockets
 @implements IAsyncDisposable
@@ -161,10 +162,11 @@ else
 
 	public async ValueTask DisposeAsync()
 	{
-		_updateStatusTimer.Stop();
-		_updateStatusTimer.Dispose();
-		await _socketClient?.Close();
-		_cancelSource.Cancel();
+		_updateStatusTimer?.Stop();
+		_updateStatusTimer?.Dispose();
+		if (_socketClient != null)
+			await _socketClient.Close();
+		_cancelSource?.Cancel();
 	}
 
 	private async void OnStatusUpdateTimer(object sender, System.Timers.ElapsedEventArgs e)
@@ -220,7 +222,10 @@ else
 	{
 		try
 		{
-			_socketClient = new SocketClient(_ipValueIp.ToString(), _portValueNum, _cancelSource.Token);
+			if (NavManager.BaseUri.StartsWith("https:", StringComparison.InvariantCultureIgnoreCase))
+				_socketClient = new SocketClient(_ipValueIp.ToString(), _portValueNum, true, _cancelSource.Token);
+			else
+				_socketClient = new SocketClient(_ipValueIp.ToString(), _portValueNum, false, _cancelSource.Token);
 			_socketClient.OnClientResponse += OnSocketClientResponse;
 			await _socketClient.Connect();
 			var requestMessage = new ClientMessage()

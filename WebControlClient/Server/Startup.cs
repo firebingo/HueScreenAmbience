@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Net.Http.Headers;
 using System.Linq;
+using System.Net;
 
 namespace WebControlClient.Server
 {
@@ -48,7 +50,15 @@ namespace WebControlClient.Server
 
 			app.UseResponseCompression();
 			app.UseBlazorFrameworkFiles();
-			app.UseStaticFiles();
+			app.UseStaticFiles(new StaticFileOptions
+			{
+				OnPrepareResponse = ctx =>
+				{
+					const int durationInSeconds = 60 * 60 * 24;
+					ctx.Context.Response.Headers[HeaderNames.CacheControl] =
+						"public,max-age=" + durationInSeconds;
+				}
+			});
 
 			app.UseRouting();
 
