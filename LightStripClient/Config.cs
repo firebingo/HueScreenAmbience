@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Security.Authentication;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -109,5 +110,8 @@ namespace LightStripClient
 				return _listenIp;
 			}
 		}
+		public string SslCertLocation = string.Empty;
+		public string SslCertPassword = string.Empty;
+		public SslProtocols SslProtocol = SslProtocols.Tls12 | SslProtocols.Tls13;
 	}
 }

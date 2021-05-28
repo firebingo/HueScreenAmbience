@@ -5,6 +5,8 @@ using WebControlClient.Shared;
 using LightsShared.Sockets;
 using LightsShared;
 using System.Text.Json;
+using System.Security.Cryptography.X509Certificates;
+using System.IO;
 
 namespace LightStripClient.Sockets
 {
@@ -33,7 +35,15 @@ namespace LightStripClient.Sockets
 			try
 			{
 				_socketServer = new SocketServer(_logger);
-				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort.ToString(), _config.Model.SocketSettings.AspnetConsoleLog);
+				X509Certificate2? cert = null;
+				if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.SslCertLocation) && File.Exists(_config.Model.SocketSettings.SslCertLocation))
+				{
+					if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.SslCertPassword))
+						cert = new X509Certificate2(_config.Model.SocketSettings.SslCertLocation, _config.Model.SocketSettings.SslCertPassword);
+					else
+						cert = new X509Certificate2(_config.Model.SocketSettings.SslCertLocation);
+				}
+				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort, false, cert, _config.Model.SocketSettings.SslProtocol);
 				_socketServer.OnClientMessage += HandleClientCommand;
 				_isRunning = true;
 			}

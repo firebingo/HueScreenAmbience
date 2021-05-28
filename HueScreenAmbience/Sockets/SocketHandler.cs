@@ -7,6 +7,8 @@ using LightsShared.Sockets;
 using LightsShared;
 using System.Text;
 using System.Text.Json;
+using System.IO;
+using System.Security.Cryptography.X509Certificates;
 
 namespace HueScreenAmbience.Sockets
 {
@@ -39,7 +41,15 @@ namespace HueScreenAmbience.Sockets
 			try
 			{
 				_socketServer = new SocketServer(_logger);
-				await _socketServer.Start(_config.Model.socketSettings.listenIp.ToString(), _config.Model.socketSettings.listenPort.ToString(), _config.Model.socketSettings.aspnetConsoleLog);
+				X509Certificate2 cert = null;
+				if (!string.IsNullOrWhiteSpace(_config.Model.socketSettings.sslCertLocation) && File.Exists(_config.Model.socketSettings.sslCertLocation))
+				{
+					if (!string.IsNullOrWhiteSpace(_config.Model.socketSettings.sslCertPassword))
+						cert = new X509Certificate2(_config.Model.socketSettings.sslCertLocation, _config.Model.socketSettings.sslCertPassword);
+					else
+						cert = new X509Certificate2(_config.Model.socketSettings.sslCertLocation);
+				}
+				await _socketServer.Start(_config.Model.socketSettings.listenIp.ToString(), _config.Model.socketSettings.listenPort, _config.Model.socketSettings.aspnetConsoleLog, cert, _config.Model.socketSettings.sslProtocol);
 				_socketServer.OnClientMessage += HandleClientCommand;
 				_isRunning = true;
 			}

@@ -10,7 +10,7 @@
 	<div>
 		<section class="field-row">
 			<div class="field-row-stacked" style="width: 200px">
-				<label for="lsc-address">IP</label>
+				<label for="lsc-address">Address</label>
 				<input id="lsc-address" type="text" @bind="IpValue" @bind:event="onchange" />
 			</div>
 		</section>
@@ -77,7 +77,6 @@ else
 	//Used to disable the start/stop button until we get another server status back.
 	private bool BlockStart { get; set; }
 
-	private IPAddress _ipValueIp;
 	private string _ipValue;
 	private string IpValue
 	{
@@ -87,17 +86,12 @@ else
 		}
 		set
 		{
-			if (value == null)
-				return;
+			if (string.IsNullOrWhiteSpace(value))
+				IpValid = false;
+			else
+				IpValid = true;
 
 			_ipValue = value;
-			if (IPAddress.TryParse(IpValue, out var Ip))
-			{
-				_ipValueIp = Ip;
-				IpValid = true;
-			}
-			else
-				IpValid = false;
 		}
 	}
 	private bool IpValid { get; set; }
@@ -194,7 +188,7 @@ else
 		{
 			ModalType = ModalType.Warning;
 			ModalTitle = "Invalid Input";
-			ModalBody = "Ip address is invalid. Must be in a parsable IPv4 or IPv6 format.";
+			ModalBody = "Address can not be empty.";
 			ShowModal = true;
 			return;
 		}
@@ -223,9 +217,9 @@ else
 		try
 		{
 			if (NavManager.BaseUri.StartsWith("https:", StringComparison.InvariantCultureIgnoreCase))
-				_socketClient = new SocketClient(_ipValueIp.ToString(), _portValueNum, true, _cancelSource.Token);
+				_socketClient = new SocketClient(_ipValue, _portValueNum, true, _cancelSource.Token);
 			else
-				_socketClient = new SocketClient(_ipValueIp.ToString(), _portValueNum, false, _cancelSource.Token);
+				_socketClient = new SocketClient(_ipValue, _portValueNum, false, _cancelSource.Token);
 			_socketClient.OnClientResponse += OnSocketClientResponse;
 			await _socketClient.Connect();
 			var requestMessage = new ClientMessage()

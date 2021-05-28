@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Security.Authentication;
 
 namespace HueScreenAmbience
 {
@@ -231,5 +232,8 @@ namespace HueScreenAmbience
 				return _listenIp;
 			}
 		}
+		public string sslCertLocation = string.Empty;
+		public string sslCertPassword = string.Empty;
+		public SslProtocols sslProtocol = SslProtocols.Tls12 | SslProtocols.Tls13;
 	}
 }

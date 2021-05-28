@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.WebSockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -41,7 +43,7 @@ namespace LightsShared.Sockets
 			_logger = logger;
 		}
 
-		public async Task Start(string listenIp, string listenPort, bool log = false)
+		public async Task Start(string listenIp, int listenPort, bool log = false, X509Certificate2 cert = null, SslProtocols sslProtocol = SslProtocols.Tls13 | SslProtocols.Tls12)
 		{
 			if (_cancelSource != null)
 			{
@@ -55,10 +57,26 @@ namespace LightsShared.Sockets
 			_cancelToken = _cancelSource.Token;
 			_connectedClients = new ConcurrentDictionary<Guid, WebSocket>();
 
-			var localurl = $"http://127.0.0.1:{listenPort}/";
-			var url = $"http://{listenIp}:{listenPort}/";
 			_webHost = WebHost.CreateDefaultBuilder(Array.Empty<string>())
-				.UseKestrel()
+				.UseKestrel((hostingContext, options) =>
+				{
+					var localendpoint = IPEndPoint.Parse($"127.0.0.1:{listenPort}");
+					var endpoint = IPEndPoint.Parse($"{listenIp}:{listenPort}");
+					options.Listen(localendpoint);
+					if (cert != null)
+					{
+						options.ConfigureHttpsDefaults(o =>
+						{
+							o.SslProtocols = sslProtocol;
+						});
+						options.Listen(endpoint, listenOptions =>
+						{
+							listenOptions.UseHttps(cert);
+						});
+					}
+					else
+						options.Listen(endpoint);
+				})
 				.UseEnvironment("Development")
 				.Configure((app) =>
 				{
@@ -69,7 +87,6 @@ namespace LightsShared.Sockets
 					});
 					app.Use(OnHttpRequest);
 				})
-				.UseUrls(new string[] { url, localurl })
 				.ConfigureLogging((context, logging) =>
 				{
 					logging.ClearProviders();
