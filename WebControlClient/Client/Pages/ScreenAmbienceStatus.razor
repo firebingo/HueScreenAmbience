@@ -61,6 +61,7 @@ else
 		</fieldset>
 		<section class="field-row">
 			<button @onclick="OnStartClicked" disabled="@BlockStart">@((ServerStatus?.IsStarted ?? false) ? "Stop" : "Start")</button>
+			<button @onclick="OnDisconnectClick">Disconnect</button>
 		</section>
 	</div>
 }
@@ -146,27 +147,36 @@ else
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
 		if (firstRender)
-		{
-			if (bool.TryParse((await localStorage.GetItemAsStringAsync("saautoconnect")), out var auto))
-				AutoConnect = auto;
-			var ips = await localStorage.GetItemAsStringAsync("saipadd");
-			if (!string.IsNullOrWhiteSpace(ips))
-				IpValue = ips;
-			var ports = await localStorage.GetItemAsStringAsync("saipport");
-			if (!string.IsNullOrWhiteSpace(ports))
-				PortValue = ports;
-			if (AutoConnect)
-				await OnConnectClick();
-		}
+			await LoadSettings();
+	}
+
+	public void ResetCancelToken()
+	{
+		_cancelSource.Dispose();
+		_cancelSource = new CancellationTokenSource();
+	}
+
+	public async Task LoadSettings()
+	{
+		if (bool.TryParse((await localStorage.GetItemAsStringAsync("saautoconnect")), out var auto))
+			AutoConnect = auto;
+		var ips = await localStorage.GetItemAsStringAsync("saipadd");
+		if (!string.IsNullOrWhiteSpace(ips))
+			IpValue = ips;
+		var ports = await localStorage.GetItemAsStringAsync("saipport");
+		if (!string.IsNullOrWhiteSpace(ports))
+			PortValue = ports;
+		if (AutoConnect)
+			await OnConnectClick();
 	}
 
 	public async ValueTask DisposeAsync()
 	{
+		_cancelSource?.Cancel();
 		_updateStatusTimer?.Stop();
 		_updateStatusTimer?.Dispose();
 		if (_socketClient != null)
-			await _socketClient.Close();
-		_cancelSource?.Cancel();
+			await _socketClient.DisposeAsync();
 	}
 
 	private async void OnStatusUpdateTimer(object sender, System.Timers.ElapsedEventArgs e)
@@ -216,6 +226,26 @@ else
 
 		IsConnecting = true;
 		_ = Task.Run(() => OnConnect());
+	}
+
+	private async Task OnDisconnectClick()
+	{
+		IsConnecting = true;
+		await InvokeAsync(StateHasChanged);
+		_cancelSource?.Cancel();
+		//Set this to false so it doesn't just try to reconnect.
+		await localStorage.SetItemAsync<string>("saautoconnect", false.ToString());
+		AutoConnect = false;
+		try
+		{
+			if (_socketClient != null)
+				await _socketClient.DisposeAsync();
+		}
+		catch { }
+		_socketClient = null;
+		IsConnecting = false;
+		ResetCancelToken();
+		await LoadSettings();
 	}
 
 	private async Task OnConnect()

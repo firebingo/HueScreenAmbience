@@ -90,15 +90,15 @@ namespace LightStripClient
 		public int ReceivePort { get; set; } = 9250;
 		public int ReceiveTimeout { get; set; } = 10000;
 		public int LightCount { get; set; } = 0;
-		public SocketSettings SocketSettings = new SocketSettings();
+		public SocketSettings SocketSettings { get; set; } = new SocketSettings();
 	}
 
 	public class SocketSettings
 	{
-		public bool EnableHubSocket = false;
-		public bool AspnetConsoleLog = false;
-		public int ListenPort = 34780;
-		public string ListenAddress = IPAddress.Any.ToString();
+		public bool EnableHubSocket { get; set; } = false;
+		public bool AspnetConsoleLog { get; set; } = false;
+		public int ListenPort { get; set; } = 34780;
+		public string ListenAddress { get; set; } = IPAddress.Any.ToString();
 		private IPAddress? _listenIp;
 		[JsonIgnore]
 		public IPAddress ListenIp
@@ -110,8 +110,8 @@ namespace LightStripClient
 				return _listenIp;
 			}
 		}
-		public string SslCertLocation = string.Empty;
-		public string SslCertPassword = string.Empty;
-		public SslProtocols SslProtocol = SslProtocols.Tls12 | SslProtocols.Tls13;
+		public string SslCertLocation { get; set; } = string.Empty;
+		public string SslCertPassword { get; set; } = string.Empty;
+		public SslProtocols SslProtocol { get; set; } = SslProtocols.Tls12 | SslProtocols.Tls13;
 	}
 }

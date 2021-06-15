@@ -43,12 +43,14 @@ namespace LightStripClient.Sockets
 					else
 						cert = new X509Certificate2(_config.Model.SocketSettings.SslCertLocation);
 				}
-				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort, false, cert, _config.Model.SocketSettings.SslProtocol);
+				//Console.WriteLine($"Loaded X509Certificate2 {cert}");
+				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort, _config.Model.SocketSettings.AspnetConsoleLog, cert, _config.Model.SocketSettings.SslProtocol);
 				_socketServer.OnClientMessage += HandleClientCommand;
 				_isRunning = true;
 			}
 			catch (Exception ex)
 			{
+				//Console.WriteLine($"ex {ex}");
 				_ = Task.Run(() => { _logger?.WriteLog(ex.ToString()); });
 			}
 		}
@@ -78,7 +80,7 @@ namespace LightStripClient.Sockets
 						{
 							Success = true,
 							Message = string.Empty,
-							Type = ClientResponseType.SAData,
+							Type = ClientResponseType.LSCData,
 							Data = new LightStripStatus()
 							{
 								Frame = _lighter.Frame,

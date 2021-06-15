@@ -44,18 +44,21 @@ else
 				<span>Frame:</span>&nbsp;<span>@((ServerStatus?.Frame ?? 0).ToString())</span>
 			</p>
 		</fieldset>
-		@if (ServerStatus != null)
+		@if (ServerStatus.NetworkInterfaces != null)
 		{
 			<fieldset>
 				<legend>IPs</legend>
 				@foreach (var n in ServerStatus.NetworkInterfaces)
 				{
 					<p>
-						<span>@(n.Name)</span>&nbsp;<span>@(n.Ip.ToString())</span>
+						<span>@(n.Name)</span>&nbsp;<span>@(n.Ip?.ToString() ?? string.Empty)</span>
 					</p>
 				}
 			</fieldset>
 		}
+		<section class="field-row">
+			<button @onclick="OnDisconnectClick" disabled="@IsConnecting">Disconnect</button>
+		</section>
 	</div>
 }
 <Modal Open="@ShowModal" Title="@ModalTitle" Body="@ModalBody" Buttons="@ModalButtons" Type="@ModalType" OnClose="@ModalOnClose" />
@@ -140,27 +143,37 @@ else
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
 		if (firstRender)
-		{
-			if (bool.TryParse((await localStorage.GetItemAsStringAsync("saautoconnect")), out var auto))
-				AutoConnect = auto;
-			var ips = await localStorage.GetItemAsStringAsync("saipadd");
-			if (!string.IsNullOrWhiteSpace(ips))
-				IpValue = ips;
-			var ports = await localStorage.GetItemAsStringAsync("saipport");
-			if (!string.IsNullOrWhiteSpace(ports))
-				PortValue = ports;
-			if (AutoConnect)
-				await OnConnectClick();
-		}
+			await LoadSettings();
+	}
+
+	public void ResetCancelToken()
+	{
+		_cancelSource.Dispose();
+		_cancelSource = new CancellationTokenSource();
+	}
+
+	public async Task LoadSettings()
+	{
+		if (bool.TryParse((await localStorage.GetItemAsStringAsync("lscautoconnect")), out var auto))
+			AutoConnect = auto;
+		var ips = await localStorage.GetItemAsStringAsync("lscipadd");
+		if (!string.IsNullOrWhiteSpace(ips))
+			IpValue = ips;
+		var ports = await localStorage.GetItemAsStringAsync("lscipport");
+		if (!string.IsNullOrWhiteSpace(ports))
+			PortValue = ports;
+		await InvokeAsync(StateHasChanged);
+		if (AutoConnect)
+			await OnConnectClick();
 	}
 
 	public async ValueTask DisposeAsync()
 	{
+		_cancelSource?.Cancel();
 		_updateStatusTimer?.Stop();
 		_updateStatusTimer?.Dispose();
 		if (_socketClient != null)
-			await _socketClient.Close();
-		_cancelSource?.Cancel();
+			await _socketClient.DisposeAsync();
 	}
 
 	private async void OnStatusUpdateTimer(object sender, System.Timers.ElapsedEventArgs e)
@@ -201,15 +214,35 @@ else
 			return;
 		}
 
-		await localStorage.SetItemAsync<string>("lscautoconnect", AutoConnect.ToString());
+		await localStorage.SetItemAsStringAsync("lscautoconnect", AutoConnect.ToString());
 		if (AutoConnect)
 		{
-			await localStorage.SetItemAsync<string>("lscipadd", IpValue.ToString());
-			await localStorage.SetItemAsync<string>("lscipport", PortValue.ToString());
+			await localStorage.SetItemAsStringAsync("lscipadd", IpValue.ToString());
+			await localStorage.SetItemAsStringAsync("lscipport", PortValue.ToString());
 		}
 
 		IsConnecting = true;
 		_ = Task.Run(() => OnConnect());
+	}
+
+	private async Task OnDisconnectClick()
+	{
+		IsConnecting = true;
+		await InvokeAsync(StateHasChanged);
+		_cancelSource?.Cancel();
+		//Set this to false so it doesn't just try to reconnect.
+		await localStorage.SetItemAsync<string>("lscautoconnect", false.ToString());
+		AutoConnect = false;
+		try
+		{
+			if (_socketClient != null)
+				await _socketClient.DisposeAsync();
+		}
+		catch { }
+		_socketClient = null;
+		IsConnecting = false;
+		ResetCancelToken();
+		await LoadSettings();
 	}
 
 	private async Task OnConnect()
@@ -248,7 +281,7 @@ else
 		{
 			switch (e.Response.Type)
 			{
-				case ClientResponseType.SAData:
+				case ClientResponseType.LSCData:
 					{
 						if (e.Response is ClientResponse<WebControlClient.Shared.LightStripStatus> res)
 						{

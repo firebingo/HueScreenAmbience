@@ -4,7 +4,8 @@
 	{
 		None = 0,
 		Pong = 1,
-		SAData = 2
+		SAData = 2,
+		LSCData = 3
 	}
 
 	public class ClientResponse
