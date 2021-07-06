@@ -16,10 +16,14 @@ namespace HueScreenAmbience.PiCapture
 		private readonly int _inputHeight = 0;
 		private readonly string _inputSource = "";
 		private readonly string _inputFormat = "";
+		private readonly string _inputPixelFormatType = "";
+		private readonly string _inputPixelFormat = "";
 		private readonly int _inputFrameRate = 0;
+		private readonly int _bufferMultiplier = 4;
 		private readonly bool _ffmpegOutput = false;
 		private Process _ffmpegProcess;
 		private Stream _ffmpegStream;
+		private Stream _ffmpegStdErrorStream;
 		private bool _isRunning = false;
 		private readonly int _frameLength = 0;
 		private readonly byte[] _frameBuffer;
@@ -27,10 +31,12 @@ namespace HueScreenAmbience.PiCapture
 		private bool _readLock;
 
 		private Thread _ffmpegThread;
+		private Thread _ffmpegStdErrorThread;
 
 		private readonly FileLogger _logger;
 
-		public PiCapture(int width, int height, int inputWidth, int inputHeight, int frameRate, string inputSource, string inputFormat, int inputFrameRate, FileLogger logger, bool ffmpegOutput = false)
+		public PiCapture(int width, int height, int inputWidth, int inputHeight, int frameRate, string inputSource, string inputFormat, string inputPixelFormat, string inputPixelFormatType,
+			int inputFrameRate, int bufferMultiplier, FileLogger logger, bool ffmpegOutput = false)
 		{
 			_logger = logger;
 			_width = width;
@@ -40,8 +46,11 @@ namespace HueScreenAmbience.PiCapture
 			_frameRate = frameRate;
 			_inputSource = inputSource;
 			_inputFormat = inputFormat;
+			_inputPixelFormat = inputPixelFormat;
+			_inputPixelFormatType = inputPixelFormatType;
 			_ffmpegOutput = ffmpegOutput;
 			_inputFrameRate = inputFrameRate;
+			_bufferMultiplier = bufferMultiplier;
 			_frameLength = _width * _height * 4;
 			_frameBuffer = new byte[_frameLength];
 			_frameBackBuffer = new byte[_frameLength];
@@ -62,7 +71,7 @@ namespace HueScreenAmbience.PiCapture
 				_ffmpegProcess.StartInfo.RedirectStandardOutput = true;
 				_ffmpegProcess.StartInfo.FileName = "ffmpeg";
 				//rgb32 and bgr32 are flipped for some reason??
-				_ffmpegProcess.StartInfo.Arguments = $"-f v4l2 -input_format {_inputFormat} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -s {_width}x{_height} -f rawvideo pipe:1";
+				_ffmpegProcess.StartInfo.Arguments = $"-f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -s {_width}x{_height} -f rawvideo pipe:1";
 
 				_isRunning = true;
 				_ffmpegThread = new Thread(new ThreadStart(ReadLoop));
@@ -70,6 +79,14 @@ namespace HueScreenAmbience.PiCapture
 
 				_ffmpegProcess.Start();
 				_ffmpegStream = _ffmpegProcess.StandardOutput.BaseStream;
+				//need to read this until exit otherwise we will block
+				if (!_ffmpegOutput)
+				{
+					_ffmpegStdErrorStream = _ffmpegProcess.StandardError.BaseStream;
+					_ffmpegStdErrorThread = new Thread(new ThreadStart(ReadStdErrorLoop));
+					_ffmpegStdErrorThread.Name = "FFMPEG StdError Thread";
+					_ffmpegStdErrorThread.Start();
+				}
 				_ffmpegThread.Start();
 			}
 			catch (Exception ex)
@@ -141,6 +158,15 @@ namespace HueScreenAmbience.PiCapture
 			}
 		}
 
+		public void ReadStdErrorLoop()
+		{
+			var buffer = new byte[8192];
+			do
+			{
+				_ffmpegStdErrorStream?.Read(buffer, 0, 8192);
+			} while (_isRunning);
+		}
+
 		public bool GetFrame(MemoryStream frameStream)
 		{
 			try
@@ -175,13 +201,20 @@ namespace HueScreenAmbience.PiCapture
 		{
 			_isRunning = false;
 			if (_ffmpegProcess != null)
+			{
 				_ffmpegProcess.StandardOutput.Close();
+				if (!_ffmpegOutput)
+					_ffmpegProcess.StandardError.Close();
+			}
 		}
 
 		public void Dispose()
 		{
 			if (_ffmpegProcess != null)
+			{
 				_ffmpegStream?.Dispose();
+				_ffmpegStdErrorStream?.Dispose();
+			}
 
 			GC.SuppressFinalize(this);
 		}

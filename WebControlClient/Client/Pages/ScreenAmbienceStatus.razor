@@ -158,12 +158,12 @@ else
 
 	public async Task LoadSettings()
 	{
-		if (bool.TryParse((await localStorage.GetItemAsStringAsync("saautoconnect")), out var auto))
+		if (bool.TryParse((await localStorage.GetItemAsStringAsync("saautoconnect", _cancelSource.Token)), out var auto))
 			AutoConnect = auto;
-		var ips = await localStorage.GetItemAsStringAsync("saipadd");
+		var ips = await localStorage.GetItemAsStringAsync("saipadd", _cancelSource.Token);
 		if (!string.IsNullOrWhiteSpace(ips))
 			IpValue = ips;
-		var ports = await localStorage.GetItemAsStringAsync("saipport");
+		var ports = await localStorage.GetItemAsStringAsync("saipport", _cancelSource.Token);
 		if (!string.IsNullOrWhiteSpace(ports))
 			PortValue = ports;
 		if (AutoConnect)
@@ -217,11 +217,11 @@ else
 			return;
 		}
 
-		await localStorage.SetItemAsStringAsync("saautoconnect", AutoConnect.ToString());
+		await localStorage.SetItemAsStringAsync("saautoconnect", AutoConnect.ToString(), _cancelSource.Token);
 		if (AutoConnect)
 		{
-			await localStorage.SetItemAsStringAsync("saipadd", IpValue.ToString());
-			await localStorage.SetItemAsStringAsync("saipport", PortValue.ToString());
+			await localStorage.SetItemAsStringAsync("saipadd", IpValue.ToString(), _cancelSource.Token);
+			await localStorage.SetItemAsStringAsync("saipport", PortValue.ToString(), _cancelSource.Token);
 		}
 
 		IsConnecting = true;

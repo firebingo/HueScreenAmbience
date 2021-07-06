@@ -147,7 +147,8 @@ namespace HueScreenAmbience
 			if (_config.Model.piCameraSettings.isPi)
 			{
 				_piCapture = new PiCapture.PiCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.piCameraSettings.inputWidth, _config.Model.piCameraSettings.inputHeight,
-					_config.Model.piCameraSettings.frameRate, _config.Model.piCameraSettings.inputSource, _config.Model.piCameraSettings.inputFormat, _config.Model.piCameraSettings.inputFrameRate,
+					_config.Model.piCameraSettings.frameRate, _config.Model.piCameraSettings.inputSource, _config.Model.piCameraSettings.inputFormat, _config.Model.piCameraSettings.inputPixelFormat,
+					_config.Model.piCameraSettings.inputPixelFormatType, _config.Model.piCameraSettings.inputFrameRate, _config.Model.piCameraSettings.bufferMultiplier,
 					_logger, _config.Model.piCameraSettings.ffmpegStdError);
 				_piCapture.Start();
 			}

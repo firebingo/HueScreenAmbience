@@ -161,7 +161,7 @@ namespace HueScreenAmbience.LightStrip
 				} while (_updating);
 
 				_updating = true;
-				if (_config.Model.piCameraSettings.isPi)
+				if (_config.Model.piCameraSettings.isPi && _config.Model.piCameraSettings.lightsLocal)
 				{
 					foreach (var light in _lights)
 					{

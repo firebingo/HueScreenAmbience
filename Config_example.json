@@ -30,7 +30,7 @@
     "updateFrameRate": 60 //Can be used to throttle rate that rgb devices are allowed to update at
   },
   "piCameraSettings": {
-    "isPi": false, //Whether or not we are running on a pi and reading from a video input source.
+    "isPi": false, //Whether or not we are reading video input from ffmpeg. Requires ffmpeg to be in PATH.
     "lightsLocal": false, //Whether or not a light strip is connected to the pi to update or if it should send udp packets like a standard device.
     "width": 1280, //Dimensions of video for ffmpeg to output. This can be used to scale the video source in ffmpeg instead of using readResolutionReduce.
     "height": 720, //This can be more efficent instead of scaling later as it can do format conversion at the same time. Set readResolutionReduce to 1.0 if using this.
@@ -39,8 +39,11 @@
 	"inputWidth": 1280, //Dimensions of video from video input
     "inputHeight": 720,
     "inputFrameRate": 60, //The frame rate of the video source.
-    "inputSource": "/dev/video0", //The source of video to pull from.
-    "inputFormat": "yuv420p", //The format of the input for ffmpeg to read.
+    "inputSource": "/dev/video0", //The source of video to pull from. probably somthing like "/dev/video0" on linux with v4l2, or "video=\"USB Video Device\"" on windows with directshow. https://trac.ffmpeg.org/wiki/Capture/Webcam
+	"inputFormat": "v4l2", //"v4l2" on linux, "dshow" on windows.
+	"inputPixelFormatType": "input_format", //"pixel_format" with dshow, "input_format" with v4l2.
+    "inputPixelFormat": "yuv420p", //The format of the input for ffmpeg to read.
+	"bufferMultiplier": 8, //Used for setting ffmpeg rtbufsize. 4-16. If it feels like a lot of frames are being dropped check ffmpeg output and see if its outputting "real-time buffer too full or near too full". If it is consistently increase this value.
     "ffmpegStdError": false //Whether or not to allow ffmpeg to dump its statistics to console. Useful for debugging.
   },
   "socketSettings": {

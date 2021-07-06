@@ -154,12 +154,12 @@ else
 
 	public async Task LoadSettings()
 	{
-		if (bool.TryParse((await localStorage.GetItemAsStringAsync("lscautoconnect")), out var auto))
+		if (bool.TryParse((await localStorage.GetItemAsStringAsync("lscautoconnect", _cancelSource.Token)), out var auto))
 			AutoConnect = auto;
-		var ips = await localStorage.GetItemAsStringAsync("lscipadd");
+		var ips = await localStorage.GetItemAsStringAsync("lscipadd", _cancelSource.Token);
 		if (!string.IsNullOrWhiteSpace(ips))
 			IpValue = ips;
-		var ports = await localStorage.GetItemAsStringAsync("lscipport");
+		var ports = await localStorage.GetItemAsStringAsync("lscipport", _cancelSource.Token);
 		if (!string.IsNullOrWhiteSpace(ports))
 			PortValue = ports;
 		await InvokeAsync(StateHasChanged);
@@ -214,11 +214,11 @@ else
 			return;
 		}
 
-		await localStorage.SetItemAsStringAsync("lscautoconnect", AutoConnect.ToString());
+		await localStorage.SetItemAsStringAsync("lscautoconnect", AutoConnect.ToString(), _cancelSource.Token);
 		if (AutoConnect)
 		{
-			await localStorage.SetItemAsStringAsync("lscipadd", IpValue.ToString());
-			await localStorage.SetItemAsStringAsync("lscipport", PortValue.ToString());
+			await localStorage.SetItemAsStringAsync("lscipadd", IpValue.ToString(), _cancelSource.Token);
+			await localStorage.SetItemAsStringAsync("lscipport", PortValue.ToString(), _cancelSource.Token);
 		}
 
 		IsConnecting = true;
