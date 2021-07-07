@@ -150,7 +150,7 @@ namespace HueScreenAmbience
 			_socketServer = new SocketHandler();
 
 			var services = new ServiceCollection();
-			if (_config.Model.piCameraSettings.isPi)
+			if (_config.Model.ffmpegCaptureSettings.useFFMpeg)
 			{
 				services
 				.AddScoped<FileLogger>()

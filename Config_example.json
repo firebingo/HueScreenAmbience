@@ -29,8 +29,8 @@
     "keyboardResReduce": 4, //Reduces the sample size of the keyboard layout. This is for layouts from rgb.net that represent keys as larger rects.
     "updateFrameRate": 60 //Can be used to throttle rate that rgb devices are allowed to update at
   },
-  "piCameraSettings": {
-    "isPi": false, //Whether or not we are reading video input from ffmpeg. Requires ffmpeg to be in PATH.
+  "ffmpegCaptureSettings": {
+    "useFFMpeg": false, //Whether or not we are reading video input from ffmpeg. Requires ffmpeg to be in PATH.
     "lightsLocal": false, //Whether or not a light strip is connected to the pi to update or if it should send udp packets like a standard device.
     "width": 1280, //Dimensions of video for ffmpeg to output. This can be used to scale the video source in ffmpeg instead of using readResolutionReduce.
     "height": 720, //This can be more efficent instead of scaling later as it can do format conversion at the same time. Set readResolutionReduce to 1.0 if using this.

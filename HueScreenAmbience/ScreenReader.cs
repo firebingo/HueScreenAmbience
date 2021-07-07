@@ -22,7 +22,7 @@ namespace HueScreenAmbience
 		private StripLighter _stripLighter;
 		private FileLogger _logger;
 		private DxCapture _dxCapture;
-		private PiCapture.PiCapture _piCapture;
+		private FFMpegCapture.FFMpegCapture _ffmpegCapture;
 		private DateTime _lastPostReadTime;
 		private long _frame;
 		public long Frame { get => _frame; }
@@ -44,14 +44,14 @@ namespace HueScreenAmbience
 		public void Start()
 		{
 			_frameRate = _config.Model.screenReadFrameRate;
-			if (_config.Model.piCameraSettings.isPi)
+			if (_config.Model.ffmpegCaptureSettings.useFFMpeg)
 			{
 				ScreenInfo = new ScreenDimensions()
 				{
 					Source = "Capture",
-					Rate = _config.Model.piCameraSettings.inputFrameRate,
-					RealWidth = _config.Model.piCameraSettings.width,
-					RealHeight = _config.Model.piCameraSettings.height,
+					Rate = _config.Model.ffmpegCaptureSettings.inputFrameRate,
+					RealWidth = _config.Model.ffmpegCaptureSettings.width,
+					RealHeight = _config.Model.ffmpegCaptureSettings.height,
 					SizeReduction = _config.Model.readResolutionReduce
 				};
 			}
@@ -65,7 +65,7 @@ namespace HueScreenAmbience
 			_config = _map.GetService(typeof(Config)) as Config;
 			_zoneProcesser = _map.GetService(typeof(ZoneProcessor)) as ZoneProcessor;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
-			if (!_config.Model.piCameraSettings.isPi)
+			if (!_config.Model.ffmpegCaptureSettings.useFFMpeg)
 				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
@@ -144,13 +144,13 @@ namespace HueScreenAmbience
 
 		public void InitScreenLoop()
 		{
-			if (_config.Model.piCameraSettings.isPi)
+			if (_config.Model.ffmpegCaptureSettings.useFFMpeg)
 			{
-				_piCapture = new PiCapture.PiCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.piCameraSettings.inputWidth, _config.Model.piCameraSettings.inputHeight,
-					_config.Model.piCameraSettings.frameRate, _config.Model.piCameraSettings.inputSource, _config.Model.piCameraSettings.inputFormat, _config.Model.piCameraSettings.inputPixelFormat,
-					_config.Model.piCameraSettings.inputPixelFormatType, _config.Model.piCameraSettings.inputFrameRate, _config.Model.piCameraSettings.bufferMultiplier,
-					_logger, _config.Model.piCameraSettings.ffmpegStdError);
-				_piCapture.Start();
+				_ffmpegCapture = new FFMpegCapture.FFMpegCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.ffmpegCaptureSettings.inputWidth, _config.Model.ffmpegCaptureSettings.inputHeight,
+					_config.Model.ffmpegCaptureSettings.frameRate, _config.Model.ffmpegCaptureSettings.inputSource, _config.Model.ffmpegCaptureSettings.inputFormat, _config.Model.ffmpegCaptureSettings.inputPixelFormat,
+					_config.Model.ffmpegCaptureSettings.inputPixelFormatType, _config.Model.ffmpegCaptureSettings.inputFrameRate, _config.Model.ffmpegCaptureSettings.bufferMultiplier,
+					_logger, _config.Model.ffmpegCaptureSettings.ffmpegStdError);
+				_ffmpegCapture.Start();
 			}
 			else
 			{
@@ -195,15 +195,15 @@ namespace HueScreenAmbience
 				{
 					var updatedFrame = false;
 					var t = start;
-					if (_config.Model.piCameraSettings.isPi)
-						updatedFrame = _piCapture.GetFrame(frameStream);
+					if (_config.Model.ffmpegCaptureSettings.useFFMpeg)
+						updatedFrame = _ffmpegCapture.GetFrame(frameStream);
 					else
 						updatedFrame = _dxCapture.GetFrame(frameStream);
 					//Console.WriteLine($"Capture Time:        {(DateTime.UtcNow - start).TotalMilliseconds}");
 
 					//If we are on pi and have skip frames set wait until we are past the frame number before we start trying to read.
 					// This is done because initialization for the hdmi connection can take a bit before we get real frames back.
-					if (_config.Model.piCameraSettings.isPi && _frame < _config.Model.piCameraSettings.skipFrames)
+					if (_config.Model.ffmpegCaptureSettings.useFFMpeg && _frame < _config.Model.ffmpegCaptureSettings.skipFrames)
 					{
 						_lastPostReadTime = DateTime.UtcNow;
 						await _zoneProcesser.PostRead(_zones, _frame);
@@ -286,10 +286,10 @@ namespace HueScreenAmbience
 				return;
 
 			IsRunning = false;
-			if (_config.Model.piCameraSettings.isPi)
+			if (_config.Model.ffmpegCaptureSettings.useFFMpeg)
 			{
-				_piCapture.Stop();
-				_piCapture.Dispose();
+				_ffmpegCapture.Stop();
+				_ffmpegCapture.Dispose();
 			}
 			else
 			{

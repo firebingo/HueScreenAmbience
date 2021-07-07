@@ -30,7 +30,7 @@ namespace HueScreenAmbience
 			_config = _map.GetService(typeof(Config)) as Config;
 			_hueClient = _map.GetService(typeof(HueCore)) as HueCore;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
-			if (!_config.Model.piCameraSettings.isPi)
+			if (!_config.Model.ffmpegCaptureSettings.useFFMpeg)
 				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
@@ -124,7 +124,7 @@ namespace HueScreenAmbience
 
 				//Console.WriteLine($"PostRead ChangeLightColor Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
-				if (!_config.Model.piCameraSettings.isPi && (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice))
+				if (!_config.Model.ffmpegCaptureSettings.useFFMpeg && (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice))
 				{
 					if (_rgbImageMemStream == null)
 						_rgbImageMemStream = new MemoryStream(newWidth * newHeight * 3);

@@ -5,9 +5,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HueScreenAmbience.PiCapture
+namespace HueScreenAmbience.FFMpegCapture
 {
-	public class PiCapture : IDisposable
+	public class FFMpegCapture : IDisposable
 	{
 		private readonly int _width = 0;
 		private readonly int _height = 0;
@@ -35,7 +35,7 @@ namespace HueScreenAmbience.PiCapture
 
 		private readonly FileLogger _logger;
 
-		public PiCapture(int width, int height, int inputWidth, int inputHeight, int frameRate, string inputSource, string inputFormat, string inputPixelFormat, string inputPixelFormatType,
+		public FFMpegCapture(int width, int height, int inputWidth, int inputHeight, int frameRate, string inputSource, string inputFormat, string inputPixelFormat, string inputPixelFormatType,
 			int inputFrameRate, int bufferMultiplier, FileLogger logger, bool ffmpegOutput = false)
 		{
 			_logger = logger;

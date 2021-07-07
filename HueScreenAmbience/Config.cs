@@ -65,7 +65,7 @@ namespace HueScreenAmbience
 			_config.readResolutionReduce = Math.Clamp(_config.readResolutionReduce, 1.0f, 10.0f);
 			_config.screenReadFrameRate = Math.Max(1, _config.screenReadFrameRate);
 			_config.socketSettings.listenPort = Math.Clamp(_config.socketSettings.listenPort, 1, 65535);
-			_config.piCameraSettings.bufferMultiplier = Math.Clamp(_config.piCameraSettings.bufferMultiplier, 4, 16);
+			_config.ffmpegCaptureSettings.bufferMultiplier = Math.Clamp(_config.ffmpegCaptureSettings.bufferMultiplier, 4, 16);
 
 			if (_config.bitmapRect.HasValue)
 				_config.imageRect = new SixLabors.ImageSharp.Rectangle(_config.bitmapRect.Value.top, _config.bitmapRect.Value.left, _config.bitmapRect.Value.width, _config.bitmapRect.Value.height);
@@ -111,7 +111,7 @@ namespace HueScreenAmbience
 		public HueSettings hueSettings = new HueSettings();
 		public ZoneProcessSettings zoneProcessSettings = new ZoneProcessSettings();
 		public RGBDeviceSettings rgbDeviceSettings = new RGBDeviceSettings();
-		public PiCameraSettings piCameraSettings = new PiCameraSettings();
+		public FFMpegCaptureSettings ffmpegCaptureSettings = new FFMpegCaptureSettings();
 		public SocketSettings socketSettings = new SocketSettings();
 		public int adapterId = 0;
 		public int monitorId = 0;
@@ -200,9 +200,9 @@ namespace HueScreenAmbience
 		public List<SimplePointF> lights = new List<SimplePointF>();
 	}
 
-	public class PiCameraSettings
+	public class FFMpegCaptureSettings
 	{
-		public bool isPi = false;
+		public bool useFFMpeg = false;
 		public bool lightsLocal = false;
 		public int width = 1280;
 		public int height = 720;

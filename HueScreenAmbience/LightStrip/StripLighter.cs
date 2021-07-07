@@ -90,7 +90,7 @@ namespace HueScreenAmbience.LightStrip
 					}
 				}
 
-				if (_config.Model.piCameraSettings.isPi && _config.Model.piCameraSettings.lightsLocal)
+				if (_config.Model.ffmpegCaptureSettings.useFFMpeg && _config.Model.ffmpegCaptureSettings.lightsLocal)
 				{
 					try
 					{
@@ -161,7 +161,7 @@ namespace HueScreenAmbience.LightStrip
 				} while (_updating);
 
 				_updating = true;
-				if (_config.Model.piCameraSettings.isPi && _config.Model.piCameraSettings.lightsLocal)
+				if (_config.Model.ffmpegCaptureSettings.useFFMpeg && _config.Model.ffmpegCaptureSettings.lightsLocal)
 				{
 					foreach (var light in _lights)
 					{
@@ -219,7 +219,7 @@ namespace HueScreenAmbience.LightStrip
 					return;
 
 				_updating = true;
-				if (_config.Model.piCameraSettings.isPi && _config.Model.piCameraSettings.lightsLocal)
+				if (_config.Model.ffmpegCaptureSettings.useFFMpeg && _config.Model.ffmpegCaptureSettings.lightsLocal)
 					UpdateImagePi(image, width, height);
 				else
 					UpdateImageServer(image, width, height, frame);
