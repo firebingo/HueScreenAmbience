@@ -74,11 +74,14 @@ namespace BitmapZoneProcessor
 
 		public static MemoryStream CreateSmallImageFromZones(PixelZone[] zones, MemoryStream memStream)
 		{
-			for (var i = 0; i < zones.Length; ++i)
+			unsafe
 			{
-				memStream.WriteByte(zones[i].AvgR);
-				memStream.WriteByte(zones[i].AvgG);
-				memStream.WriteByte(zones[i].AvgB);
+				for (var i = 0; i < zones.Length; ++i)
+				{
+					memStream.WriteByte((byte)(*zones[i].AvgR));
+					memStream.WriteByte((byte)(*zones[i].AvgG));
+					memStream.WriteByte((byte)(*zones[i].AvgB));
+				}
 			}
 
 			memStream.Seek(0, SeekOrigin.Begin);

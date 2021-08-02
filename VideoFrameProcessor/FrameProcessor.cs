@@ -16,13 +16,10 @@ namespace VideoFrameProcessor
 				var newWidth = (int)Math.Floor(width / config.Model.ReadResolutionReduce);
 				var newHeight = (int)Math.Floor(height / config.Model.ReadResolutionReduce);
 				resizeMemStream = new MemoryStream(newWidth * newHeight * 4);
-				var zones = SetupPixelZones(newWidth, newHeight, config.Model.ZoneRows, config.Model.ZoneColumns);
-				BitmapProcessor.ReadBitmap(stream, width, height, newWidth, newHeight, config.Model.ReadResolutionReduce, config.Model.ZoneRows, config.Model.ZoneColumns, ref zones, resizeMemStream);
+				var (zones, zoneTotals) = SetupPixelZones(newWidth, newHeight, config.Model.ZoneRows, config.Model.ZoneColumns);
+				BitmapProcessor.ReadBitmap(stream, width, height, newWidth, newHeight, config.Model.ReadResolutionReduce, config.Model.ZoneRows, config.Model.ZoneColumns, ref zones, ref zoneTotals, resizeMemStream);
 
-				foreach (var zone in zones)
-				{
-					zone.CalculateAverages();
-				}
+				zoneTotals.CalculateAverages();
 
 				newWidth = (int)Math.Floor(config.Model.ZoneColumns * config.Model.ResizeScale);
 				newHeight = (int)Math.Floor(config.Model.ZoneRows * config.Model.ResizeScale);
@@ -34,6 +31,7 @@ namespace VideoFrameProcessor
 				await ImageHandler.WriteImageToFile(blurImage, newWidth, newHeight, Path.Combine(outPath, $"out{frame.ToString().PadLeft(6, '0')}.png"), pixelFormat: PixelFormat.Rgb24);
 				await blurImage.DisposeAsync();
 				await image.DisposeAsync();
+				zoneTotals.Dispose();
 			}
 			catch (Exception ex)
 			{
@@ -47,8 +45,9 @@ namespace VideoFrameProcessor
 			}
 		}
 
-		private static PixelZone[] SetupPixelZones(int width, int height, int rows, int columns)
+		private static (PixelZone[] zones, PixelZonesTotals zoneTotals) SetupPixelZones(int width, int height, int rows, int columns)
 		{
+			var zoneTotals = new PixelZonesTotals(columns * rows);
 			var zones = new PixelZone[columns * rows];
 			if (zones.Length == 0)
 				throw new Exception("0 Light zones created");
@@ -66,12 +65,12 @@ namespace VideoFrameProcessor
 				var yMax = row == rows - 1
 					? height
 					: (height / (double)rows) * (row + 1);
-				zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax));
+				zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), zoneTotals, i);
 				if (col == columns - 1)
 					row += 1;
 			}
 
-			return zones;
+			return (zones, zoneTotals);
 		}
 	}
 }

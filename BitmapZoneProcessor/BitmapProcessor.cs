@@ -6,18 +6,11 @@ namespace BitmapZoneProcessor
 	public static class BitmapProcessor
 	{
 		public static void ReadBitmap(MemoryStream image, int width, int height, int newWidth, int newHeight, float resReduce, int zoneRows, int zoneColumns, ref PixelZone[] zones,
-			MemoryStream resizeStream = null, MemoryStream cropStream = null, SixLabors.ImageSharp.Rectangle? bitmapRect = null)
+			ref PixelZonesTotals zoneTotals, MemoryStream resizeStream = null, MemoryStream cropStream = null, SixLabors.ImageSharp.Rectangle? bitmapRect = null)
 		{
 			var start = DateTime.UtcNow;
 			//Reset zones
-			foreach (var zone in zones)
-			{
-				zone.Count = 0;
-				zone.TotalR = 0;
-				zone.TotalG = 0;
-				zone.TotalB = 0;
-				zone.ResetAverages();
-			}
+			zoneTotals.ResetAverages();
 
 			var useImage = image;
 			//If this is passed it is expected that the zones passed are also based on this reduced resolution for now.
@@ -65,10 +58,10 @@ namespace BitmapZoneProcessor
 					for (var i = 0; i < totalSize; i += pixLength)
 					{
 						//index is our power of 4 padded index in the bitmap.
-						zone.TotalB += p[i]; //b
-						zone.TotalG += p[i + 1]; //g
-						zone.TotalR += p[i + 2]; //r
-						zone.Count++;
+						*zone.TotalB += p[i]; //b
+						*zone.TotalG += p[i + 1]; //g
+						*zone.TotalR += p[i + 2]; //r
+						*zone.Count += 1;
 
 						//If we only have one row we do want to process this for the last zone still
 						if (!oneZone && (zoneRows == 1 || currentZone != zones.Length - 1))

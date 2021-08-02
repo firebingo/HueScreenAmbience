@@ -10,8 +10,11 @@ using LightsShared;
 
 namespace HueScreenAmbience
 {
-	class ScreenReader
+	public class ScreenReader : IDisposable
 	{
+		private bool disposed = false;
+
+		private PixelZonesTotals _zoneTotals;
 		private PixelZone[] _zones = null;
 		public bool Ready { get; private set; }
 		public DxEnumeratedDisplay Screen { get; private set; }
@@ -101,9 +104,10 @@ namespace HueScreenAmbience
 			}
 		}
 
-		public void SetupPixelZones()
+		unsafe public void SetupPixelZones()
 		{
 			_zones = new PixelZone[_config.Model.zoneColumns * _config.Model.zoneRows];
+			_zoneTotals = new PixelZonesTotals(_zones.Length);
 			if (_zones.Length == 0)
 				throw new Exception("0 Light zones created");
 			var newWidth = ScreenInfo.Width;
@@ -135,7 +139,7 @@ namespace HueScreenAmbience
 				var yMax = row == _config.Model.zoneRows - 1
 					? newHeight
 					: (newHeight / (double)_config.Model.zoneRows) * (row + 1);
-				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax));
+				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), _zoneTotals, i);
 				if (col == _config.Model.zoneColumns - 1)
 					row += 1;
 			}
@@ -206,7 +210,7 @@ namespace HueScreenAmbience
 					if (_config.Model.ffmpegCaptureSettings.useFFMpeg && _frame < _config.Model.ffmpegCaptureSettings.skipFrames)
 					{
 						_lastPostReadTime = DateTime.UtcNow;
-						await _zoneProcesser.PostRead(_zones, _frame);
+						await _zoneProcesser.PostRead(_zones, _zoneTotals, _frame);
 						_frame++;
 						continue;
 					}
@@ -218,7 +222,7 @@ namespace HueScreenAmbience
 						if ((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
 						{
 							_lastPostReadTime = DateTime.UtcNow;
-							await _zoneProcesser.PostRead(_zones, _frame);
+							await _zoneProcesser.PostRead(_zones, _zoneTotals, _frame);
 							_frame++;
 						}
 						continue;
@@ -228,7 +232,7 @@ namespace HueScreenAmbience
 					t = DateTime.UtcNow;
 
 					BitmapProcessor.ReadBitmap(frameStream, ScreenInfo.RealWidth, ScreenInfo.RealHeight, newWidth, newHeight, _config.Model.readResolutionReduce,
-						_config.Model.zoneRows, _config.Model.zoneColumns, ref _zones, sizeFrameStream, cropFrameStream, _config.Model.imageRect);
+						_config.Model.zoneRows, _config.Model.zoneColumns, ref _zones, ref _zoneTotals, sizeFrameStream, cropFrameStream, _config.Model.imageRect);
 
 					var readTime = (DateTime.UtcNow - t).TotalMilliseconds;
 
@@ -236,7 +240,7 @@ namespace HueScreenAmbience
 
 					long f = _frame;
 					_lastPostReadTime = DateTime.UtcNow;
-					await _zoneProcesser.PostRead(_zones, f);
+					await _zoneProcesser.PostRead(_zones, _zoneTotals, f);
 
 					var postReadTime = (DateTime.UtcNow - t).TotalMilliseconds;
 
@@ -277,7 +281,6 @@ namespace HueScreenAmbience
 				await cropFrameStream.DisposeAsync();
 			if (sizeFrameStream != null)
 				await sizeFrameStream.DisposeAsync();
-
 		}
 
 		public void StopScreenLoop()
@@ -314,6 +317,21 @@ namespace HueScreenAmbience
 			{
 				get => SizeReduction == 0 ? RealHeight : (int)Math.Floor(RealHeight / SizeReduction);
 			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(disposing: true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (disposed)
+				return;
+
+			_zoneTotals.Dispose();
+			disposed = true;
 		}
 	}
 }

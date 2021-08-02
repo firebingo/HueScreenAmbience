@@ -35,7 +35,7 @@ namespace HueScreenAmbience
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
 
-		public async Task PostRead(PixelZone[] zones, long frame)
+		public async Task PostRead(PixelZone[] zones, PixelZonesTotals zoneTotals, long frame)
 		{
 			(MemoryStream image, MemoryStream blurImage) images = (null, null);
 			var columns = zones.OrderByDescending(x => x.Column).First().Column + 1;
@@ -56,10 +56,7 @@ namespace HueScreenAmbience
 				var start = DateTime.UtcNow;
 				var time = start;
 
-				foreach (var zone in zones)
-				{
-					zone.CalculateAverages();
-				}
+				zoneTotals.CalculateAverages();
 
 				//This is for debug purpose so I can just dump out the zones as pixels
 				//using (var smallImage = ImageHandler.CreateSmallImageFromZones(zones, columns, rows))
@@ -81,10 +78,20 @@ namespace HueScreenAmbience
 					return;
 				}
 
-				int avgR = zones.Sum(x => x.AvgR) / zones.Length;
-				int avgG = zones.Sum(x => x.AvgG) / zones.Length;
-				int avgB = zones.Sum(x => x.AvgB) / zones.Length;
-				var avgColor = new Rgb24((byte)Math.Clamp(avgR, 0, 255), (byte)Math.Clamp(avgG, 0, 255), (byte)Math.Clamp(avgB, 0, 255));
+				Rgb24 avgColor;
+				unsafe
+				{
+					int totalR = 0;
+					int totalG = 0;
+					int totalB = 0;
+					for (var i = 0; i < zones.Length; ++i)
+					{
+						totalR += zoneTotals.AvgR[i];
+						totalG += zoneTotals.AvgG[i];
+						totalB += zoneTotals.AvgB[i];
+					}
+					avgColor = new Rgb24((byte)Math.Clamp(totalR / zones.Length, 0, 255), (byte)Math.Clamp(totalG / zones.Length, 0, 255), (byte)Math.Clamp(totalB / zones.Length, 0, 255));
+				}
 
 				time = DateTime.UtcNow;
 

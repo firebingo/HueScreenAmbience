@@ -100,7 +100,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				}
 
 				screenResource?.Dispose();
-				_duplicatedOutput.ReleaseFrame();
+				_duplicatedOutput?.ReleaseFrame();
 
 				//Only return the bitmap if it has actually been updated so we can still ignore it otherwise and save the processing.
 				if (returnChange)
