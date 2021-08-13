@@ -139,7 +139,7 @@ namespace HueScreenAmbience
 				var yMax = row == _config.Model.zoneRows - 1
 					? newHeight
 					: (newHeight / (double)_config.Model.zoneRows) * (row + 1);
-				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), _zoneTotals, i);
+				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), newWidth * ScreenInfo.BitDepth, ScreenInfo.BitDepth, _zoneTotals, i);
 				if (col == _config.Model.zoneColumns - 1)
 					row += 1;
 			}
@@ -172,11 +172,11 @@ namespace HueScreenAmbience
 			IsRunning = true;
 			var newWidth = ScreenInfo.Width;
 			var newHeight = ScreenInfo.Height;
-			var frameStream = new MemoryStream(ScreenInfo.RealWidth * ScreenInfo.RealHeight * 4);
+			var frameStream = new MemoryStream(ScreenInfo.RealWidth * ScreenInfo.RealHeight * ScreenInfo.BitDepth);
 			MemoryStream cropFrameStream = null;
 			if (_config.Model.imageRect.HasValue)
 			{
-				cropFrameStream = new MemoryStream(_config.Model.imageRect.Value.Width * _config.Model.imageRect.Value.Height * 4);
+				cropFrameStream = new MemoryStream(_config.Model.imageRect.Value.Width * _config.Model.imageRect.Value.Height * ScreenInfo.BitDepth);
 				if (_config.Model.readResolutionReduce > 1.0f)
 				{
 					newWidth = (int)Math.Floor(_config.Model.imageRect.Value.Width / _config.Model.readResolutionReduce);
@@ -190,7 +190,7 @@ namespace HueScreenAmbience
 			}
 			MemoryStream sizeFrameStream = null;
 			if (_config.Model.readResolutionReduce > 1.0f)
-				sizeFrameStream = new MemoryStream(newWidth * newHeight * 4);
+				sizeFrameStream = new MemoryStream(newWidth * newHeight * ScreenInfo.BitDepth);
 
 			do
 			{
@@ -232,7 +232,7 @@ namespace HueScreenAmbience
 					t = DateTime.UtcNow;
 
 					BitmapProcessor.ReadBitmap(frameStream, ScreenInfo.RealWidth, ScreenInfo.RealHeight, newWidth, newHeight, _config.Model.readResolutionReduce,
-						_config.Model.zoneRows, _config.Model.zoneColumns, ref _zones, ref _zoneTotals, sizeFrameStream, cropFrameStream, _config.Model.imageRect);
+						_config.Model.zoneRows, _config.Model.zoneColumns, _zones, _zoneTotals, ScreenInfo.BitDepth, sizeFrameStream, cropFrameStream, _config.Model.imageRect);
 
 					var readTime = (DateTime.UtcNow - t).TotalMilliseconds;
 
@@ -309,6 +309,7 @@ namespace HueScreenAmbience
 			public int RealWidth;
 			public int RealHeight;
 			public float SizeReduction;
+			public int BitDepth = 4;
 			public int Width
 			{
 				get => SizeReduction == 0 ? RealWidth : (int)Math.Floor(RealWidth / SizeReduction);
@@ -330,7 +331,14 @@ namespace HueScreenAmbience
 			if (disposed)
 				return;
 
-			_zoneTotals.Dispose();
+			if (_zones != null)
+			{
+				foreach (var zone in _zones)
+				{
+					zone.Dispose();
+				}
+			}
+			_zoneTotals?.Dispose();
 			disposed = true;
 		}
 	}

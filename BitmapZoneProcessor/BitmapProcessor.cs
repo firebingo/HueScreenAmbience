@@ -5,8 +5,8 @@ namespace BitmapZoneProcessor
 {
 	public static class BitmapProcessor
 	{
-		public static void ReadBitmap(MemoryStream image, int width, int height, int newWidth, int newHeight, float resReduce, int zoneRows, int zoneColumns, ref PixelZone[] zones,
-			ref PixelZonesTotals zoneTotals, MemoryStream resizeStream = null, MemoryStream cropStream = null, SixLabors.ImageSharp.Rectangle? bitmapRect = null)
+		public static void ReadBitmap(MemoryStream image, int width, int height, int newWidth, int newHeight, float resReduce, int zoneRows, int zoneColumns, PixelZone[] zones,
+			PixelZonesTotals zoneTotals, int bitDepth = 4, MemoryStream resizeStream = null, MemoryStream cropStream = null, SixLabors.ImageSharp.Rectangle? bitmapRect = null)
 		{
 			var start = DateTime.UtcNow;
 			//Reset zones
@@ -41,57 +41,25 @@ namespace BitmapZoneProcessor
 			unsafe
 			{
 				var t1 = DateTime.UtcNow;
-				//Console.WriteLine($"Build Bitmap Time: {(t1 - start).TotalMilliseconds}");
-
-				var pixLength = 4;
 
 				fixed (byte* p = &(useImage.GetBuffer()[0]))
 				{
-					//Colors in are bitmap format are 32bpp so 4 bytes for each color in BGRA format
-					var totalSize = newWidth * newHeight * pixLength;
-					bool oneZone = !(zones.Length > 1);
-					int currentZone = 0;
-					var zone = zones[currentZone];
-					int zoneRow = 0;
-					int xIter = 0;
-					int yIter = 0;
-					for (var i = 0; i < totalSize; i += pixLength)
+					long pos = 0;
+					fixed (PixelZone* z = &zones[0])
 					{
-						//index is our power of 4 padded index in the bitmap.
-						*zone.TotalB += p[i]; //b
-						*zone.TotalG += p[i + 1]; //g
-						*zone.TotalR += p[i + 2]; //r
-						*zone.Count += 1;
-
-						//If we only have one row we do want to process this for the last zone still
-						if (!oneZone && (zoneRows == 1 || currentZone != zones.Length - 1))
+						for (var i = 0; i < zones.Length; ++i)
 						{
-							//If x is greater than zone width
-							if (++xIter >= zone.Width)
+							for (var j = 0; j < z[i].Height; ++j)
 							{
-								xIter = 0;
-								//If we are on the last column for this row
-								if (zone.Column == zoneColumns - 1)
+								for (var k = 0; k < z[i].PixelRanges[j].Length; k += bitDepth)
 								{
-									//If our y is greater than this rows height
-									// reset y and advance us to the next row
-									//Dont do this check if we only have one row
-									if (zoneRows != 1 && ++yIter >= zone.Height)
-									{
-										yIter = 0;
-										currentZone = ++zoneRow * zoneColumns;
-										zone = zones[currentZone];
-									}
-									//Else reset us back to the start of the current row
-									else
-									{
-										currentZone = zoneRow * zoneColumns;
-										zone = zones[currentZone];
-									}
+									//Colors are in BGRA32 format
+									pos = z[i].PixelRanges[j].Start + k;
+									*z[i].TotalB += p[pos];
+									*z[i].TotalG += p[pos + 1];
+									*z[i].TotalR += p[pos + 2];
+									*z[i].Count += 1;
 								}
-								//Else move to the next column
-								else
-									zone = zones[++currentZone];
 							}
 						}
 					}

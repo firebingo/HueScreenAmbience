@@ -17,7 +17,7 @@ namespace VideoFrameProcessor
 				var newHeight = (int)Math.Floor(height / config.Model.ReadResolutionReduce);
 				resizeMemStream = new MemoryStream(newWidth * newHeight * 4);
 				var (zones, zoneTotals) = SetupPixelZones(newWidth, newHeight, config.Model.ZoneRows, config.Model.ZoneColumns);
-				BitmapProcessor.ReadBitmap(stream, width, height, newWidth, newHeight, config.Model.ReadResolutionReduce, config.Model.ZoneRows, config.Model.ZoneColumns, ref zones, ref zoneTotals, resizeMemStream);
+				BitmapProcessor.ReadBitmap(stream, width, height, newWidth, newHeight, config.Model.ReadResolutionReduce, config.Model.ZoneRows, config.Model.ZoneColumns, zones, zoneTotals, 4, resizeMemStream);
 
 				zoneTotals.CalculateAverages();
 
@@ -31,6 +31,10 @@ namespace VideoFrameProcessor
 				await ImageHandler.WriteImageToFile(blurImage, newWidth, newHeight, Path.Combine(outPath, $"out{frame.ToString().PadLeft(6, '0')}.png"), pixelFormat: PixelFormat.Rgb24);
 				await blurImage.DisposeAsync();
 				await image.DisposeAsync();
+				foreach (var zone in zones)
+				{
+					zone.Dispose();
+				}
 				zoneTotals.Dispose();
 			}
 			catch (Exception ex)
@@ -65,7 +69,7 @@ namespace VideoFrameProcessor
 				var yMax = row == rows - 1
 					? height
 					: (height / (double)rows) * (row + 1);
-				zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), zoneTotals, i);
+				zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), width * 4, 4, zoneTotals, i);
 				if (col == columns - 1)
 					row += 1;
 			}

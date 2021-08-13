@@ -15,7 +15,7 @@ namespace BitmapZoneProcessor
 		public int* AvgR;
 		public int* AvgG;
 		public int* AvgB;
-		private int _length;
+		private readonly int _length;
 
 		public PixelZonesTotals(int length)
 		{
@@ -76,7 +76,7 @@ namespace BitmapZoneProcessor
 		}
 	}
 
-	unsafe public class PixelZone
+	unsafe public struct PixelZone : IDisposable
 	{
 		public readonly Point TopLeft;
 		public readonly Point BottomRight;
@@ -91,8 +91,9 @@ namespace BitmapZoneProcessor
 		public int* AvgR;
 		public int* AvgG;
 		public int* AvgB;
+		public ZonePixelRange* PixelRanges;
 
-		public PixelZone(int row, int column, int xMin, int xMax, int yMin, int yMax, PixelZonesTotals totals, int totalsIndex)
+		public PixelZone(int row, int column, int xMin, int xMax, int yMin, int yMax, int stride, int bitDepth, PixelZonesTotals totals, int totalsIndex)
 		{
 			Row = row;
 			Column = column;
@@ -107,6 +108,22 @@ namespace BitmapZoneProcessor
 			AvgR = totals.AvgR + totalsIndex;
 			AvgG = totals.AvgG + totalsIndex;
 			AvgB = totals.AvgB + totalsIndex;
+
+			//The zones cover a rectangular area of the image, but the images are stored in a sequential array, so we need to have a range
+			// for each y coordinate that the rectangle covers.
+			var bytesLength = sizeof(ZonePixelRange) * Height;
+			PixelRanges = (ZonePixelRange*)Marshal.AllocHGlobal(bytesLength);
+			for (int y = TopLeft.Y, i = 0; y < BottomRight.Y; ++y, ++i)
+			{
+				var start = GetImageCoordinate(stride, TopLeft.X, y, bitDepth);
+				var length = GetImageCoordinate(stride, BottomRight.X, y, bitDepth) - start;
+				PixelRanges[i] = new ZonePixelRange(start, length);
+			}
+		}
+
+		private long GetImageCoordinate(int stride, int x, int y, int bitDepth = 3)
+		{
+			return (y * stride) + x * bitDepth;
 		}
 
 		public bool IsCoordInZone(int x, int y)
@@ -122,57 +139,23 @@ namespace BitmapZoneProcessor
 				return true;
 			return false;
 		}
+
+		public void Dispose()
+		{
+			Marshal.FreeHGlobal((IntPtr)PixelRanges);
+		}
 	}
 
-	public readonly struct ReadPixel : IEquatable<ReadPixel>
+	[StructLayout(LayoutKind.Sequential)]
+	public readonly struct ZonePixelRange
 	{
-		//Point.Empty is 0,0 which is actually a valid point
-		public static readonly ReadPixel Empty = new ReadPixel(null, new Point(-1, -1));
+		public readonly long Start;
+		public readonly long Length;
 
-		public readonly PixelZone Zone;
-		public readonly Point Pixel;
-
-		public bool Equals(ReadPixel other)
+		public ZonePixelRange(long start, long length)
 		{
-			return other.Pixel.Equals(this.Pixel);
-		}
-
-		public override bool Equals(object obj)
-		{
-			if (obj is ReadPixel p)
-				return p.Pixel.Equals(this.Pixel);
-			return false;
-		}
-
-		public override int GetHashCode()
-		{
-			return this.Pixel.GetHashCode();
-		}
-
-		public static bool operator ==(ReadPixel left, ReadPixel right)
-		{
-			return left.Equals(right);
-		}
-
-		public static bool operator !=(ReadPixel left, ReadPixel right)
-		{
-			return !left.Equals(right);
-		}
-
-		public static bool operator ==(ReadPixel left, Point right)
-		{
-			return left.Pixel.Equals(right);
-		}
-
-		public static bool operator !=(ReadPixel left, Point right)
-		{
-			return !left.Pixel.Equals(right);
-		}
-
-		public ReadPixel(PixelZone zone, Point pixel)
-		{
-			Zone = zone;
-			Pixel = pixel;
+			Start = start;
+			Length = length;
 		}
 	}
 }
