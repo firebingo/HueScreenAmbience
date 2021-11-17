@@ -3,3 +3,6 @@
 # I am supressing this because I believe in the use cases for this in the project it doesn't really provide a benefit.
 # CA1835: Prefer the 'Memory'-based overloads for 'ReadAsync' and 'WriteAsync'
 dotnet_diagnostic.CA1835.severity = silent
+
+[*.{cs,vb}]
+indent_style=tab
