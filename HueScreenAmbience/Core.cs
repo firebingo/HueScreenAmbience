@@ -70,7 +70,7 @@ namespace HueScreenAmbience
 								Console.Clear();
 								Console.WriteLine("Input Device Name and press Link Button on HUE Bridge before hitting enter: ");
 								var deviceName = Console.ReadLine().Trim();
-								if (deviceName == string.Empty || deviceName.Length > 19 || deviceName.Contains(" "))
+								if (string.IsNullOrWhiteSpace(deviceName) || deviceName.Length > 19 || deviceName.Contains(' '))
 									continue;
 								nameValid = true;
 								if (_config.Model.hueSettings.hueType == HueType.Basic)

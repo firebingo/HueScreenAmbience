@@ -19,15 +19,16 @@ namespace BitmapZoneProcessor
 
 		public PixelZonesTotals(int length)
 		{
+			
 			_length = length;
-			var bytesLength = sizeof(int) * length;
-			TotalR = (int*)Marshal.AllocHGlobal(bytesLength);
-			TotalG = (int*)Marshal.AllocHGlobal(bytesLength);
-			TotalB = (int*)Marshal.AllocHGlobal(bytesLength);
-			Count = (int*)Marshal.AllocHGlobal(bytesLength);
-			AvgR = (int*)Marshal.AllocHGlobal(bytesLength);
-			AvgG = (int*)Marshal.AllocHGlobal(bytesLength);
-			AvgB = (int*)Marshal.AllocHGlobal(bytesLength);
+			nuint bytesLength = (nuint)(sizeof(int) * length);
+			TotalR = (int*)NativeMemory.Alloc(bytesLength);
+			TotalG = (int*)NativeMemory.Alloc(bytesLength);
+			TotalB = (int*)NativeMemory.Alloc(bytesLength);
+			Count = (int*)NativeMemory.Alloc(bytesLength);
+			AvgR = (int*)NativeMemory.Alloc(bytesLength);
+			AvgG = (int*)NativeMemory.Alloc(bytesLength);
+			AvgB = (int*)NativeMemory.Alloc(bytesLength);
 		}
 
 		public void ResetAverages()
@@ -65,13 +66,13 @@ namespace BitmapZoneProcessor
 			if (disposed)
 				return;
 
-			Marshal.FreeHGlobal((IntPtr)TotalR);
-			Marshal.FreeHGlobal((IntPtr)TotalG);
-			Marshal.FreeHGlobal((IntPtr)TotalB);
-			Marshal.FreeHGlobal((IntPtr)Count);
-			Marshal.FreeHGlobal((IntPtr)AvgR);
-			Marshal.FreeHGlobal((IntPtr)AvgG);
-			Marshal.FreeHGlobal((IntPtr)AvgB);
+			NativeMemory.Free(TotalR);
+			NativeMemory.Free(TotalG);
+			NativeMemory.Free(TotalB);
+			NativeMemory.Free(Count);
+			NativeMemory.Free(AvgR);
+			NativeMemory.Free(AvgG);
+			NativeMemory.Free(AvgB);
 			disposed = true;
 		}
 	}
@@ -111,8 +112,8 @@ namespace BitmapZoneProcessor
 
 			//The zones cover a rectangular area of the image, but the images are stored in a sequential array, so we need to have a range
 			// for each y coordinate that the rectangle covers.
-			var bytesLength = sizeof(ZonePixelRange) * Height;
-			PixelRanges = (ZonePixelRange*)Marshal.AllocHGlobal(bytesLength);
+			nuint bytesLength = (nuint)(sizeof(ZonePixelRange) * Height);
+			PixelRanges = (ZonePixelRange*)NativeMemory.Alloc(bytesLength);
 			for (int y = TopLeft.Y, i = 0; y < BottomRight.Y; ++y, ++i)
 			{
 				var start = GetImageCoordinate(stride, TopLeft.X, y, bitDepth);
@@ -142,7 +143,7 @@ namespace BitmapZoneProcessor
 
 		public void Dispose()
 		{
-			Marshal.FreeHGlobal((IntPtr)PixelRanges);
+			NativeMemory.Free(PixelRanges);
 		}
 	}
 
