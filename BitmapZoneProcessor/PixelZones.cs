@@ -122,7 +122,7 @@ namespace BitmapZoneProcessor
 			}
 		}
 
-		private long GetImageCoordinate(int stride, int x, int y, int bitDepth = 3)
+		private static long GetImageCoordinate(int stride, int x, int y, int bitDepth = 3)
 		{
 			return (y * stride) + x * bitDepth;
 		}

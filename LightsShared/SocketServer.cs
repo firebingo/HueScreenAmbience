@@ -82,7 +82,6 @@ namespace LightsShared.Sockets
 				{
 					app.UseWebSockets(new WebSocketOptions()
 					{
-						ReceiveBufferSize = 4096,
 						KeepAliveInterval = TimeSpan.FromSeconds(30)
 					});
 					app.Use(OnHttpRequest);
