@@ -1,6 +1,4 @@
 ﻿using RGB.NET.Core;
-using RGB.NET.Brushes;
-using RGB.NET.Groups;
 using RGB.NET.Devices.Corsair;
 using RGB.NET.Devices.Razer;
 using RGB.NET.Devices.Logitech;
@@ -16,7 +14,7 @@ namespace HueScreenAmbience.RGB
 {
 	public class RGBLighter : IDisposable
 	{
-		private readonly RGBSurface _surface;
+		private RGBSurface _surface;
 		private FileLogger _logger;
 		private Config _config;
 		private MemoryStream _imageByteStream;
@@ -29,8 +27,6 @@ namespace HueScreenAmbience.RGB
 		public RGBLighter()
 		{
 			_colors = new int[] { 0, 0, 0 };
-			_surface = RGBSurface.Instance;
-			_surface.Exception += Surface_Exception;
 		}
 
 		public void InstallServices(IServiceProvider _map)
@@ -48,6 +44,8 @@ namespace HueScreenAmbience.RGB
 
 				_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.rgbDeviceSettings.updateFrameRate);
 				_colorChangeThreshold = _config.Model.rgbDeviceSettings.colorChangeThreshold;
+				_surface = new RGBSurface();
+				_surface.Exception += Surface_Exception;
 				LoadDevices();
 				_started = true;
 			}
@@ -64,19 +62,33 @@ namespace HueScreenAmbience.RGB
 				if (!_started)
 					return;
 
-				//This is the best I can do because rgb.net doesn't let me fully release the surface and let it be able to be created again.
 				if (_surface?.Devices != null)
 				{
-					foreach (var device in _surface.Devices)
+					for (var i = _surface.Devices.Count - 1; i >= 0; i--)
 					{
-						var group = new ListLedGroup(device)
+						try
 						{
-							Brush = new SolidColorBrush(RGBConsts.White)
-						};
-						_surface.Update();
-						group.Detach();
+							var device = _surface.Devices[i];
+							_surface.Detach(device);
+							device.Dispose();
+						}
+						catch (Exception ex)
+						{
+							_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+						}
 					}
 				}
+				CorsairDeviceProvider.Instance.Dispose();
+				CorsairDeviceProvider.Instance.Exception -= Instance_Exception;
+				RazerDeviceProvider.Instance.Dispose();
+				RazerDeviceProvider.Instance.Exception -= Instance_Exception;
+				LogitechDeviceProvider.Instance.Dispose();
+				LogitechDeviceProvider.Instance.Exception -= Instance_Exception;
+				AsusDeviceProvider.Instance.Dispose();
+				AsusDeviceProvider.Instance.Exception -= Instance_Exception;
+				_surface.Exception -= Surface_Exception;
+				_surface.Dispose();
+				_surface = null;
 				_started = false;
 			}
 			catch (Exception ex)
@@ -95,15 +107,35 @@ namespace HueScreenAmbience.RGB
 			if (_config.Model.rgbDeviceSettings.useMotherboard)
 				deviceMask |= RGBDeviceType.Mainboard;
 			Console.WriteLine("Loading rgb devices...");
-			_surface.LoadDevices(CorsairDeviceProvider.Instance, deviceMask, throwExceptions: true);
-			_surface.LoadDevices(RazerDeviceProvider.Instance, deviceMask, throwExceptions: true);
-			_surface.LoadDevices(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
-			_surface.LoadDevices(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
+			if (!CorsairDeviceProvider.Instance.IsInitialized)
+				CorsairDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+			CorsairDeviceProvider.Instance.Exception += Instance_Exception;
+			_surface.Load(CorsairDeviceProvider.Instance, deviceMask, throwExceptions: true);
+
+			//razer sdk may not exist because it has to be in system directories.
+			try
+			{
+				if (!RazerDeviceProvider.Instance.IsInitialized)
+					RazerDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+				RazerDeviceProvider.Instance.Exception += Instance_Exception;
+				_surface.Load(RazerDeviceProvider.Instance, deviceMask, throwExceptions: true);
+			}
+			catch { }
+
+			if (!LogitechDeviceProvider.Instance.IsInitialized)
+				LogitechDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+			LogitechDeviceProvider.Instance.Exception += Instance_Exception;
+			_surface.Load(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
+
+			if (!AsusDeviceProvider.Instance.IsInitialized)
+				AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+			AsusDeviceProvider.Instance.Exception += Instance_Exception;
+			_surface.Load(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
 			_surface.AlignDevices();
 
 			foreach (var device in _surface.Devices)
 			{
-				var group = new ListLedGroup(device)
+				var group = new ListLedGroup(device.Surface)
 				{
 					Brush = new SolidColorBrush(RGBConsts.Black)
 				};
@@ -127,8 +159,8 @@ namespace HueScreenAmbience.RGB
 
 					//I am sampling the image by half the given dimensions because the rgb.net layouts width/height are not physical key dimensions and I dont need the extra accuracy here.
 					// It is better to reduce the footprint created by doing this to try and help the gc.
-					var newWidth = (int)Math.Floor(device.DeviceRectangle.Size.Width / red);
-					var newHeight = (int)Math.Floor(device.DeviceRectangle.Size.Height / red);
+					var newWidth = (int)Math.Floor(device.Size.Width / red);
+					var newHeight = (int)Math.Floor(device.Size.Height / red);
 					if (_imageByteStream == null)
 						_imageByteStream = new MemoryStream(newWidth * newHeight * 3);
 
@@ -150,12 +182,12 @@ namespace HueScreenAmbience.RGB
 						_colors[1] = 0;
 						_colors[2] = 0;
 						count = 0;
-						for (var y = 0; y < key.LedRectangle.Size.Height / red; ++y)
+						for (var y = 0; y < key.Size.Height / red; ++y)
 						{
-							for (var x = 0; x < key.LedRectangle.Size.Width / red; ++x)
+							for (var x = 0; x < key.Size.Width / red; ++x)
 							{
-								sampleX = (int)Math.Floor(key.LedRectangle.Location.X / red + x);
-								sampleY = (int)Math.Floor(key.LedRectangle.Location.Y / red + y);
+								sampleX = (int)Math.Floor(key.Location.X / red + x);
+								sampleY = (int)Math.Floor(key.Location.Y / red + y);
 								pixIndex = (sampleY * stride) + sampleX * 3;
 								_imageByteStream.Seek(pixIndex, SeekOrigin.Begin);
 								_colors[0] += _imageByteStream.ReadByte();
@@ -200,24 +232,10 @@ namespace HueScreenAmbience.RGB
 			}
 		}
 
-		//private void SetupKeyboardDevices()
-		//{
-		//	try
-		//	{
-		//		foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Keyboard))
-		//		{
-		//			var listLedGroup = new ListLedGroup(device)
-		//			{
-		//				Brush = new SolidColorBrush(RGBConsts.Black)
-		//			};
-		//			listLedGroup.Brush.BrushCalculationMode = BrushCalculationMode.Relative;
-		//		}
-		//	}
-		//	catch (Exception ex)
-		//	{
-		//		_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
-		//	}
-		//}
+		private void Instance_Exception(object sender, ExceptionEventArgs e)
+		{
+			_ = Task.Run(() => _logger?.WriteLog($"{sender}: {e.Exception}"));
+		}
 
 		private void Surface_Exception(ExceptionEventArgs args)
 		{
@@ -242,6 +260,7 @@ namespace HueScreenAmbience.RGB
 			_imageByteStream = null;
 			_surface.Exception -= Surface_Exception;
 			_surface?.Dispose();
+			_surface = null;
 			_started = false;
 			GC.SuppressFinalize(this);
 		}

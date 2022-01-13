@@ -323,7 +323,9 @@ namespace HueScreenAmbience
 #endif
 			_screen.StopScreenLoop();
 
-			await _hueClient.OnStopReading();
+			if (_config.Model.hueSettings.useHue)
+				await _hueClient.OnStopReading();
+
 			_isScreenStarted = false;
 			_input.ResetConsole();
 		}

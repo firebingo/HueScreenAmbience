@@ -1,81 +1,80 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <Platforms>x64;AnyCPU</Platforms>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+		<Platforms>x64;AnyCPU</Platforms>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<PlatformTarget>x64</PlatformTarget>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Prefer32Bit>true</Prefer32Bit>
-    <DefineConstants>TRACE;ANYCPU</DefineConstants>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Prefer32Bit>true</Prefer32Bit>
+		<DefineConstants>TRACE;ANYCPU</DefineConstants>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Optimize>true</Optimize>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Optimize>true</Optimize>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Optimize>true</Optimize>
-    <Prefer32Bit>true</Prefer32Bit>
-    <DefineConstants>TRACE;ANYCPU</DefineConstants>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Optimize>true</Optimize>
+		<Prefer32Bit>true</Prefer32Bit>
+		<DefineConstants>TRACE;ANYCPU</DefineConstants>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Include="..\.editorconfig" Link=".editorconfig" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="..\.editorconfig" Link=".editorconfig" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="HidSharp" Version="2.1.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="Q42.HueApi" Version="3.18.1" />
-    <PackageReference Include="Q42.HueApi.ColorConverters" Version="3.18.1" />
-    <PackageReference Include="Q42.HueApi.Entertainment" Version="3.18.1" />
-    <PackageReference Include="RGB.NET.Resources.Asus" Version="0.3.0" />
-    <PackageReference Include="RGB.NET.Resources.Corsair" Version="0.3.0.361" />
-    <PackageReference Include="RGB.NET.Resources.Logitech" Version="0.3.0" />
-    <PackageReference Include="RGB.NET.Resources.Razer" Version="0.3.2.4" />
-    <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="HidSharp" Version="2.1.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<PackageReference Include="Q42.HueApi" Version="3.19.1" />
+		<PackageReference Include="Q42.HueApi.ColorConverters" Version="3.18.1" />
+		<PackageReference Include="Q42.HueApi.Entertainment" Version="3.18.1" />
+		<PackageReference Include="RGB.NET.Resources.Corsair" Version="0.3.0.378" />
+		<PackageReference Include="RGB.NET.Resources.Logitech" Version="0.3.0" />
+		<PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
+		<PackageReference Include="System.Management" Version="6.0.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\BitmapZoneProcessor\BitmapZoneProcessor.csproj" />
-    <ProjectReference Include="..\Iot.Device.Bindings\Iot.Device.Bindings.csproj" />
-    <ProjectReference Include="..\LightsShared\LightsShared.csproj" />
-    <ProjectReference Include="..\WebControlClient\Shared\WebControlClient.Shared.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\BitmapZoneProcessor\BitmapZoneProcessor.csproj" />
+		<ProjectReference Include="..\Iot.Device.Bindings\Iot.Device.Bindings.csproj" />
+		<ProjectReference Include="..\LightsShared\LightsShared.csproj" />
+		<ProjectReference Include="..\WebControlClient\Shared\WebControlClient.Shared.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="RGB.NET.Brushes">
-      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Brushes.dll</HintPath>
-    </Reference>
-    <Reference Include="RGB.NET.Core">
-      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="RGB.NET.Devices.Asus">
-      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Devices.Asus.dll</HintPath>
-    </Reference>
-    <Reference Include="RGB.NET.Devices.Corsair">
-      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Devices.Corsair.dll</HintPath>
-    </Reference>
-    <Reference Include="RGB.NET.Devices.Logitech">
-      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Devices.Logitech.dll</HintPath>
-    </Reference>
-    <Reference Include="RGB.NET.Devices.Razer">
-      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Devices.Razer.dll</HintPath>
-    </Reference>
-    <Reference Include="RGB.NET.Groups">
-      <HintPath>..\..\..\Corsair\RGB.NET\bin\netstandard2.0\RGB.NET.Groups.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+	<ItemGroup>
+		<Reference Include="RGB.NET.Brushes">
+			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Brushes.dll</HintPath>
+		</Reference>
+		<Reference Include="RGB.NET.Core">
+			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="RGB.NET.Devices.Asus">
+			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Devices.Asus.dll</HintPath>
+		</Reference>
+		<Reference Include="RGB.NET.Devices.Corsair">
+			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Devices.Corsair.dll</HintPath>
+		</Reference>
+		<Reference Include="RGB.NET.Devices.Logitech">
+			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Devices.Logitech.dll</HintPath>
+		</Reference>
+		<Reference Include="RGB.NET.Devices.Razer">
+			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Devices.Razer.dll</HintPath>
+		</Reference>
+		<Reference Include="RGB.NET.Groups">
+			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Groups.dll</HintPath>
+		</Reference>
+	</ItemGroup>
 
 </Project>

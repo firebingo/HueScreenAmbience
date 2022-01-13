@@ -10,9 +10,9 @@ namespace HueScreenAmbience.RGB
 
 		static RGBConsts()
 		{
-			White = new Color(1.0, 1.0, 1.0, 1.0);
-			Black = new Color(1.0, 0.0, 0.0, 0.0);
-			Transparent = new Color(0.0, 0.0, 0.0, 0.0);
+			White = new Color(1.0f, 1.0f, 1.0f, 1.0f);
+			Black = new Color(1.0f, 0.0f, 0.0f, 0.0f);
+			Transparent = new Color(0.0f, 0.0f, 0.0f, 0.0f);
 		}
 	}
 }
