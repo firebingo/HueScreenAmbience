@@ -46,24 +46,24 @@ namespace BitmapZoneProcessor
 			switch (pixelFormat)
 			{
 				case PixelFormat.Rgb24:
-					if (((Image<Rgb24>)simage).TryGetSinglePixelSpan(out var rgb24Span))
+					if (((Image<Rgb24>)simage).DangerousTryGetSinglePixelMemory(out var rgb24Span))
 					{
 						newImage.Seek(0, SeekOrigin.Begin);
-						newImage.Write(MemoryMarshal.AsBytes(rgb24Span));
+						newImage.Write(MemoryMarshal.AsBytes(rgb24Span.Span));
 					}
 					break;
 				case PixelFormat.Bgr32:
-					if (((Image<Bgra32>)simage).TryGetSinglePixelSpan(out var bgr32Span))
+					if (((Image<Bgra32>)simage).DangerousTryGetSinglePixelMemory(out var bgr32Span))
 					{
 						newImage.Seek(0, SeekOrigin.Begin);
-						newImage.Write(MemoryMarshal.AsBytes(bgr32Span));
+						newImage.Write(MemoryMarshal.AsBytes(bgr32Span.Span));
 					}
 					break;
 				default:
-					if (((Image<Rgba32>)simage).TryGetSinglePixelSpan(out var rba32Span))
+					if (((Image<Rgba32>)simage).DangerousTryGetSinglePixelMemory(out var rba32Span))
 					{
 						newImage.Seek(0, SeekOrigin.Begin);
-						newImage.Write(MemoryMarshal.AsBytes(rba32Span));
+						newImage.Write(MemoryMarshal.AsBytes(rba32Span.Span));
 					}
 					break;
 			}
@@ -125,24 +125,24 @@ namespace BitmapZoneProcessor
 			switch (pixelFormat)
 			{
 				case PixelFormat.Rgb24:
-					if (((Image<Rgb24>)simage).TryGetSinglePixelSpan(out var rgb24Span))
+					if (((Image<Rgb24>)simage).DangerousTryGetSinglePixelMemory(out var rgb24Span))
 					{
 						newImage.Seek(0, SeekOrigin.Begin);
-						newImage.Write(MemoryMarshal.AsBytes(rgb24Span));
+						newImage.Write(MemoryMarshal.AsBytes(rgb24Span.Span));
 					}
 					break;
 				case PixelFormat.Bgr32:
-					if (((Image<Bgra32>)simage).TryGetSinglePixelSpan(out var bgr32Span))
+					if (((Image<Bgra32>)simage).DangerousTryGetSinglePixelMemory(out var bgr32Span))
 					{
 						newImage.Seek(0, SeekOrigin.Begin);
-						newImage.Write(MemoryMarshal.AsBytes(bgr32Span));
+						newImage.Write(MemoryMarshal.AsBytes(bgr32Span.Span));
 					}
 					break;
 				default:
-					if (((Image<Rgba32>)simage).TryGetSinglePixelSpan(out var rba32Span))
+					if (((Image<Rgba32>)simage).DangerousTryGetSinglePixelMemory(out var rba32Span))
 					{
 						newImage.Seek(0, SeekOrigin.Begin);
-						newImage.Write(MemoryMarshal.AsBytes(rba32Span));
+						newImage.Write(MemoryMarshal.AsBytes(rba32Span.Span));
 					}
 					break;
 			}
