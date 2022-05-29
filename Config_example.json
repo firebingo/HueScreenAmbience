@@ -11,6 +11,7 @@
     "shutLightOffOnStop": true, //When reading is stopped turn lights off.
     "maxColorValue": 255, //A byte value (0-255) to clamp color value max to.
     "minColorValue": 0, //A byte value (0-255) to clamp color value min to.
+    "minRoundColor": 4, //A byte value (0-255). If the r+g+b for a light is less than this value it will be rounded to 0. This is due to hue lights not reacting like standard LEDs at these low values and producing erratic results.
     "colorMultiplier": 1.0, //Multiply values sent to lights by this 0.0-2.0
     "colorChangeThreshold": 15, //a byte value (0-255) that if next color is within this range dont change colors. can help reduce flickering.
     "blendLastColorAmount": 0.6 //A value to blend the current color by the last color. This reduces response time a bit to give smoother color changes. 0.6 is a good value to start. (0.0-1.0)
@@ -36,14 +37,14 @@
     "height": 720, //This can be more efficent instead of scaling later as it can do format conversion at the same time. Set readResolutionReduce to 1.0 if using this.
     "frameRate": 18, //The frame rate to read the video input. ffmpeg drops extra frames. recommended to keep below 20. Higher rates typically mean more delay in reading and updating lights.
     "skipFrames": 200, //An amount of frames to skip before updating lights. This can be used to skip hdmi causing flashes while the connection is starting.
-	"inputWidth": 1280, //Dimensions of video from video input
+    "inputWidth": 1280, //Dimensions of video from video input
     "inputHeight": 720,
     "inputFrameRate": 60, //The frame rate of the video source.
     "inputSource": "/dev/video0", //The source of video to pull from. probably somthing like "/dev/video0" on linux with v4l2, or "video=\"USB Video Device\"" on windows with directshow. https://trac.ffmpeg.org/wiki/Capture/Webcam
-	"inputFormat": "v4l2", //"v4l2" on linux, "dshow" on windows.
-	"inputPixelFormatType": "input_format", //"pixel_format" with dshow, "input_format" with v4l2.
+    "inputFormat": "v4l2", //"v4l2" on linux, "dshow" on windows.
+    "inputPixelFormatType": "input_format", //"pixel_format" with dshow, "input_format" with v4l2.
     "inputPixelFormat": "yuv420p", //The format of the input for ffmpeg to read.
-	"bufferMultiplier": 8, //Used for setting ffmpeg rtbufsize. 4-16. If it feels like a lot of frames are being dropped check ffmpeg output and see if its outputting "real-time buffer too full or near too full". If it is consistently increase this value.
+    "bufferMultiplier": 8, //Used for setting ffmpeg rtbufsize. 4-16. If it feels like a lot of frames are being dropped check ffmpeg output and see if its outputting "real-time buffer too full or near too full". If it is consistently increase this value.
     "ffmpegStdError": false //Whether or not to allow ffmpeg to dump its statistics to console. Useful for debugging.
   },
   "socketSettings": {
@@ -51,7 +52,7 @@
     "aspnetConsoleLog": false, //Enable logging of websocket server to console
     "listenPort": 34780, //Port for server to listen on.
     "listenAddress": "0.0.0.0", //Ip to bind server to.
-	"sslCertLocation": "cert.pfx", //Path to a certificate to enable ssl for websocket connect. Optional.
+    "sslCertLocation": "cert.pfx", //Path to a certificate to enable ssl for websocket connect. Optional.
     "sslCertPassword": "password", //Password for certificate. Optional.
     "sslProtocol": 15360 //Do not change unless you know how the SslProtocols enum works. Default value corrosponds to Tls12 and Tls13.
   },

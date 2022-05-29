@@ -246,20 +246,21 @@ namespace HueScreenAmbience.Hue
 
 			//If the last colors set are close enough to the current color keep the current color.
 			//This is to prevent a lot of color jittering that can happen otherwise.
+			var roundMin = _config.Model.hueSettings.minRoundColor;
 			var min = _config.Model.hueSettings.minColorValue;
 			var max = _config.Model.hueSettings.maxColorValue;
 			var r = Math.Floor(c.R * _config.Model.hueSettings.colorMultiplier);
 			var g = Math.Floor(c.G * _config.Model.hueSettings.colorMultiplier);
 			var b = Math.Floor(c.B * _config.Model.hueSettings.colorMultiplier);
-			r = Math.Clamp(r, min, max);
-			g = Math.Clamp(g, min, max);
-			b = Math.Clamp(b, min, max);
 			if (_lastColor.R >= c.R - _colorChangeThreshold && _lastColor.R <= c.R + _colorChangeThreshold)
 				r = _lastColor.R;
 			if (_lastColor.G >= c.G - _colorChangeThreshold && _lastColor.G <= c.G + _colorChangeThreshold)
 				g = _lastColor.G;
 			if (_lastColor.B >= c.B - _colorChangeThreshold && _lastColor.B <= c.B + _colorChangeThreshold)
 				b = _lastColor.B;
+			if (r + g + b <= roundMin)
+				r = g = b = 0.0;
+			c = new Rgb24((byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
 			if (c == _lastColor)
 				return;
 			_lastColor = c;
@@ -299,6 +300,7 @@ namespace HueScreenAmbience.Hue
 				{
 					(x, y) = MapLightLocationToImage(light.LightLocation, width, height);
 					image.Seek(Helpers.GetImageCoordinate(width * 3, x, y), SeekOrigin.Begin);
+					var roundMin = _config.Model.hueSettings.minRoundColor;
 					var min = _config.Model.hueSettings.minColorValue;
 					var max = _config.Model.hueSettings.maxColorValue;
 					var r = Math.Floor(image.ReadByte() * _config.Model.hueSettings.colorMultiplier);
@@ -320,6 +322,8 @@ namespace HueScreenAmbience.Hue
 							g = lastColor.G;
 						if (lastColor.B >= b - _colorChangeThreshold && lastColor.B <= b + _colorChangeThreshold)
 							b = lastColor.B;
+						if (r + g + b <= roundMin)
+							r = g = b = 0.0;
 						c = new Rgb24((byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
 						_lastLightColors[light.Id] = c;
 					}

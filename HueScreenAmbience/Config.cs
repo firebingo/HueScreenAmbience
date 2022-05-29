@@ -142,6 +142,7 @@ namespace HueScreenAmbience
 		public bool shutLightOffOnStop = true;
 		public byte maxColorValue = 255;
 		public byte minColorValue = 0;
+		public byte minRoundColor = 4;
 		public float colorMultiplier = 1.0f;
 		public byte colorChangeThreshold = 15;
 		public float blendLastColorAmount = 0.4f;
