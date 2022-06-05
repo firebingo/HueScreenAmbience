@@ -25,6 +25,7 @@
     "useKeyboards": true, //Whether to display on connected rgb keyboards or not
     "useMice": true,  //Whether to display on connected rgb mice or not
     "useMotherboard": false, //Whether to display on connected rgb motherboards or not
+	"useLightstrip": false, //Whether to display on other rgb devices connected to the motherboard rgb headers.
     "colorChangeThreshold": 5, //Byte threshold to determine if key color should change. This helps memory pressure by possibly not having to change key very frame even if it is the same.
     "colorMultiplier": 1.0, //Multiply values sent to rgb device by this 0.0-2.0
     "keyboardResReduce": 4, //Reduces the sample size of the keyboard layout. This is for layouts from rgb.net that represent keys as larger rects.

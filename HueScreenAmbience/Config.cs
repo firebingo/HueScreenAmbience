@@ -160,6 +160,7 @@ namespace HueScreenAmbience
 		public bool useKeyboards = false;
 		public bool useMice = false;
 		public bool useMotherboard = false;
+		public bool useLightstrip = false;
 		public float colorMultiplier = 1.0f;
 		public byte colorChangeThreshold = 5;
 		public int keyboardResReduce = 4;

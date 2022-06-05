@@ -106,6 +106,8 @@ namespace HueScreenAmbience.RGB
 				deviceMask |= RGBDeviceType.Mouse;
 			if (_config.Model.rgbDeviceSettings.useMotherboard)
 				deviceMask |= RGBDeviceType.Mainboard;
+			if (_config.Model.rgbDeviceSettings.useLightstrip)
+				deviceMask |= RGBDeviceType.LedStripe;
 			Console.WriteLine("Loading rgb devices...");
 			if (!CorsairDeviceProvider.Instance.IsInitialized)
 				CorsairDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
@@ -213,7 +215,7 @@ namespace HueScreenAmbience.RGB
 						}
 					}
 				}
-				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Mouse || x.DeviceInfo.DeviceType == RGBDeviceType.Mainboard))
+				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Mouse || x.DeviceInfo.DeviceType == RGBDeviceType.Mainboard || x.DeviceInfo.DeviceType == RGBDeviceType.LedStripe))
 				{
 					var color = new Color(averageColor.R, averageColor.G, averageColor.B);
 					foreach (var led in device)
