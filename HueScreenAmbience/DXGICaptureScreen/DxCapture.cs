@@ -1,10 +1,12 @@
 ﻿using LightsShared;
-using SharpDX;
-using SharpDX.Direct3D11;
-using SharpDX.DXGI;
+using SharpGen.Runtime;
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using Vortice.Direct3D;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
 
 namespace HueScreenAmbience.DXGICaptureScreen
 {
@@ -12,14 +14,17 @@ namespace HueScreenAmbience.DXGICaptureScreen
 	{
 		private readonly int _width = 0;
 		private readonly int _height = 0;
-		private readonly Factory1 _factory;
-		private readonly Adapter1 _adapter;
-		private readonly SharpDX.Direct3D11.Device _device;
-		private readonly Output _output;
-		private readonly Output6 _output6;
-		private readonly OutputDuplication _duplicatedOutput;
-		private readonly Texture2D _screenTexture;
+		private readonly IDXGIFactory7 _factory;
+		private readonly IDXGIAdapter1 _adapter;
+		private readonly ID3D11Device _device;
+		private readonly ID3D11DeviceContext _deviceContext;
+		private readonly IDXGIOutput _output;
+		private readonly IDXGIOutput6 _output6;
+		private readonly IDXGIOutputDuplication _duplicatedOutput;
+		private readonly ID3D11Texture2D _screenTexture;
 		private readonly FileLogger _logger;
+
+		private bool _readingFrame = false;
 
 		public DxCapture(int width, int height, int adapter, int monitor, FileLogger logger)
 		{
@@ -29,28 +34,32 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				_width = width;
 				_height = height;
 
-				_factory = new Factory1();
+				DXGI.CreateDXGIFactory2<IDXGIFactory7>(false, out var factory);
+				_factory = factory;
 				_adapter = _factory.GetAdapter1(adapter);
-				_device = new SharpDX.Direct3D11.Device(_adapter);
+				D3D11.D3D11CreateDevice(_adapter, DriverType.Unknown, DeviceCreationFlags.None, new FeatureLevel[] { FeatureLevel.Level_11_1 }, out var device, out var context);
+				_device = device;
+				_deviceContext = context;
 
 				_output = _adapter.GetOutput(monitor);
-				_output6 = _output.QueryInterface<Output6>();
-				_duplicatedOutput = _output6.DuplicateOutput1(_device, 0, 1, new Format[] { Format.B8G8R8A8_UNorm });
+				_output6 = _output.QueryInterface<IDXGIOutput6>();
+				_duplicatedOutput = _output6.DuplicateOutput1(_device, 1, new Format[] { Format.B8G8R8A8_UNorm });
 
 				var textureDesc = new Texture2DDescription
 				{
-					CpuAccessFlags = CpuAccessFlags.Read,
+					CPUAccessFlags = CpuAccessFlags.Read | CpuAccessFlags.Write,
 					BindFlags = BindFlags.None,
 					Format = Format.B8G8R8A8_UNorm,
 					Width = _width,
 					Height = _height,
-					OptionFlags = ResourceOptionFlags.None,
+					MiscFlags = ResourceOptionFlags.None,
 					MipLevels = 1,
 					ArraySize = 1,
 					SampleDescription = { Count = 1, Quality = 0 },
 					Usage = ResourceUsage.Staging
 				};
-				_screenTexture = new Texture2D(_device, textureDesc);
+
+				_screenTexture = _device.CreateTexture2D(textureDesc);
 			}
 			catch (Exception ex)
 			{
@@ -63,21 +72,24 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		{
 			try
 			{
+				_readingFrame = true;
 				var returnChange = false;
-				var result = _duplicatedOutput.TryAcquireNextFrame(1000, out var duplicateFrameInformation, out var screenResource);
+				var result = _duplicatedOutput.AcquireNextFrame(1000, out var duplicateFrameInformation, out var screenResource);
 				if (result.Success && duplicateFrameInformation.LastPresentTime != 0)
 				{
-					using (var screenTexture2D = screenResource.QueryInterface<Texture2D>())
+					using (var screenTexture2D = screenResource.QueryInterface<ID3D11Texture2D>())
 					{
 						if (screenTexture2D.Description.Format == Format.B8G8R8A8_UNorm)
-							_device.ImmediateContext.CopyResource(screenTexture2D, _screenTexture);
+							_deviceContext.CopyResource(_screenTexture, screenTexture2D);
 						else
+						{
+							screenResource?.Dispose();
+							_duplicatedOutput?.ReleaseFrame();
 							return false;
+						}
 					}
 
-					_device.ImmediateContext.MapSubresource(_screenTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None, out var dataStream);
-
-					var mapSource = _device.ImmediateContext.MapSubresource(_screenTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
+					var mapSource = _deviceContext.Map(_screenTexture, 0, MapMode.Read);
 
 					var sourcePtr = mapSource.DataPointer;
 					unsafe
@@ -88,14 +100,14 @@ namespace HueScreenAmbience.DXGICaptureScreen
 							var destPtr = (IntPtr)destBytePtr;
 							for (int y = 0; y < _height; y++)
 							{
-								Utilities.CopyMemory(destPtr, sourcePtr, _width * 4);
+								MemoryHelpers.CopyMemory(destPtr, sourcePtr, mapSource.RowPitch);
 								sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
-								destPtr = IntPtr.Add(destPtr, _width * 4);
+								destPtr = IntPtr.Add(destPtr, mapSource.RowPitch);
 							}
 						}
 					}
 
-					_device.ImmediateContext.UnmapSubresource(_screenTexture, 0);
+					_deviceContext.Unmap(_screenTexture, 0);
 					returnChange = true;
 				}
 
@@ -112,12 +124,18 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			{
 				Task.Run(() => _logger.WriteLog(ex.ToString()));
 			}
+			finally
+			{
+				_readingFrame = false;
+			}
 
 			return false;
 		}
 
 		public void Dispose()
 		{
+			while (_readingFrame)
+				Thread.Sleep(0);
 			_factory?.Dispose();
 			_adapter?.Dispose();
 			_device?.Dispose();

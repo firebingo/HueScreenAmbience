@@ -40,10 +40,10 @@
 		<PackageReference Include="Q42.HueApi" Version="3.20.0" />
 		<PackageReference Include="Q42.HueApi.ColorConverters" Version="3.18.1" />
 		<PackageReference Include="Q42.HueApi.Entertainment" Version="3.18.1" />
-		<PackageReference Include="RGB.NET.Resources.Corsair" Version="0.3.0.378" />
+		<PackageReference Include="RGB.NET.Resources.Corsair" Version="0.3.0.464" />
 		<PackageReference Include="RGB.NET.Resources.Logitech" Version="0.3.0" />
-		<PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
 		<PackageReference Include="System.Management" Version="6.0.0" />
+		<PackageReference Include="Vortice.Direct3D11" Version="2.1.19" />
 	</ItemGroup>
 
 	<ItemGroup>

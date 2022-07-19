@@ -67,6 +67,7 @@ namespace HueScreenAmbience.FFMpegCapture
 		// When ffmpeg finishes reading a frame it sets it to 0.
 		// When a frame is requested it reads _readLock and sets it to 1. If the value it read was 0 it means
 		//  it is safe to read the frame from the current buffer then swap again.
+		//https://codereview.stackexchange.com/questions/163810/lock-free-zero-copy-triple-buffer
 		public void Start()
 		{
 			try

@@ -1,6 +1,8 @@
-﻿using SharpDX.DXGI;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Vortice.Direct3D;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
 
 namespace HueScreenAmbience.DXGICaptureScreen
 {
@@ -29,8 +31,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			var displays = new List<DxEnumeratedAdapter>();
 			try
 			{
-				using var factory = new Factory1();
-				var adapterCount = factory.GetAdapterCount();
+				DXGI.CreateDXGIFactory2<IDXGIFactory2>(false, out var factory);
+				var adapterCount = factory.GetAdapterCount1();
 				for (var i = 0; i < adapterCount; ++i)
 				{
 					using var adapter = factory.GetAdapter1(i);
@@ -40,6 +42,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						Name = adapter.Description1.Description
 					});
 				}
+				factory.Dispose();
 			}
 			catch (Exception ex)
 			{
@@ -53,15 +56,16 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			var displays = new List<DxEnumeratedDisplay>();
 			try
 			{
-				using var factory = new Factory1();
+				DXGI.CreateDXGIFactory2<IDXGIFactory2>(false, out var factory);
 				using var adapter = factory.GetAdapter1(adapterId);
-				using var device = new SharpDX.Direct3D11.Device(adapter);
-				var displayCount = adapter.GetOutputCount();
+				D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, new FeatureLevel[] { FeatureLevel.Level_11_1 }, out var device);
+
+				var displayCount = GetOutputCount(adapter);
 				for (var i = 0; i < displayCount; ++i)
 				{
 					using var output = adapter.GetOutput(i);
-					using var output6 = output.QueryInterface<Output6>();
-					using var duplicatedOutput = output6.DuplicateOutput1(device, 0, 1, new Format[] { Format.B8G8R8A8_UNorm });
+					using var output6 = output.QueryInterface<IDXGIOutput6>();
+					using var duplicatedOutput = output6.DuplicateOutput1(device, 1, new Format[] { Format.B8G8R8A8_UNorm });
 					displays.Add(new DxEnumeratedDisplay()
 					{
 						OutputId = i,
@@ -74,6 +78,9 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						ColorSpace = output6.Description1.ColorSpace.ToString()
 					});
 				}
+
+				factory.Dispose();
+				device.Dispose();
 			}
 			catch (Exception ex)
 			{
@@ -87,16 +94,16 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			DxEnumeratedDisplay display = null;
 			try
 			{
-				using var factory = new Factory1();
+				DXGI.CreateDXGIFactory2<IDXGIFactory2>(false, out var factory);
 				using var adapter = factory.GetAdapter1(adapterId);
-				using var device = new SharpDX.Direct3D11.Device(adapter);
-				if (id > adapter.GetOutputCount())
+				D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, new FeatureLevel[] { FeatureLevel.Level_11_1 }, out var device);
+				if (id > GetOutputCount(adapter))
 				{
 					return null;
 				}
 				using var output = adapter.GetOutput(id);
-				using var output6 = output.QueryInterface<Output6>();
-				using var duplicatedOutput = output6.DuplicateOutput1(device, 0, 1, new Format[] { Format.B8G8R8A8_UNorm });
+				using var output6 = output.QueryInterface<IDXGIOutput6>();
+				using var duplicatedOutput = output6.DuplicateOutput1(device, 1, new Format[] { Format.B8G8R8A8_UNorm });
 				display = new DxEnumeratedDisplay()
 				{
 					OutputId = id,
@@ -108,12 +115,36 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					Bpp = output6.Description1.BitsPerColor,
 					ColorSpace = output6.Description1.ColorSpace.ToString()
 				};
+
+				factory.Dispose();
+				device.Dispose();
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine(ex);
 			}
 			return display;
+		}
+
+		private static int GetOutputCount(IDXGIAdapter1 adapter)
+		{
+			var nbOutputs = 0;
+			do
+			{
+				try
+				{
+					var output = adapter.GetOutput(nbOutputs);
+					if (output == null)
+						break;
+					output.Dispose();
+					nbOutputs++;
+				}
+				catch
+				{
+					break;
+				}
+			} while (true);
+			return nbOutputs;
 		}
 	}
 }
