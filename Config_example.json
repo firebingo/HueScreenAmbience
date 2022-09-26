@@ -46,6 +46,7 @@
     "inputPixelFormatType": "input_format", //"pixel_format" with dshow, "input_format" with v4l2.
     "inputPixelFormat": "yuv420p", //The format of the input for ffmpeg to read.
     "bufferMultiplier": 8, //Used for setting ffmpeg rtbufsize. 4-16. If it feels like a lot of frames are being dropped check ffmpeg output and see if its outputting "real-time buffer too full or near too full". If it is consistently increase this value.
+	"threadQueueSize": 128, //Sets ffmpeg thread_queue_size. Raising may help with dropping frames along with bufferMultiplier.
     "ffmpegStdError": false //Whether or not to allow ffmpeg to dump its statistics to console. Useful for debugging.
   },
   "socketSettings": {

@@ -65,7 +65,8 @@ namespace HueScreenAmbience
 			_config.readResolutionReduce = Math.Clamp(_config.readResolutionReduce, 1.0f, 10.0f);
 			_config.screenReadFrameRate = Math.Max(1, _config.screenReadFrameRate);
 			_config.socketSettings.listenPort = Math.Clamp(_config.socketSettings.listenPort, 1, 65535);
-			_config.ffmpegCaptureSettings.bufferMultiplier = Math.Clamp(_config.ffmpegCaptureSettings.bufferMultiplier, 4, 16);
+			_config.ffmpegCaptureSettings.bufferMultiplier = Math.Clamp(_config.ffmpegCaptureSettings.bufferMultiplier, 4, 32);
+			_config.ffmpegCaptureSettings.threadQueueSize = Math.Clamp(_config.ffmpegCaptureSettings.threadQueueSize, 1, 4096);
 
 			if (_config.bitmapRect.HasValue)
 				_config.imageRect = new SixLabors.ImageSharp.Rectangle(_config.bitmapRect.Value.top, _config.bitmapRect.Value.left, _config.bitmapRect.Value.width, _config.bitmapRect.Value.height);
@@ -218,6 +219,7 @@ namespace HueScreenAmbience
 		public string inputPixelFormatType = "input_format";
 		public string inputPixelFormat = "yuv420p";
 		public int bufferMultiplier = 5;
+		public int threadQueueSize = 128;
 		public bool ffmpegStdError = false;
 	}
 

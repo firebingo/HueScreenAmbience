@@ -20,6 +20,7 @@ namespace HueScreenAmbience.FFMpegCapture
 		private readonly string _inputPixelFormat = "";
 		private readonly int _inputFrameRate = 0;
 		private readonly int _bufferMultiplier = 4;
+		private readonly int _threadQueueSize = 128;
 		private readonly bool _ffmpegOutput = false;
 		private Process _ffmpegProcess;
 		private Stream _ffmpegStream;
@@ -37,7 +38,7 @@ namespace HueScreenAmbience.FFMpegCapture
 		private readonly FileLogger _logger;
 
 		public FFMpegCapture(int width, int height, int inputWidth, int inputHeight, int frameRate, string inputSource, string inputFormat, string inputPixelFormat, string inputPixelFormatType,
-			int inputFrameRate, int bufferMultiplier, FileLogger logger, bool ffmpegOutput = false)
+			int inputFrameRate, int bufferMultiplier, int threadQueueSize, FileLogger logger, bool ffmpegOutput = false)
 		{
 			_logger = logger;
 			_width = width;
@@ -52,6 +53,7 @@ namespace HueScreenAmbience.FFMpegCapture
 			_ffmpegOutput = ffmpegOutput;
 			_inputFrameRate = inputFrameRate;
 			_bufferMultiplier = bufferMultiplier;
+			_threadQueueSize = threadQueueSize;
 			_frameLength = _width * _height * 4;
 			_presentBuffer = new byte[_frameLength];
 			_readyBuffer = new byte[_frameLength];
@@ -81,7 +83,7 @@ namespace HueScreenAmbience.FFMpegCapture
 				_ffmpegProcess.StartInfo.RedirectStandardOutput = true;
 				_ffmpegProcess.StartInfo.FileName = "ffmpeg";
 				//rgb32 and bgr32 are flipped for some reason??
-				_ffmpegProcess.StartInfo.Arguments = $"-f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -s {_width}x{_height} -f rawvideo pipe:1";
+				_ffmpegProcess.StartInfo.Arguments = $"-f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -thread_queue_size {_threadQueueSize} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -s {_width}x{_height} -f rawvideo pipe:1";
 
 				_isRunning = true;
 				_ffmpegThread = new Thread(new ThreadStart(ReadLoop));

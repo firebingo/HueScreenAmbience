@@ -153,7 +153,7 @@ namespace HueScreenAmbience
 				_ffmpegCapture = new FFMpegCapture.FFMpegCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.ffmpegCaptureSettings.inputWidth, _config.Model.ffmpegCaptureSettings.inputHeight,
 					_config.Model.ffmpegCaptureSettings.frameRate, _config.Model.ffmpegCaptureSettings.inputSource, _config.Model.ffmpegCaptureSettings.inputFormat, _config.Model.ffmpegCaptureSettings.inputPixelFormat,
 					_config.Model.ffmpegCaptureSettings.inputPixelFormatType, _config.Model.ffmpegCaptureSettings.inputFrameRate, _config.Model.ffmpegCaptureSettings.bufferMultiplier,
-					_logger, _config.Model.ffmpegCaptureSettings.ffmpegStdError);
+					_config.Model.ffmpegCaptureSettings.threadQueueSize, _logger, _config.Model.ffmpegCaptureSettings.ffmpegStdError);
 				_ffmpegCapture.Start();
 			}
 			else
