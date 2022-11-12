@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using BitmapZoneProcessor;
+﻿using BitmapZoneProcessor;
 using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.RGB;
 using LightsShared;
 using SixLabors.ImageSharp.PixelFormats;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace HueScreenAmbience
 {
@@ -30,7 +30,7 @@ namespace HueScreenAmbience
 			_config = _map.GetService(typeof(Config)) as Config;
 			_hueClient = _map.GetService(typeof(HueCore)) as HueCore;
 			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
-			if (!_config.Model.ffmpegCaptureSettings.useFFMpeg)
+			if (_config.Model.rgbDeviceSettings.UseDevices)
 				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
 		}
@@ -42,14 +42,12 @@ namespace HueScreenAmbience
 			var rows = zones.OrderByDescending(x => x.Row).First().Row + 1;
 
 			//Pre allocate the memory stream for images since it will be the same size every time
-			if (_smallImageMemStream == null)
-				_smallImageMemStream = new MemoryStream(columns * rows * 3);
+			_smallImageMemStream ??= new MemoryStream(columns * rows * 3);
 
 			var newWidth = (int)Math.Floor(columns * _config.Model.zoneProcessSettings.resizeScale);
 			var newHeight = (int)Math.Floor(rows * _config.Model.zoneProcessSettings.resizeScale);
 
-			if (_blurImageMemStream == null)
-				_blurImageMemStream = new MemoryStream(newWidth * newHeight * 3);
+			_blurImageMemStream ??= new MemoryStream(newWidth * newHeight * 3);
 
 			try
 			{
@@ -105,8 +103,7 @@ namespace HueScreenAmbience
 					}
 					else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
 					{
-						if (_hueImageMemStream == null)
-							_hueImageMemStream = new MemoryStream(newWidth * newHeight * 3);
+						_hueImageMemStream ??= new MemoryStream(newWidth * newHeight * 3);
 						_hueImageMemStream.Seek(0, SeekOrigin.Begin);
 						_blurImageMemStream.Seek(0, SeekOrigin.Begin);
 						await _blurImageMemStream.CopyToAsync(_hueImageMemStream);
@@ -118,8 +115,7 @@ namespace HueScreenAmbience
 				}
 				if (_config.Model.lightStripSettings.useLightStrip)
 				{
-					if (_lstripImageMemStream == null)
-						_lstripImageMemStream = new MemoryStream(newWidth * newHeight * 3);
+					_lstripImageMemStream ??= new MemoryStream(newWidth * newHeight * 3);
 					_lstripImageMemStream.Seek(0, SeekOrigin.Begin);
 					_blurImageMemStream.Seek(0, SeekOrigin.Begin);
 					await _blurImageMemStream.CopyToAsync(_lstripImageMemStream);
@@ -131,10 +127,9 @@ namespace HueScreenAmbience
 
 				//Console.WriteLine($"PostRead ChangeLightColor Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
-				if (!_config.Model.ffmpegCaptureSettings.useFFMpeg && (_config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice))
+				if (_config.Model.rgbDeviceSettings.UseDevices)
 				{
-					if (_rgbImageMemStream == null)
-						_rgbImageMemStream = new MemoryStream(newWidth * newHeight * 3);
+					_rgbImageMemStream ??= new MemoryStream(newWidth * newHeight * 3);
 					_rgbImageMemStream.Seek(0, SeekOrigin.Begin);
 					_blurImageMemStream.Seek(0, SeekOrigin.Begin);
 					await _blurImageMemStream.CopyToAsync(_rgbImageMemStream);

@@ -158,13 +158,11 @@ namespace HueScreenAmbience.RGB
 
 				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Keyboard))
 				{
-
 					//I am sampling the image by half the given dimensions because the rgb.net layouts width/height are not physical key dimensions and I dont need the extra accuracy here.
 					// It is better to reduce the footprint created by doing this to try and help the gc.
 					var newWidth = (int)Math.Floor(device.Size.Width / red);
 					var newHeight = (int)Math.Floor(device.Size.Height / red);
-					if (_imageByteStream == null)
-						_imageByteStream = new MemoryStream(newWidth * newHeight * 3);
+					_imageByteStream ??= new MemoryStream(newWidth * newHeight * 3);
 
 					_imageByteStream.Seek(0, SeekOrigin.Begin);
 					var resizeImage = ImageHandler.ResizeImage(image, width, height, _imageByteStream, newWidth, newHeight, pixelFormat: PixelFormat.Rgb24);

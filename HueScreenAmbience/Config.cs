@@ -158,6 +158,11 @@ namespace HueScreenAmbience
 
 	public class RGBDeviceSettings
 	{
+		[JsonIgnore]
+		public bool UseDevices
+		{
+			get => useKeyboards || useMice || useMotherboard || useLightstrip;
+		}
 		public bool useKeyboards = false;
 		public bool useMice = false;
 		public bool useMotherboard = false;
