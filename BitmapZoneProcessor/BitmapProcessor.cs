@@ -45,6 +45,7 @@ namespace BitmapZoneProcessor
 				fixed (byte* p = &(useImage.GetBuffer()[0]))
 				{
 					long pos = 0;
+					byte* posP;
 					fixed (PixelZone* z = &zones[0])
 					{
 						for (var i = 0; i < zones.Length; ++i)
@@ -55,9 +56,10 @@ namespace BitmapZoneProcessor
 								{
 									//Colors are in BGRA32 format
 									pos = z[i].PixelRanges[j].Start + k;
-									*z[i].TotalB += p[pos];
-									*z[i].TotalG += p[pos + 1];
-									*z[i].TotalR += p[pos + 2];
+									posP = &p[pos];
+									*z[i].TotalB += posP[0];
+									*z[i].TotalG += posP[1];
+									*z[i].TotalR += posP[2];
 									*z[i].Count += 1;
 								}
 							}
