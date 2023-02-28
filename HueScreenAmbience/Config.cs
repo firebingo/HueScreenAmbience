@@ -226,6 +226,7 @@ namespace HueScreenAmbience
 		public int bufferMultiplier = 5;
 		public int threadQueueSize = 128;
 		public bool ffmpegStdError = false;
+		public bool useGpu = false;
 	}
 
 	public class SocketSettings

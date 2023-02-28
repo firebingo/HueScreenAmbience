@@ -47,7 +47,8 @@
     "inputPixelFormat": "yuv420p", //The format of the input for ffmpeg to read.
     "bufferMultiplier": 8, //Used for setting ffmpeg rtbufsize. 4-16. If it feels like a lot of frames are being dropped check ffmpeg output and see if its outputting "real-time buffer too full or near too full". If it is consistently increase this value.
 	"threadQueueSize": 128, //Sets ffmpeg thread_queue_size. Raising may help with dropping frames along with bufferMultiplier.
-    "ffmpegStdError": false //Whether or not to allow ffmpeg to dump its statistics to console. Useful for debugging.
+    "ffmpegStdError": false, //Whether or not to allow ffmpeg to dump its statistics to console. Useful for debugging.
+	"useGpu": false //Whether or not to use gpu for scale filter in ffmpeg. Can speed up processing but may restrict input formats. Only use if output width/height are different than input. NVIDIA gpu with CUDA required.
   },
   "socketSettings": {
     "enableHubSocket": true, //Whether to enable websocket server. This is used by WebControlClient to display running stats and config.
