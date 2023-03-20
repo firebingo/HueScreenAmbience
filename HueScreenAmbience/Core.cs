@@ -73,7 +73,7 @@ namespace HueScreenAmbience
 								if (string.IsNullOrWhiteSpace(deviceName) || deviceName.Length > 19 || deviceName.Contains(' '))
 									continue;
 								nameValid = true;
-								if (_config.Model.hueSettings.hueType == HueType.Basic)
+								if (_config.Model.HueSettings.HueType == HueType.Basic)
 									await _hueClient.RegisterBridge(deviceName);
 								else
 									await _hueClient.RegisterBridgeEntertainment(deviceName);
@@ -99,7 +99,7 @@ namespace HueScreenAmbience
 
 		public async Task<bool> SelectHue()
 		{
-			var oldSetting = _config.Model.hueSettings.hueType;
+			var oldSetting = _config.Model.HueSettings.HueType;
 			bool validInput = false;
 			do
 			{
@@ -113,12 +113,12 @@ namespace HueScreenAmbience
 					if (readInt != 0 && readInt != 1)
 						continue;
 					validInput = true;
-					_config.Model.hueSettings.hueType = (HueType)readInt;
+					_config.Model.HueSettings.HueType = (HueType)readInt;
 					_config.SaveConfig();
 				}
 			} while (!validInput);
 
-			if (_hueClient.IsConnectedToBridge && oldSetting != _config.Model.hueSettings.hueType)
+			if (_hueClient.IsConnectedToBridge && oldSetting != _config.Model.HueSettings.HueType)
 				await ConnectToBridge();
 
 			return true;
@@ -229,7 +229,7 @@ namespace HueScreenAmbience
 					if (adapter == null)
 						continue;
 					validInput = true;
-					_config.Model.adapterId = adapter.AdapterId;
+					_config.Model.AdapterId = adapter.AdapterId;
 					_config.SaveConfig();
 					_screen.Start();
 				}
@@ -240,7 +240,7 @@ namespace HueScreenAmbience
 		public void SelectMonitor()
 		{
 			var validInput = false;
-			var displays = DxEnumerate.GetMonitors(_config.Model.adapterId);
+			var displays = DxEnumerate.GetMonitors(_config.Model.AdapterId);
 
 			if (!displays?.Any() ?? true)
 			{
@@ -268,7 +268,7 @@ namespace HueScreenAmbience
 					if (display == null)
 						continue;
 					validInput = true;
-					_config.Model.monitorId = display.OutputId;
+					_config.Model.MonitorId = display.OutputId;
 					_config.SaveConfig();
 					_screen.Start();
 				}
@@ -281,7 +281,7 @@ namespace HueScreenAmbience
 			if (_isScreenStarted)
 				return;
 
-			if (_config.Model.hueSettings.useHue)
+			if (_config.Model.HueSettings.UseHue)
 			{
 				if (!_hueClient.IsConnectedToBridge || _hueClient.UseRoom == null)
 				{
@@ -306,7 +306,7 @@ namespace HueScreenAmbience
 #endif
 
 			_screen.InitScreenLoop();
-			if (_config.Model.hueSettings.useHue)
+			if (_config.Model.HueSettings.UseHue)
 				await _hueClient.OnStartReading();
 
 			_isScreenStarted = true;
@@ -323,7 +323,7 @@ namespace HueScreenAmbience
 #endif
 			_screen.StopScreenLoop();
 
-			if (_config.Model.hueSettings.useHue)
+			if (_config.Model.HueSettings.UseHue)
 				await _hueClient.OnStopReading();
 
 			_isScreenStarted = false;

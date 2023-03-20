@@ -42,8 +42,8 @@ namespace HueScreenAmbience.RGB
 				if (_started)
 					return;
 
-				_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.rgbDeviceSettings.updateFrameRate);
-				_colorChangeThreshold = _config.Model.rgbDeviceSettings.colorChangeThreshold;
+				_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.RgbDeviceSettings.UpdateFrameRate);
+				_colorChangeThreshold = _config.Model.RgbDeviceSettings.ColorChangeThreshold;
 				_surface = new RGBSurface();
 				_surface.Exception += Surface_Exception;
 				LoadDevices();
@@ -100,13 +100,13 @@ namespace HueScreenAmbience.RGB
 		private void LoadDevices()
 		{
 			RGBDeviceType deviceMask = RGBDeviceType.None;
-			if (_config.Model.rgbDeviceSettings.useKeyboards)
+			if (_config.Model.RgbDeviceSettings.UseKeyboards)
 				deviceMask |= RGBDeviceType.Keyboard;
-			if (_config.Model.rgbDeviceSettings.useMice)
+			if (_config.Model.RgbDeviceSettings.UseMice)
 				deviceMask |= RGBDeviceType.Mouse;
-			if (_config.Model.rgbDeviceSettings.useMotherboard)
+			if (_config.Model.RgbDeviceSettings.UseMotherboard)
 				deviceMask |= RGBDeviceType.Mainboard;
-			if (_config.Model.rgbDeviceSettings.useLightstrip)
+			if (_config.Model.RgbDeviceSettings.UseLightstrip)
 				deviceMask |= RGBDeviceType.LedStripe;
 			Console.WriteLine("Loading rgb devices...");
 			if (!CorsairDeviceProvider.Instance.IsInitialized)
@@ -128,11 +128,12 @@ namespace HueScreenAmbience.RGB
 				LogitechDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
 			LogitechDeviceProvider.Instance.Exception += Instance_Exception;
 			_surface.Load(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
-
+			
 			if (!AsusDeviceProvider.Instance.IsInitialized)
 				AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
 			AsusDeviceProvider.Instance.Exception += Instance_Exception;
 			_surface.Load(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
+
 			_surface.AlignDevices();
 
 			foreach (var device in _surface.Devices)
@@ -154,7 +155,7 @@ namespace HueScreenAmbience.RGB
 					return;
 
 				var start = DateTime.UtcNow;
-				var red = _config.Model.rgbDeviceSettings.keyboardResReduce;
+				var red = _config.Model.RgbDeviceSettings.KeyboardResReduce;
 
 				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Keyboard))
 				{
@@ -197,9 +198,9 @@ namespace HueScreenAmbience.RGB
 							}
 						}
 
-						r = (int)Math.Floor((_colors[0] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
-						g = (int)Math.Floor((_colors[1] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
-						b = (int)Math.Floor((_colors[2] / count) * _config.Model.rgbDeviceSettings.colorMultiplier);
+						r = (int)Math.Floor((_colors[0] / count) * _config.Model.RgbDeviceSettings.ColorMultiplier);
+						g = (int)Math.Floor((_colors[1] / count) * _config.Model.RgbDeviceSettings.ColorMultiplier);
+						b = (int)Math.Floor((_colors[2] / count) * _config.Model.RgbDeviceSettings.ColorMultiplier);
 						var lastColorR = key.Color.R * 255;
 						var lastColorG = key.Color.G * 255;
 						var lastColorB = key.Color.B * 255;

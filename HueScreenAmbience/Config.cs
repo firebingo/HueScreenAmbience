@@ -1,10 +1,11 @@
 ﻿using BitmapZoneProcessor;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Security.Authentication;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace HueScreenAmbience
 {
@@ -13,6 +14,12 @@ namespace HueScreenAmbience
 		private ConfigModel _config;
 		public ConfigModel Model { get => _config; private set => _config = value; }
 
+		private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions()
+		{
+			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+			WriteIndented = true
+		};
+
 		public void LoadConfig()
 		{
 			try
@@ -20,7 +27,7 @@ namespace HueScreenAmbience
 				_config = null;
 				if (File.Exists("Data/Config.json"))
 				{
-					_config = JsonConvert.DeserializeObject<ConfigModel>(File.ReadAllText("Data/Config.json"));
+					_config = JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText("Data/Config.json"), _jsonOptions);
 					ValidateConfig();
 					SaveConfig();
 				}
@@ -43,7 +50,7 @@ namespace HueScreenAmbience
 		{
 			try
 			{
-				File.WriteAllText("Data/Config.json", JsonConvert.SerializeObject(_config, Formatting.Indented));
+				File.WriteAllText("Data/Config.json", JsonSerializer.Serialize(_config, _jsonOptions));
 			}
 			catch (Exception e)
 			{
@@ -53,41 +60,41 @@ namespace HueScreenAmbience
 
 		private void ValidateConfig()
 		{
-			_config.hueSettings.colorMultiplier = Math.Clamp(_config.hueSettings.colorMultiplier, 0.0f, 2.0f);
-			_config.hueSettings.blendLastColorAmount = Math.Clamp(_config.hueSettings.blendLastColorAmount, 0.0f, 1.0f);
-			_config.hueSettings.updateFrameRate = Math.Clamp(_config.hueSettings.updateFrameRate, 1, 24);
-			_config.rgbDeviceSettings.colorMultiplier = Math.Clamp(_config.rgbDeviceSettings.colorMultiplier, 0.0f, 2.0f);
-			_config.lightStripSettings.remotePort = Math.Clamp(_config.lightStripSettings.remotePort, 1, 65535);
-			_config.lightStripSettings.blendLastColorAmount = Math.Clamp(_config.lightStripSettings.blendLastColorAmount, 0.0f, 1.0f);
-			_config.lightStripSettings.saturateColors = Math.Clamp(_config.lightStripSettings.saturateColors, 0.0f, 5.0f);
-			_config.zoneColumns = Math.Max(1, _config.zoneColumns);
-			_config.zoneRows = Math.Max(1, _config.zoneRows);
-			_config.readResolutionReduce = Math.Clamp(_config.readResolutionReduce, 1.0f, 10.0f);
-			_config.screenReadFrameRate = Math.Max(1, _config.screenReadFrameRate);
-			_config.socketSettings.listenPort = Math.Clamp(_config.socketSettings.listenPort, 1, 65535);
-			_config.ffmpegCaptureSettings.bufferMultiplier = Math.Clamp(_config.ffmpegCaptureSettings.bufferMultiplier, 4, 32);
-			_config.ffmpegCaptureSettings.threadQueueSize = Math.Clamp(_config.ffmpegCaptureSettings.threadQueueSize, 1, 4096);
+			_config.HueSettings.ColorMultiplier = Math.Clamp(_config.HueSettings.ColorMultiplier, 0.0f, 2.0f);
+			_config.HueSettings.BlendLastColorAmount = Math.Clamp(_config.HueSettings.BlendLastColorAmount, 0.0f, 1.0f);
+			_config.HueSettings.UpdateFrameRate = Math.Clamp(_config.HueSettings.UpdateFrameRate, 1, 24);
+			_config.RgbDeviceSettings.ColorMultiplier = Math.Clamp(_config.RgbDeviceSettings.ColorMultiplier, 0.0f, 2.0f);
+			_config.LightStripSettings.RemotePort = Math.Clamp(_config.LightStripSettings.RemotePort, 1, 65535);
+			_config.LightStripSettings.BlendLastColorAmount = Math.Clamp(_config.LightStripSettings.BlendLastColorAmount, 0.0f, 1.0f);
+			_config.LightStripSettings.SaturateColors = Math.Clamp(_config.LightStripSettings.SaturateColors, 0.0f, 5.0f);
+			_config.ZoneColumns = Math.Max(1, _config.ZoneColumns);
+			_config.ZoneRows = Math.Max(1, _config.ZoneRows);
+			_config.ReadResolutionReduce = Math.Clamp(_config.ReadResolutionReduce, 1.0f, 10.0f);
+			_config.ScreenReadFrameRate = Math.Max(1, _config.ScreenReadFrameRate);
+			_config.SocketSettings.ListenPort = Math.Clamp(_config.SocketSettings.ListenPort, 1, 65535);
+			_config.FfmpegCaptureSettings.BufferMultiplier = Math.Clamp(_config.FfmpegCaptureSettings.BufferMultiplier, 4, 32);
+			_config.FfmpegCaptureSettings.ThreadQueueSize = Math.Clamp(_config.FfmpegCaptureSettings.ThreadQueueSize, 1, 4096);
 
-			if (_config.bitmapRect.HasValue)
-				_config.imageRect = new SixLabors.ImageSharp.Rectangle(_config.bitmapRect.Value.top, _config.bitmapRect.Value.left, _config.bitmapRect.Value.width, _config.bitmapRect.Value.height);
+			if (_config.BitmapRect.HasValue)
+				_config.ImageRect = new SixLabors.ImageSharp.Rectangle(_config.BitmapRect.Value.top, _config.BitmapRect.Value.left, _config.BitmapRect.Value.width, _config.BitmapRect.Value.height);
 
-			if (!IPAddress.TryParse(_config.lightStripSettings.remoteAddress, out _))
+			if (!IPAddress.TryParse(_config.LightStripSettings.RemoteAddress, out _))
 			{
-				_config.lightStripSettings.remoteAddress = "127.0.0.1";
+				_config.LightStripSettings.RemoteAddress = "127.0.0.1";
 			}
-			_ = _config.lightStripSettings.remoteAddressIp;
+			_ = _config.LightStripSettings.RemoteAddressIp;
 
-			if (!IPAddress.TryParse(_config.socketSettings.listenAddress, out _))
+			if (!IPAddress.TryParse(_config.SocketSettings.ListenAddress, out _))
 			{
-				_config.socketSettings.listenAddress = IPAddress.Any.ToString();
+				_config.SocketSettings.ListenAddress = IPAddress.Any.ToString();
 			}
-			_ = _config.socketSettings.listenIp;
+			_ = _config.SocketSettings.ListenIp;
 
-			for (var i = 0; i < _config.lightStripSettings.lights.Count; ++i)
+			for (var i = 0; i < _config.LightStripSettings.Lights.Count; ++i)
 			{
-				var x = Math.Clamp(_config.lightStripSettings.lights[i].X, 0.0f, 1.0f);
-				var y = Math.Clamp(_config.lightStripSettings.lights[i].Y, 0.0f, 1.0f);
-				_config.lightStripSettings.lights[i] = new SimplePointF(x, y);
+				var x = Math.Clamp(_config.LightStripSettings.Lights[i].X, 0.0f, 1.0f);
+				var y = Math.Clamp(_config.LightStripSettings.Lights[i].Y, 0.0f, 1.0f);
+				_config.LightStripSettings.Lights[i] = new SimplePointF(x, y);
 			}
 		}
 	}
@@ -109,51 +116,51 @@ namespace HueScreenAmbience
 	[Serializable]
 	public class ConfigModel
 	{
-		public HueSettings hueSettings = new HueSettings();
-		public ZoneProcessSettings zoneProcessSettings = new ZoneProcessSettings();
-		public RGBDeviceSettings rgbDeviceSettings = new RGBDeviceSettings();
-		public FFMpegCaptureSettings ffmpegCaptureSettings = new FFMpegCaptureSettings();
-		public SocketSettings socketSettings = new SocketSettings();
-		public int adapterId = 0;
-		public int monitorId = 0;
-		public int zoneColumns = 1;
-		public int zoneRows = 1;
-		public int screenReadFrameRate = 24;
-		public bool dumpPngs = false;
-		public string imageDumpLocation = "Images";
-		public bool intrinsicsEnabled;
-		public float readResolutionReduce = 2.0f;
-		public bool debugTimings = false;
-		public JsonRect? bitmapRect = null;
+		public HueSettings HueSettings { get; set; } = new HueSettings();
+		public ZoneProcessSettings ZoneProcessSettings { get; set; } = new ZoneProcessSettings();
+		public RGBDeviceSettings RgbDeviceSettings { get; set; } = new RGBDeviceSettings();
+		public FFMpegCaptureSettings FfmpegCaptureSettings { get; set; } = new FFMpegCaptureSettings();
+		public SocketSettings SocketSettings { get; set; } = new SocketSettings();
+		public int AdapterId { get; set; } = 0;
+		public int MonitorId { get; set; } = 0;
+		public int ZoneColumns { get; set; } = 1;
+		public int ZoneRows { get; set; } = 1;
+		public int ScreenReadFrameRate { get; set; } = 24;
+		public bool DumpPngs { get; set; } = false;
+		public string ImageDumpLocation { get; set; } = "Images";
+		public bool IntrinsicsEnabled { get; set; } = false;
+		public float ReadResolutionReduce { get; set; } = 2.0f;
+		public bool DebugTimings { get; set; } = false;
+		public JsonRect? BitmapRect { get; set; } = null;
 		[JsonIgnore]
-		public SixLabors.ImageSharp.Rectangle? imageRect = null;
-		public LightStripSettings lightStripSettings = new LightStripSettings();
+		public SixLabors.ImageSharp.Rectangle? ImageRect = null;
+		public LightStripSettings LightStripSettings { get; set; } = new LightStripSettings();
 	}
 
 	public class HueSettings
 	{
-		public bool useHue = true;
-		public string appKey;
-		public string entertainmentKey;
-		public string ip;
-		public string roomId;
-		public HueType hueType = HueType.Basic;
-		public int updateFrameRate = 8;
-		public bool turnLightOnIfOff = true;
-		public bool shutLightOffOnStop = true;
-		public byte maxColorValue = 255;
-		public byte minColorValue = 0;
-		public byte minRoundColor = 4;
-		public float colorMultiplier = 1.0f;
-		public byte colorChangeThreshold = 15;
-		public float blendLastColorAmount = 0.4f;
+		public bool UseHue { get; set; } = true;
+		public string AppKey { get; set; } = string.Empty;
+		public string EntertainmentKey { get; set; } = string.Empty;
+		public string Ip { get; set; } = string.Empty;
+		public string RoomId { get; set; } = string.Empty;
+		public HueType HueType { get; set; } = HueType.Basic;
+		public int UpdateFrameRate { get; set; } = 8;
+		public bool TurnLightOnIfOff { get; set; } = true;
+		public bool ShutLightOffOnStop { get; set; } = true;
+		public byte MaxColorValue { get; set; } = 255;
+		public byte MinColorValue { get; set; } = 0;
+		public byte MinRoundColor { get; set; } = 4;
+		public float ColorMultiplier { get; set; } = 1.0f;
+		public byte ColorChangeThreshold { get; set; } = 15;
+		public float BlendLastColorAmount { get; set; } = 0.4f;
 	}
 
 	public class ZoneProcessSettings
 	{
-		public float resizeScale = 4.0f;
-		public float resizeSigma = 0.75f;
-		public ImageFilter resizeFilter = ImageFilter.Gaussian;
+		public float ResizeScale { get; set; } = 4.0f;
+		public float ResizeSigma { get; set; } = 0.75f;
+		public ImageFilter ResizeFilter { get; set; } = ImageFilter.Gaussian;
 	}
 
 	public class RGBDeviceSettings
@@ -161,16 +168,16 @@ namespace HueScreenAmbience
 		[JsonIgnore]
 		public bool UseDevices
 		{
-			get => useKeyboards || useMice || useMotherboard || useLightstrip;
+			get => UseKeyboards || UseMice || UseMotherboard || UseLightstrip;
 		}
-		public bool useKeyboards = false;
-		public bool useMice = false;
-		public bool useMotherboard = false;
-		public bool useLightstrip = false;
-		public float colorMultiplier = 1.0f;
-		public byte colorChangeThreshold = 5;
-		public int keyboardResReduce = 4;
-		public int updateFrameRate = 60;
+		public bool UseKeyboards { get; set; } = false;
+		public bool UseMice { get; set; } = false;
+		public bool UseMotherboard { get; set; } = false;
+		public bool UseLightstrip { get; set; } = false;
+		public float ColorMultiplier { get; set; } = 1.0f;
+		public byte ColorChangeThreshold { get; set; } = 5;
+		public int KeyboardResReduce { get; set; } = 4;
+		public int UpdateFrameRate { get; set; } = 60;
 	}
 
 	public struct SimplePointF
@@ -187,67 +194,67 @@ namespace HueScreenAmbience
 
 	public class LightStripSettings
 	{
-		public bool useLightStrip = false;
-		public string remoteAddress = "127.0.0.1";
+		public bool UseLightStrip { get; set; } = false;
+		public string RemoteAddress { get; set; } = "127.0.0.1";
 		private IPAddress _remoteAddressIp;
 		[JsonIgnore]
-		public IPAddress remoteAddressIp
+		public IPAddress RemoteAddressIp
 		{
 			get
 			{
 				if (_remoteAddressIp == null)
-					_remoteAddressIp = IPAddress.Parse(remoteAddress);
+					_remoteAddressIp = IPAddress.Parse(RemoteAddress);
 				return _remoteAddressIp;
 			}
 		}
-		public int remotePort = 9250;
-		public float colorMultiplier = 1.0f;
-		public float blendLastColorAmount = 0.4f;
-		public float saturateColors = 1.0f;
-		public int updateFrameRate = 24;
-		public List<SimplePointF> lights = new List<SimplePointF>();
+		public int RemotePort { get; set; } = 9250;
+		public float ColorMultiplier { get; set; } = 1.0f;
+		public float BlendLastColorAmount { get; set; } = 0.4f;
+		public float SaturateColors { get; set; } = 1.0f;
+		public int UpdateFrameRate { get; set; } = 24;
+		public List<SimplePointF> Lights { get; set; } = new List<SimplePointF>();
 	}
 
 	public class FFMpegCaptureSettings
 	{
-		public bool useFFMpeg = false;
-		public bool lightsLocal = false;
-		public int width = 1280;
-		public int height = 720;
-		public int frameRate = 18;
-		public int skipFrames = 100;
-		public int inputWidth = 1280;
-		public int inputHeight = 720;
-		public int inputFrameRate = 60;
-		public string inputSource = "/dev/video0";
-		public string inputFormat = "v4l2";
-		public string inputPixelFormatType = "input_format";
-		public string inputPixelFormat = "yuv420p";
-		public int bufferMultiplier = 5;
-		public int threadQueueSize = 128;
-		public bool ffmpegStdError = false;
-		public bool useGpu = false;
+		public bool UseFFMpeg { get; set; } = false;
+		public bool LightsLocal { get; set; } = false;
+		public int Width { get; set; } = 1280;
+		public int Height { get; set; } = 720;
+		public int FrameRate { get; set; } = 18;
+		public int SkipFrames { get; set; } = 100;
+		public int InputWidth { get; set; } = 1280;
+		public int InputHeight { get; set; } = 720;
+		public int InputFrameRate { get; set; } = 60;
+		public string InputSource { get; set; } = "/dev/video0";
+		public string InputFormat { get; set; } = "v4l2";
+		public string InputPixelFormatType { get; set; } = "input_format";
+		public string InputPixelFormat { get; set; } = "yuv420p";
+		public int BufferMultiplier { get; set; } = 5;
+		public int ThreadQueueSize { get; set; } = 128;
+		public bool FfmpegStdError { get; set; } = false;
+		public bool UseGpu { get; set; } = false;
 	}
 
 	public class SocketSettings
 	{
-		public bool enableHubSocket = false;
-		public bool aspnetConsoleLog = false;
-		public int listenPort = 34780;
-		public string listenAddress = IPAddress.Any.ToString();
+		public bool EnableHubSocket { get; set; } = false;
+		public bool AspnetConsoleLog { get; set; } = false;
+		public int ListenPort { get; set; } = 34780;
+		public string ListenAddress { get; set; } = IPAddress.Any.ToString();
 		private IPAddress _listenIp;
 		[JsonIgnore]
-		public IPAddress listenIp
+		public IPAddress ListenIp
 		{
 			get
 			{
 				if (_listenIp == null)
-					_listenIp = IPAddress.Parse(listenAddress);
+					_listenIp = IPAddress.Parse(ListenAddress);
 				return _listenIp;
 			}
 		}
-		public string sslCertLocation = string.Empty;
-		public string sslCertPassword = string.Empty;
-		public SslProtocols sslProtocol = SslProtocols.Tls12 | SslProtocols.Tls13;
+		public string SslCertLocation { get; set; } = string.Empty;
+		public string SslCertPassword { get; set; } = string.Empty;
+		public SslProtocols SslProtocol { get; set; } = SslProtocols.Tls12 | SslProtocols.Tls13;
 	}
 }

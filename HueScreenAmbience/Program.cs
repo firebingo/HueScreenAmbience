@@ -150,7 +150,7 @@ namespace HueScreenAmbience
 			_socketServer = new SocketHandler();
 
 			var services = new ServiceCollection();
-			if (_config.Model.ffmpegCaptureSettings.useFFMpeg)
+			if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
 			{
 				services
 				.AddScoped<FileLogger>()

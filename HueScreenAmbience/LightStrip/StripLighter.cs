@@ -77,9 +77,9 @@ namespace HueScreenAmbience.LightStrip
 				else
 					_lights = new List<StripLighterLight>();
 
-				if (_config.Model.lightStripSettings.lights?.Any() ?? false)
+				if (_config.Model.LightStripSettings.Lights?.Any() ?? false)
 				{
-					foreach (var light in _config.Model.lightStripSettings.lights)
+					foreach (var light in _config.Model.LightStripSettings.Lights)
 					{
 						_lights.Add(new StripLighterLight()
 						{
@@ -90,7 +90,7 @@ namespace HueScreenAmbience.LightStrip
 					}
 				}
 
-				if (_config.Model.ffmpegCaptureSettings.useFFMpeg && _config.Model.ffmpegCaptureSettings.lightsLocal)
+				if (_config.Model.FfmpegCaptureSettings.UseFFMpeg && _config.Model.FfmpegCaptureSettings.LightsLocal)
 				{
 					try
 					{
@@ -117,8 +117,8 @@ namespace HueScreenAmbience.LightStrip
 					if (_lightClientSocket != null)
 						_lightClientSocket.Dispose();
 
-					_lightClientSocket = new Socket(_config.Model.lightStripSettings.remoteAddressIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-					_lightClientEndpoint = new IPEndPoint(_config.Model.lightStripSettings.remoteAddressIp, _config.Model.lightStripSettings.remotePort);
+					_lightClientSocket = new Socket(_config.Model.LightStripSettings.RemoteAddressIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+					_lightClientEndpoint = new IPEndPoint(_config.Model.LightStripSettings.RemoteAddressIp, _config.Model.LightStripSettings.RemotePort);
 
 					if (_serializeStreams != null)
 					{
@@ -139,7 +139,7 @@ namespace HueScreenAmbience.LightStrip
 				}
 				_started = true;
 
-				_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.lightStripSettings.updateFrameRate);
+				_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.LightStripSettings.UpdateFrameRate);
 			}
 			catch (Exception ex)
 			{
@@ -161,7 +161,7 @@ namespace HueScreenAmbience.LightStrip
 				} while (_updating);
 
 				_updating = true;
-				if (_config.Model.ffmpegCaptureSettings.useFFMpeg && _config.Model.ffmpegCaptureSettings.lightsLocal)
+				if (_config.Model.FfmpegCaptureSettings.UseFFMpeg && _config.Model.FfmpegCaptureSettings.LightsLocal)
 				{
 					foreach (var light in _lights)
 					{
@@ -219,7 +219,7 @@ namespace HueScreenAmbience.LightStrip
 					return;
 
 				_updating = true;
-				if (_config.Model.ffmpegCaptureSettings.useFFMpeg && _config.Model.ffmpegCaptureSettings.lightsLocal)
+				if (_config.Model.FfmpegCaptureSettings.UseFFMpeg && _config.Model.FfmpegCaptureSettings.LightsLocal)
 					UpdateImagePi(image, width, height);
 				else
 					UpdateImageServer(image, width, height, frame);
@@ -282,12 +282,12 @@ namespace HueScreenAmbience.LightStrip
 			}
 
 			image.Seek(Helpers.GetImageCoordinate(width * 3, x, y), SeekOrigin.Begin);
-			var r = Math.Floor(image.ReadByte() * _config.Model.lightStripSettings.colorMultiplier);
-			var g = Math.Floor(image.ReadByte() * _config.Model.lightStripSettings.colorMultiplier);
-			var b = Math.Floor(image.ReadByte() * _config.Model.lightStripSettings.colorMultiplier);
+			var r = Math.Floor(image.ReadByte() * _config.Model.LightStripSettings.ColorMultiplier);
+			var g = Math.Floor(image.ReadByte() * _config.Model.LightStripSettings.ColorMultiplier);
+			var b = Math.Floor(image.ReadByte() * _config.Model.LightStripSettings.ColorMultiplier);
 			if (light.LastColor.HasValue)
 			{
-				var blendAmount = 1.0f - _config.Model.lightStripSettings.blendLastColorAmount;
+				var blendAmount = 1.0f - _config.Model.LightStripSettings.BlendLastColorAmount;
 				if (blendAmount != 0.0f)
 				{
 					r = Math.Sqrt((1 - blendAmount) * Math.Pow(light.LastColor.Value.R, 2) + blendAmount * Math.Pow(r, 2));
@@ -296,8 +296,8 @@ namespace HueScreenAmbience.LightStrip
 				}
 			}
 			light.Color = Color.FromRgb((byte)Math.Clamp(r, 0, 255), (byte)Math.Clamp(g, 0, 255), (byte)Math.Clamp(b, 0, 255));
-			if (_config.Model.lightStripSettings.saturateColors != 1.0f)
-				light.Color = ColorHelper.SaturateColor(light.Color, _config.Model.lightStripSettings.saturateColors);
+			if (_config.Model.LightStripSettings.SaturateColors != 1.0f)
+				light.Color = ColorHelper.SaturateColor(light.Color, _config.Model.LightStripSettings.SaturateColors);
 			light.LastColor = light.Color;
 		}
 

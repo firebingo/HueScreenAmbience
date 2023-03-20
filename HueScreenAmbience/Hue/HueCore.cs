@@ -50,9 +50,9 @@ namespace HueScreenAmbience.Hue
 
 		public async Task Start()
 		{
-			_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.hueSettings.updateFrameRate);
+			_frameTimeSpan = TimeSpan.FromMilliseconds(1000 / _config.Model.HueSettings.UpdateFrameRate);
 			_lastColor = new Rgb24(255, 255, 255);
-			_colorChangeThreshold = _config.Model.hueSettings.colorChangeThreshold;
+			_colorChangeThreshold = _config.Model.HueSettings.ColorChangeThreshold;
 			if (_lastLightColors != null)
 				_lastLightColors.Clear();
 			else
@@ -62,7 +62,7 @@ namespace HueScreenAmbience.Hue
 
 		public async Task<bool> AutoConnectAttempt()
 		{
-			if (string.IsNullOrWhiteSpace(_config.Model.hueSettings.appKey) || string.IsNullOrWhiteSpace(_config.Model.hueSettings.ip))
+			if (string.IsNullOrWhiteSpace(_config.Model.HueSettings.AppKey) || string.IsNullOrWhiteSpace(_config.Model.HueSettings.Ip))
 				return false;
 
 			Console.WriteLine("Attempting auto-connect");
@@ -72,27 +72,27 @@ namespace HueScreenAmbience.Hue
 
 		public async Task ConnectToBridge()
 		{
-			if (_config.Model.hueSettings.hueType == HueType.Basic)
+			if (_config.Model.HueSettings.HueType == HueType.Basic)
 			{
-				_client = new LocalHueClient(_config.Model.hueSettings.ip);
-				_client.Initialize(_config.Model.hueSettings.appKey);
+				_client = new LocalHueClient(_config.Model.HueSettings.Ip);
+				_client.Initialize(_config.Model.HueSettings.AppKey);
 				IsConnectedToBridge = true;
-				if (!string.IsNullOrWhiteSpace(_config.Model.hueSettings.roomId))
+				if (!string.IsNullOrWhiteSpace(_config.Model.HueSettings.RoomId))
 				{
 					var Groups = await _client.GetGroupsAsync();
 					if (Groups != null && Groups.Count != 0)
-						UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.hueSettings.roomId);
+						UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.HueSettings.RoomId);
 				}
 			}
-			else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
+			else if (_config.Model.HueSettings.HueType == HueType.Entertainment)
 			{
-				_streamClient = new StreamingHueClient(_config.Model.hueSettings.ip, _config.Model.hueSettings.appKey, _config.Model.hueSettings.entertainmentKey);
+				_streamClient = new StreamingHueClient(_config.Model.HueSettings.Ip, _config.Model.HueSettings.AppKey, _config.Model.HueSettings.EntertainmentKey);
 				IsConnectedToBridge = true;
-				if (!string.IsNullOrWhiteSpace(_config.Model.hueSettings.roomId))
+				if (!string.IsNullOrWhiteSpace(_config.Model.HueSettings.RoomId))
 				{
 					var Groups = await _streamClient.LocalHueClient.GetEntertainmentGroups();
 					if (Groups != null && Groups.Count != 0)
-						UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.hueSettings.roomId);
+						UseRoom = Groups.FirstOrDefault(x => x.Id == _config.Model.HueSettings.RoomId);
 				}
 			}
 		}
@@ -114,8 +114,8 @@ namespace HueScreenAmbience.Hue
 			var appKey = await _client.RegisterAsync(_appName, name);
 			_client.Initialize(appKey);
 			IsConnectedToBridge = true;
-			_config.Model.hueSettings.ip = _useBridge.IpAddress;
-			_config.Model.hueSettings.appKey = appKey;
+			_config.Model.HueSettings.Ip = _useBridge.IpAddress;
+			_config.Model.HueSettings.AppKey = appKey;
 			_config.SaveConfig();
 			await ConnectToBridge();
 		}
@@ -126,16 +126,16 @@ namespace HueScreenAmbience.Hue
 			var registerResult = await _client.RegisterAsync(_appName, name, true);
 			_streamClient = new StreamingHueClient(registerResult.Ip, registerResult.Username, registerResult.StreamingClientKey);
 			IsConnectedToBridge = true;
-			_config.Model.hueSettings.ip = _useBridge.IpAddress;
-			_config.Model.hueSettings.appKey = registerResult.Username;
-			_config.Model.hueSettings.entertainmentKey = registerResult.StreamingClientKey;
+			_config.Model.HueSettings.Ip = _useBridge.IpAddress;
+			_config.Model.HueSettings.AppKey = registerResult.Username;
+			_config.Model.HueSettings.EntertainmentKey = registerResult.StreamingClientKey;
 			_config.SaveConfig();
 			await ConnectToBridge();
 		}
 
 		public async Task<IEnumerable<Group>> GetGroups()
 		{
-			if (_config.Model.hueSettings.hueType == HueType.Basic)
+			if (_config.Model.HueSettings.HueType == HueType.Basic)
 				return await _client.GetGroupsAsync();
 			else
 				return await _streamClient.LocalHueClient.GetGroupsAsync();
@@ -143,7 +143,7 @@ namespace HueScreenAmbience.Hue
 
 		public async Task<IEnumerable<Group>> GetEntertainmentGroups()
 		{
-			if (_config.Model.hueSettings.hueType == HueType.Basic)
+			if (_config.Model.HueSettings.HueType == HueType.Basic)
 				return await _client.GetEntertainmentGroups();
 			else
 				return await _streamClient.LocalHueClient.GetEntertainmentGroups();
@@ -152,7 +152,7 @@ namespace HueScreenAmbience.Hue
 		public void SetRoom(Group group)
 		{
 			UseRoom = group;
-			_config.Model.hueSettings.roomId = UseRoom.Id;
+			_config.Model.HueSettings.RoomId = UseRoom.Id;
 			_config.SaveConfig();
 		}
 
@@ -160,9 +160,9 @@ namespace HueScreenAmbience.Hue
 		{
 			try
 			{
-				if (_config.Model.hueSettings.hueType == HueType.Basic)
+				if (_config.Model.HueSettings.HueType == HueType.Basic)
 				{
-					if (_config.Model.hueSettings.turnLightOnIfOff)
+					if (_config.Model.HueSettings.TurnLightOnIfOff)
 					{
 						var command = new LightCommand
 						{
@@ -173,7 +173,7 @@ namespace HueScreenAmbience.Hue
 						await _client.SendCommandAsync(command, UseRoom.Lights);
 					}
 				}
-				else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
+				else if (_config.Model.HueSettings.HueType == HueType.Entertainment)
 				{
 					_cancelSource = new CancellationTokenSource();
 					_cancelToken = _cancelSource.Token;
@@ -182,7 +182,7 @@ namespace HueScreenAmbience.Hue
 					_streamBaseLayer = _streamGroup.GetNewLayer(true);
 					foreach (var light in _streamBaseLayer)
 					{
-						if (_config.Model.hueSettings.turnLightOnIfOff)
+						if (_config.Model.HueSettings.TurnLightOnIfOff)
 							light.SetState(_cancelToken, new RGBColor(1.0, 1.0, 1.0), 0.5);
 					}
 
@@ -198,9 +198,9 @@ namespace HueScreenAmbience.Hue
 
 		public async Task OnStopReading()
 		{
-			if (_config.Model.hueSettings.hueType == HueType.Basic)
+			if (_config.Model.HueSettings.HueType == HueType.Basic)
 			{
-				if (_config.Model.hueSettings.shutLightOffOnStop)
+				if (_config.Model.HueSettings.ShutLightOffOnStop)
 				{
 					var command = new LightCommand
 					{
@@ -208,12 +208,12 @@ namespace HueScreenAmbience.Hue
 						TransitionTime = _frameTimeSpan
 					};
 					command.TurnOff();
-					await _client.SendCommandAsync(command, UseRoom.Lights);
+					await _client?.SendCommandAsync(command, UseRoom.Lights);
 				}
 			}
-			else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
+			else if (_config.Model.HueSettings.HueType == HueType.Entertainment)
 			{
-				if (_config.Model.hueSettings.shutLightOffOnStop && _streamBaseLayer != null)
+				if (_config.Model.HueSettings.ShutLightOffOnStop && _streamBaseLayer != null)
 				{
 					foreach (var light in _streamBaseLayer)
 					{
@@ -246,12 +246,12 @@ namespace HueScreenAmbience.Hue
 
 			//If the last colors set are close enough to the current color keep the current color.
 			//This is to prevent a lot of color jittering that can happen otherwise.
-			var roundMin = _config.Model.hueSettings.minRoundColor;
-			var min = _config.Model.hueSettings.minColorValue;
-			var max = _config.Model.hueSettings.maxColorValue;
-			var r = Math.Floor(c.R * _config.Model.hueSettings.colorMultiplier);
-			var g = Math.Floor(c.G * _config.Model.hueSettings.colorMultiplier);
-			var b = Math.Floor(c.B * _config.Model.hueSettings.colorMultiplier);
+			var roundMin = _config.Model.HueSettings.MinRoundColor;
+			var min = _config.Model.HueSettings.MinColorValue;
+			var max = _config.Model.HueSettings.MaxColorValue;
+			var r = Math.Floor(c.R * _config.Model.HueSettings.ColorMultiplier);
+			var g = Math.Floor(c.G * _config.Model.HueSettings.ColorMultiplier);
+			var b = Math.Floor(c.B * _config.Model.HueSettings.ColorMultiplier);
 			if (_lastColor.R >= c.R - _colorChangeThreshold && _lastColor.R <= c.R + _colorChangeThreshold)
 				r = _lastColor.R;
 			if (_lastColor.G >= c.G - _colorChangeThreshold && _lastColor.G <= c.G + _colorChangeThreshold)
@@ -300,16 +300,16 @@ namespace HueScreenAmbience.Hue
 				{
 					(x, y) = MapLightLocationToImage(light.LightLocation, width, height);
 					image.Seek(Helpers.GetImageCoordinate(width * 3, x, y), SeekOrigin.Begin);
-					var roundMin = _config.Model.hueSettings.minRoundColor;
-					var min = _config.Model.hueSettings.minColorValue;
-					var max = _config.Model.hueSettings.maxColorValue;
-					var r = Math.Floor(image.ReadByte() * _config.Model.hueSettings.colorMultiplier);
-					var g = Math.Floor(image.ReadByte() * _config.Model.hueSettings.colorMultiplier);
-					var b = Math.Floor(image.ReadByte() * _config.Model.hueSettings.colorMultiplier);
+					var roundMin = _config.Model.HueSettings.MinRoundColor;
+					var min = _config.Model.HueSettings.MinColorValue;
+					var max = _config.Model.HueSettings.MaxColorValue;
+					var r = Math.Floor(image.ReadByte() * _config.Model.HueSettings.ColorMultiplier);
+					var g = Math.Floor(image.ReadByte() * _config.Model.HueSettings.ColorMultiplier);
+					var b = Math.Floor(image.ReadByte() * _config.Model.HueSettings.ColorMultiplier);
 					if (_lastLightColors.ContainsKey(light.Id))
 					{
 						var lastColor = _lastLightColors[light.Id];
-						var blendAmount = 1.0f - _config.Model.hueSettings.blendLastColorAmount;
+						var blendAmount = 1.0f - _config.Model.HueSettings.BlendLastColorAmount;
 						if (blendAmount != 0.0f)
 						{
 							r = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.R, 2) + blendAmount * Math.Pow(r, 2));

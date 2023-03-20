@@ -35,21 +35,21 @@ namespace HueScreenAmbience.Sockets
 
 		public async Task Start()
 		{
-			if (!_config.Model.socketSettings.enableHubSocket || _isRunning)
+			if (!_config.Model.SocketSettings.EnableHubSocket || _isRunning)
 				return;
 
 			try
 			{
 				_socketServer = new SocketServer(_logger);
 				X509Certificate2 cert = null;
-				if (!string.IsNullOrWhiteSpace(_config.Model.socketSettings.sslCertLocation) && File.Exists(_config.Model.socketSettings.sslCertLocation))
+				if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.SslCertLocation) && File.Exists(_config.Model.SocketSettings.SslCertLocation))
 				{
-					if (!string.IsNullOrWhiteSpace(_config.Model.socketSettings.sslCertPassword))
-						cert = new X509Certificate2(_config.Model.socketSettings.sslCertLocation, _config.Model.socketSettings.sslCertPassword);
+					if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.SslCertPassword))
+						cert = new X509Certificate2(_config.Model.SocketSettings.SslCertLocation, _config.Model.SocketSettings.SslCertPassword);
 					else
-						cert = new X509Certificate2(_config.Model.socketSettings.sslCertLocation);
+						cert = new X509Certificate2(_config.Model.SocketSettings.SslCertLocation);
 				}
-				await _socketServer.Start(_config.Model.socketSettings.listenIp.ToString(), _config.Model.socketSettings.listenPort, _config.Model.socketSettings.aspnetConsoleLog, cert, _config.Model.socketSettings.sslProtocol);
+				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort, _config.Model.SocketSettings.AspnetConsoleLog, cert, _config.Model.SocketSettings.SslProtocol);
 				_socketServer.OnClientMessage += HandleClientCommand;
 				_isRunning = true;
 			}
@@ -97,9 +97,9 @@ namespace HueScreenAmbience.Sockets
 								Frame = _screen.Frame,
 								AverageDeltaTime = _screen.AverageDt,
 								IsHueConnected = _hueCore.IsConnectedToBridge,
-								UsingHue = _config.Model.hueSettings.useHue,
-								UsingRgb = _config.Model.rgbDeviceSettings.useKeyboards || _config.Model.rgbDeviceSettings.useMice || _config.Model.rgbDeviceSettings.useMotherboard,
-								UsingLightStrip = _config.Model.lightStripSettings.useLightStrip,
+								UsingHue = _config.Model.HueSettings.UseHue,
+								UsingRgb = _config.Model.RgbDeviceSettings.UseKeyboards || _config.Model.RgbDeviceSettings.UseMice || _config.Model.RgbDeviceSettings.UseMotherboard,
+								UsingLightStrip = _config.Model.LightStripSettings.UseLightStrip,
 								ScreenInfo = new ScreenInfo()
 								{
 									Id = _screen.ScreenInfo.Source,

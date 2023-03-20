@@ -35,15 +35,17 @@
 
 	<ItemGroup>
 		<PackageReference Include="HidSharp" Version="2.1.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="Q42.HueApi" Version="3.20.0" />
-		<PackageReference Include="Q42.HueApi.ColorConverters" Version="3.18.1" />
-		<PackageReference Include="Q42.HueApi.Entertainment" Version="3.18.1" />
-		<PackageReference Include="RGB.NET.Resources.Corsair" Version="0.3.0.464" />
-		<PackageReference Include="RGB.NET.Resources.Logitech" Version="0.3.0" />
-		<PackageReference Include="System.Management" Version="6.0.0" />
-		<PackageReference Include="Vortice.Direct3D11" Version="2.1.19" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+		<PackageReference Include="Q42.HueApi" Version="3.21.0" />
+		<PackageReference Include="Q42.HueApi.ColorConverters" Version="3.20.1" />
+		<PackageReference Include="Q42.HueApi.Entertainment" Version="3.20.1" />
+		<PackageReference Include="RGB.NET.Core" Version="1.0.0" />
+		<PackageReference Include="RGB.NET.Devices.Corsair" Version="1.0.0" />
+		<PackageReference Include="RGB.NET.Devices.Logitech" Version="1.0.0" />
+		<PackageReference Include="RGB.NET.Devices.Razer" Version="1.0.0" />
+		<PackageReference Include="RGB.NET.Layout" Version="1.0.0" />
+		<PackageReference Include="System.Management" Version="7.0.0" />
+		<PackageReference Include="Vortice.Direct3D11" Version="2.4.2" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -54,27 +56,22 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Reference Include="RGB.NET.Brushes">
-			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Brushes.dll</HintPath>
-		</Reference>
-		<Reference Include="RGB.NET.Core">
-			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Core.dll</HintPath>
-		</Reference>
-		<Reference Include="RGB.NET.Devices.Asus">
-			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Devices.Asus.dll</HintPath>
-		</Reference>
-		<Reference Include="RGB.NET.Devices.Corsair">
-			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Devices.Corsair.dll</HintPath>
-		</Reference>
-		<Reference Include="RGB.NET.Devices.Logitech">
-			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Devices.Logitech.dll</HintPath>
-		</Reference>
-		<Reference Include="RGB.NET.Devices.Razer">
-			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Devices.Razer.dll</HintPath>
-		</Reference>
-		<Reference Include="RGB.NET.Groups">
-			<HintPath>..\..\..\Corsair\RGB.NET\bin\net6.0\RGB.NET.Groups.dll</HintPath>
-		</Reference>
+	  <Folder Include="x64\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="RGB.NET.Devices.Asus">
+	    <HintPath>..\..\..\Corsair\RGB.NET\bin\net7.0\RGB.NET.Devices.Asus.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="x64\CUESDK.dll">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="x64\LogitechLedEnginesWrapper.dll">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
 	</ItemGroup>
 
 </Project>

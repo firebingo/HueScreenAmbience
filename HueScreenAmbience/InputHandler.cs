@@ -109,9 +109,9 @@ namespace HueScreenAmbience
 					case "-r":
 						if (CheckRunning())
 							break;
-						if (_config.Model.hueSettings.hueType == HueType.Basic)
+						if (_config.Model.HueSettings.HueType == HueType.Basic)
 							await _core.SelectRoom();
-						else if (_config.Model.hueSettings.hueType == HueType.Entertainment)
+						else if (_config.Model.HueSettings.HueType == HueType.Entertainment)
 							await _core.SelectEntertainmentGroup();
 						ResetConsole();
 						break;
@@ -136,9 +136,9 @@ namespace HueScreenAmbience
 					case "-a":
 						if (CheckRunning())
 							break;
-						var oldAda = _config.Model.adapterId;
+						var oldAda = _config.Model.AdapterId;
 						_core.SelectAdapter();
-						if (oldAda != _config.Model.adapterId)
+						if (oldAda != _config.Model.AdapterId)
 							_core.SelectMonitor();
 						ResetConsole();
 						break;
@@ -178,8 +178,8 @@ namespace HueScreenAmbience
 						Console.WriteLine($"Using room: {_hueClient.UseRoom.Name}");
 					if (_screen.Screen != null)
 						Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
-					if (_config.Model.ffmpegCaptureSettings.useFFMpeg)
-						Console.WriteLine($"Using ffmpeg input: {_config.Model.ffmpegCaptureSettings.width}x{_config.Model.ffmpegCaptureSettings.height}x{_config.Model.ffmpegCaptureSettings.frameRate}");
+					if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
+						Console.WriteLine($"Using ffmpeg input: {_config.Model.FfmpegCaptureSettings.Width}x{_config.Model.FfmpegCaptureSettings.Height}x{_config.Model.FfmpegCaptureSettings.FrameRate}");
 					Console.WriteLine("Use -h for help");
 					if (_screen.IsRunning)
 						Console.WriteLine($"Lighting is running");
@@ -193,8 +193,8 @@ namespace HueScreenAmbience
 					Console.WriteLine($"Using room: {_hueClient.UseRoom.Name}");
 				if (_screen.Screen != null)
 					Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
-				if (_config.Model.ffmpegCaptureSettings.useFFMpeg)
-					Console.WriteLine($"Using ffmpeg input: {_config.Model.ffmpegCaptureSettings.width}x{_config.Model.ffmpegCaptureSettings.height}x{_config.Model.ffmpegCaptureSettings.frameRate}");
+				if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
+					Console.WriteLine($"Using ffmpeg input: {_config.Model.FfmpegCaptureSettings.Width}x{_config.Model.FfmpegCaptureSettings.Height}x{_config.Model.FfmpegCaptureSettings.FrameRate}");
 				if (_screen.IsRunning)
 					Console.WriteLine($"Lighting is running");
 				_headlessHasWrittenInfo = true;

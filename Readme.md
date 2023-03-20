@@ -1,4 +1,5 @@
 # Screen Ambience
+
 This application can be used for various RGBlight effects from reading screens.
 
 A basic level of HUE and HUE Entertainment groups are supported. RGB keyboards/mice/motherboards from Corsair/Logitech/Razer/Asus are supported although only Corsair has been tested.
@@ -10,6 +11,6 @@ The coordinates for the light strip must be calculated manually. LightStripCalcu
 HueScreenAmbience itself can also be built and ran on a Raspberry Pi. Hue devices and light strips can be updated this way. Other RGB devices like keyboard are not supported. This uses the Pi's CSI port to take in video so a HDMI->CSI module and other hardware such as a splitter or scaler may be necessary. Recommended to keep the output to the PI at 1280x720@30hz otherwise it may not be able to keep up with processing the video frames.
 For updating light strips in this case the pi can either directly update a connected light strip or send packets over udp like a normal device to another Pi with a connected strip. If updating a connected light strip directly it has the same setup requirements as running LightStripClient.
 
-If you are building the project yourself you will have to include the RGB.net dlls yourself or add them from nuget as I use my own build for device support.
+If you are building the project yourself you will probably have to include the Asus RGB.net dll yourself as it doesn't load its dll properly.
 
 If you are on a system with a integrated gpu using the Microsoft Hybrid system. Make sure the application is set to use the integrated gpu. And adapter will probably need to be set to 0.

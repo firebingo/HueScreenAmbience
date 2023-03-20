@@ -80,8 +80,8 @@
     "updateFrameRate": 24, //Can be used to throttle rate that light strip is allowed to update at
     "lights": [ //List of light x and y positions to sample from screen. (0.0,0.0) is top left, (1.0,1.0) is bottom right.
       {
-        "X": 0.0,
-        "Y": 0.0
+        "x": 0.0,
+        "y": 0.0
       }
     ]
   }
