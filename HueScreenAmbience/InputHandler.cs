@@ -1,5 +1,4 @@
 ﻿using HueScreenAmbience.Hue;
-using Q42.HueApi.Interfaces;
 using System;
 using System.IO;
 using System.Threading;
@@ -175,7 +174,9 @@ namespace HueScreenAmbience
 					if (_hueClient.IsConnectedToBridge)
 						Console.WriteLine("Connected to Bridge");
 					if (_hueClient.UseRoom != null)
-						Console.WriteLine($"Using room: {_hueClient.UseRoom.Name}");
+						Console.WriteLine($"Using room: {_hueClient.UseRoom.Metadata.Name}");
+					if (_hueClient.UseEntertainment != null)
+						Console.WriteLine($"Using room: {_hueClient.UseEntertainment.Metadata.Name}");
 					if (_screen.Screen != null)
 						Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
 					if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
@@ -190,7 +191,9 @@ namespace HueScreenAmbience
 				if (_hueClient.IsConnectedToBridge)
 					Console.WriteLine("Connected to Bridge");
 				if (_hueClient.UseRoom != null)
-					Console.WriteLine($"Using room: {_hueClient.UseRoom.Name}");
+					Console.WriteLine($"Using room: {_hueClient.UseRoom.Metadata.Name}");
+				if (_hueClient.UseEntertainment != null)
+					Console.WriteLine($"Using room: {_hueClient.UseEntertainment.Metadata.Name}");
 				if (_screen.Screen != null)
 					Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
 				if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)

@@ -35,10 +35,10 @@
 
 	<ItemGroup>
 		<PackageReference Include="HidSharp" Version="2.1.0" />
+		<PackageReference Include="HueApi" Version="1.0.0" />
+		<PackageReference Include="HueApi.ColorConverters" Version="1.0.0" />
+		<PackageReference Include="HueApi.Entertainment" Version="1.4.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-		<PackageReference Include="Q42.HueApi" Version="3.21.0" />
-		<PackageReference Include="Q42.HueApi.ColorConverters" Version="3.20.1" />
-		<PackageReference Include="Q42.HueApi.Entertainment" Version="3.20.1" />
 		<PackageReference Include="RGB.NET.Core" Version="1.0.0" />
 		<PackageReference Include="RGB.NET.Devices.Corsair" Version="1.0.0" />
 		<PackageReference Include="RGB.NET.Devices.Logitech" Version="1.0.0" />

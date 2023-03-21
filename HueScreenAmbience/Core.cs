@@ -129,7 +129,7 @@ namespace HueScreenAmbience
 			if (!_hueClient.IsConnectedToBridge)
 				return false;
 
-			var groups = await _hueClient.GetGroups();
+			var groups = await _hueClient.GetRooms();
 
 			if (!groups?.Any() ?? true)
 			{
@@ -146,7 +146,7 @@ namespace HueScreenAmbience
 				var i = 1;
 				foreach (var r in groups)
 				{
-					Console.WriteLine($"{i++}: Name: {r.Name}");
+					Console.WriteLine($"{i++}: Name: {r.Metadata.Name}");
 				}
 				Console.WriteLine("Input a room(#) to connect to: ");
 				var read = Console.ReadLine();
@@ -184,7 +184,7 @@ namespace HueScreenAmbience
 				var i = 1;
 				foreach (var r in groups)
 				{
-					Console.WriteLine($"{i++}: Name: {r.Name}");
+					Console.WriteLine($"{i++}: Name: {r.Metadata.Name}");
 				}
 				Console.WriteLine("Input a group(#) to connect to: ");
 				var read = Console.ReadLine();
@@ -193,7 +193,7 @@ namespace HueScreenAmbience
 					if (readInt > groups.Count() || readInt < 1)
 						continue;
 					validInput = true;
-					_hueClient.SetRoom(groups.ElementAt(readInt - 1));
+					_hueClient.SetEntertainmentRoom(groups.ElementAt(readInt - 1));
 				}
 			} while (!validInput);
 			return true;
@@ -283,7 +283,7 @@ namespace HueScreenAmbience
 
 			if (_config.Model.HueSettings.UseHue)
 			{
-				if (!_hueClient.IsConnectedToBridge || _hueClient.UseRoom == null)
+				if (!_hueClient.IsConnectedToBridge || (_hueClient.UseRoom == null && _hueClient.UseEntertainment == null))
 				{
 					Console.Clear();
 					Console.WriteLine("Either not connected to a bridge or room has not been selected");

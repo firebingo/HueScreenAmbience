@@ -19,6 +19,12 @@ namespace HueScreenAmbience
 			return Color.FromRgb(r, g, b);
 		}
 
+		public static double GetBrightness(Rgb24 color)
+		{
+			var hsl = ColorSpaceConverter.ToHsl(color);
+			return Math.Clamp(hsl.L * 100.0, 0.0, 100.0);
+		}
+
 		public static string ColorToHex(Color c)
 		{
 			return c.ToHex()[0..6];

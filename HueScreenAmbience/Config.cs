@@ -143,7 +143,7 @@ namespace HueScreenAmbience
 		public string AppKey { get; set; } = string.Empty;
 		public string EntertainmentKey { get; set; } = string.Empty;
 		public string Ip { get; set; } = string.Empty;
-		public string RoomId { get; set; } = string.Empty;
+		public Guid RoomId { get; set; } = Guid.Empty;
 		public HueType HueType { get; set; } = HueType.Basic;
 		public int UpdateFrameRate { get; set; } = 8;
 		public bool TurnLightOnIfOff { get; set; } = true;
