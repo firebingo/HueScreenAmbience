@@ -24,7 +24,7 @@ namespace HueScreenAmbience.Hue
 		private StreamingHueClient _streamClient = null;
 		private LocatedBridge _useBridge = null;
 		public Room UseRoom { get; private set; } = null;
-		public Guid _useRoomGroupLight { get; private set; }
+		private Guid _useRoomGroupLight;
 		public EntertainmentConfiguration UseEntertainment { get; private set; } = null;
 		private const string _appName = "HUEScreenAmbience";
 		public bool IsConnectedToBridge { get; private set; } = false;

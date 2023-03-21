@@ -34,7 +34,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				_width = width;
 				_height = height;
 
-				DXGI.CreateDXGIFactory2<IDXGIFactory7>(false, out var _factory);
+				DXGI.CreateDXGIFactory2<IDXGIFactory7>(false, out _factory);
 				_adapter = DxEnumerate.GetAdapter1(adapter, _factory);
 				D3D11.D3D11CreateDevice(_adapter, DriverType.Unknown, DeviceCreationFlags.None, new FeatureLevel[] { FeatureLevel.Level_11_1 }, out var device, out var context);
 				_device = device;

@@ -157,7 +157,7 @@ namespace LightStripCalculator
 		}
 	}
 
-	public struct LightCoord
+	public readonly struct LightCoord
 	{
 		public readonly int X { get; }
 		public readonly int Y { get; }
@@ -186,7 +186,7 @@ namespace LightStripCalculator
 		}
 	}
 
-	public struct LightCoordF
+	public readonly struct LightCoordF
 	{
 		public readonly float X { get; }
 		public readonly float Y { get; }

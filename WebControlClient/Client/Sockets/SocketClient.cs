@@ -192,8 +192,7 @@ namespace WebControlClient.Client.Sockets
 			if (_socket != null && _socket.State == WebSocketState.Open)
 				await Close();
 
-			if (_socket != null)
-				_socket.Dispose();
+			_socket?.Dispose();
 
 			GC.SuppressFinalize(this);
 		}
