@@ -1,5 +1,4 @@
 ﻿using Iot.Device.Graphics;
-using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.Ws28xx

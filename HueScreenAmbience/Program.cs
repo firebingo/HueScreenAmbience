@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using HueScreenAmbience.Hue;
+﻿using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.RGB;
 using HueScreenAmbience.Sockets;
 using LightsShared;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace HueScreenAmbience
 {

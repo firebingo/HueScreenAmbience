@@ -1,14 +1,13 @@
-﻿using System;
-using System.Threading.Tasks;
-using HueScreenAmbience.Hue;
-using WebControlClient.Client.Shared;
-using WebControlClient.Shared;
-using LightsShared.Sockets;
+﻿using HueScreenAmbience.Hue;
 using LightsShared;
-using System.Text;
-using System.Text.Json;
+using LightsShared.Sockets;
+using System;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
+using System.Threading.Tasks;
+using WebControlClient.Client.Shared;
+using WebControlClient.Shared;
 
 namespace HueScreenAmbience.Sockets
 {

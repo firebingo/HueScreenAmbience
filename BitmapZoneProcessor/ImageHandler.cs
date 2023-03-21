@@ -1,11 +1,11 @@
-﻿using System.IO;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using System.Collections.Concurrent;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Transforms;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace BitmapZoneProcessor
 {

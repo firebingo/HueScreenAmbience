@@ -1,14 +1,14 @@
-﻿using RGB.NET.Core;
-using RGB.NET.Devices.Corsair;
-using RGB.NET.Devices.Razer;
-using RGB.NET.Devices.Logitech;
-using RGB.NET.Devices.Asus;
-using System;
-using System.Threading.Tasks;
-using System.Linq;
-using System.IO;
-using BitmapZoneProcessor;
+﻿using BitmapZoneProcessor;
 using LightsShared;
+using RGB.NET.Core;
+using RGB.NET.Devices.Asus;
+using RGB.NET.Devices.Corsair;
+using RGB.NET.Devices.Logitech;
+using RGB.NET.Devices.Razer;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace HueScreenAmbience.RGB
 {
@@ -128,7 +128,7 @@ namespace HueScreenAmbience.RGB
 				LogitechDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
 			LogitechDeviceProvider.Instance.Exception += Instance_Exception;
 			_surface.Load(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
-			
+
 			if (!AsusDeviceProvider.Instance.IsInitialized)
 				AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
 			AsusDeviceProvider.Instance.Exception += Instance_Exception;

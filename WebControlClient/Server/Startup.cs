@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using System.Linq;
-using System.Net;
 
 namespace WebControlClient.Server
 {

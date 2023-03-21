@@ -1,12 +1,12 @@
-﻿using HueScreenAmbience.DXGICaptureScreen;
+﻿using BitmapZoneProcessor;
+using HueScreenAmbience.DXGICaptureScreen;
+using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.RGB;
-using BitmapZoneProcessor;
+using LightsShared;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using HueScreenAmbience.LightStrip;
-using System.IO;
-using LightsShared;
 
 namespace HueScreenAmbience
 {

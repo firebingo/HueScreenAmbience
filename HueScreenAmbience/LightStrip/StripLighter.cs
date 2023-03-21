@@ -1,4 +1,8 @@
-﻿using System;
+﻿using Iot.Device.Ws28xx;
+using LightsShared;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using System;
 using System.Collections.Generic;
 using System.Device.Spi;
 using System.IO;
@@ -7,10 +11,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Iot.Device.Ws28xx;
-using LightsShared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace HueScreenAmbience.LightStrip
 {

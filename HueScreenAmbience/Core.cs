@@ -1,8 +1,8 @@
-﻿using System;
+﻿using HueScreenAmbience.DXGICaptureScreen;
+using HueScreenAmbience.Hue;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
-using HueScreenAmbience.Hue;
-using HueScreenAmbience.DXGICaptureScreen;
 
 namespace HueScreenAmbience
 {

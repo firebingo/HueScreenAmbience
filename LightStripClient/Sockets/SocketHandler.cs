@@ -1,12 +1,12 @@
-﻿using System;
+﻿using LightsShared;
+using LightsShared.Sockets;
+using System;
+using System.IO;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using System.Threading.Tasks;
 using WebControlClient.Client.Shared;
 using WebControlClient.Shared;
-using LightsShared.Sockets;
-using LightsShared;
-using System.Text.Json;
-using System.Security.Cryptography.X509Certificates;
-using System.IO;
 
 namespace LightStripClient.Sockets
 {

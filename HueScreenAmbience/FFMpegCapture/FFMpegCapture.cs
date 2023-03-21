@@ -85,7 +85,7 @@ namespace HueScreenAmbience.FFMpegCapture
 				_ffmpegProcess.StartInfo.RedirectStandardOutput = true;
 				_ffmpegProcess.StartInfo.FileName = "ffmpeg";
 				//rgb32 and bgr32 are flipped for some reason??
-				if(_useGpu)
+				if (_useGpu)
 					_ffmpegProcess.StartInfo.Arguments = $"-hwaccel cuda -hwaccel_output_format cuda -f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -thread_queue_size {_threadQueueSize} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -vf \"format=nv12,hwupload,scale_cuda=w={_width}:h={_height},hwdownload,format=nv12\" -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -f rawvideo pipe:1";
 				else
 					_ffmpegProcess.StartInfo.Arguments = $"-f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -thread_queue_size {_threadQueueSize} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -s {_width}x{_height} -f rawvideo pipe:1";

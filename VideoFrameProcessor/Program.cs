@@ -15,7 +15,7 @@ namespace VideoFrameProcessor
 			var commandLine = builder.Build();
 
 			var filePath = commandLine["file_path"];
-			if(string.IsNullOrWhiteSpace(filePath))
+			if (string.IsNullOrWhiteSpace(filePath))
 			{
 				Console.WriteLine("no file path provided");
 				Console.ReadLine();

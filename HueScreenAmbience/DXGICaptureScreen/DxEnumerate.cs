@@ -63,7 +63,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 
 		public static IDXGIOutput GetOutput(int outputId, IDXGIAdapter1 adapter)
 		{
-			if(adapter.EnumOutputs(outputId, out IDXGIOutput output).Success && output is not null)
+			if (adapter.EnumOutputs(outputId, out IDXGIOutput output).Success && output is not null)
 				return output;
 
 			return null;

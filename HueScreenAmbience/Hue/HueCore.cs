@@ -1,20 +1,20 @@
-﻿using System;
+﻿using HueApi;
+using HueApi.BridgeLocator;
+using HueApi.ColorConverters;
+using HueApi.ColorConverters.Original.Extensions;
+using HueApi.Entertainment;
+using HueApi.Entertainment.Extensions;
+using HueApi.Entertainment.Models;
+using HueApi.Models;
+using HueApi.Models.Requests;
+using LightsShared;
+using SixLabors.ImageSharp.PixelFormats;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.IO;
-using HueApi;
-using HueApi.ColorConverters;
-using HueApi.BridgeLocator;
-using HueApi.Entertainment;
-using HueApi.Entertainment.Models;
-using HueApi.Models;
-using HueApi.Entertainment.Extensions;
-using HueApi.Models.Requests;
-using HueApi.ColorConverters.Original.Extensions;
-using SixLabors.ImageSharp.PixelFormats;
-using LightsShared;
 
 namespace HueScreenAmbience.Hue
 {
@@ -171,7 +171,7 @@ namespace HueScreenAmbience.Hue
 			{
 				if (_config.Model.HueSettings.HueType == HueType.Basic)
 				{
-					if(_config.Model.HueSettings.TurnLightOnIfOff)
+					if (_config.Model.HueSettings.TurnLightOnIfOff)
 					{
 						var command = new UpdateGroupedLight();
 						command.TurnOn();
@@ -190,7 +190,7 @@ namespace HueScreenAmbience.Hue
 						if (_config.Model.HueSettings.TurnLightOnIfOff)
 							light.SetState(_cancelToken, new RGBColor(1.0, 1.0, 1.0), 0.5);
 					}
-			
+
 					_streamClient.ManualUpdate(_streamGroup);
 				}
 			}
@@ -221,10 +221,10 @@ namespace HueScreenAmbience.Hue
 						light.SetState(_cancelToken, brightness: 0.0, timeSpan: _frameTimeSpan);
 					}
 				}
-			
+
 				if (_streamGroup != null)
 					_streamClient?.ManualUpdate(_streamGroup);
-			
+
 				_cancelSource?.Cancel();
 				_cancelSource?.Dispose();
 				_streamGroup = null;
@@ -244,7 +244,7 @@ namespace HueScreenAmbience.Hue
 			//Hue bridge can only take so many updates at a time (7-10 a second) so this needs to be throttled
 			if (dt.TotalMilliseconds < _frameTimeSpan.TotalMilliseconds)
 				return;
-			
+
 			//If the last colors set are close enough to the current color keep the current color.
 			//This is to prevent a lot of color jittering that can happen otherwise.
 			var roundMin = _config.Model.HueSettings.MinRoundColor;
@@ -289,7 +289,7 @@ namespace HueScreenAmbience.Hue
 					return;
 				if ((DateTime.UtcNow - _lastHueChangeTime).TotalMilliseconds < _frameTimeSpan.TotalMilliseconds)
 					return;
-			
+
 				_sendingCommand = true;
 				var start = DateTime.UtcNow;
 				var (x, y) = (0, 0);
@@ -333,9 +333,9 @@ namespace HueScreenAmbience.Hue
 
 					light.SetState(_cancelToken, new RGBColor(c.R, c.G, c.B), 1.0);
 				}
-			
+
 				_streamClient.ManualUpdate(_streamGroup);
-			
+
 				//Console.WriteLine($"UpdateEntertainmentGroupFromImage Time: {(DateTime.UtcNow - start).TotalMilliseconds}");
 			}
 			catch (Exception ex)

@@ -1,6 +1,6 @@
-﻿using System;
+﻿using SixLabors.ImageSharp;
+using System;
 using System.Runtime.InteropServices;
-using SixLabors.ImageSharp;
 
 namespace BitmapZoneProcessor
 {
@@ -19,7 +19,7 @@ namespace BitmapZoneProcessor
 
 		public PixelZonesTotals(int length)
 		{
-			
+
 			_length = length;
 			nuint bytesLength = (nuint)(sizeof(int) * length);
 			TotalR = (int*)NativeMemory.Alloc(bytesLength);
