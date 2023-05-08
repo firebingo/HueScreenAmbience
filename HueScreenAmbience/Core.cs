@@ -295,7 +295,7 @@ namespace HueScreenAmbience
 
 			//Zones use int for total as it is faster and reasonable since we cut the screen resolution by a lot anyways.
 			// Check that a full white screen will not go over the int max at our resolution.
-			long maxValue = (long)_screen.ScreenInfo.Width * _screen.ScreenInfo.Height * byte.MaxValue;
+			long maxValue = (long)_screen.ScreenInfo.RealWidth * _screen.ScreenInfo.RealHeight * byte.MaxValue;
 			if (maxValue >= int.MaxValue)
 				throw new Exception("Process screen size is too large, increase readResolutionReduce value");
 

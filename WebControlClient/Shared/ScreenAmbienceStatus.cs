@@ -35,8 +35,6 @@
 	public class ScreenInfo
 	{
 		public string Id { get; set; }
-		public int Width { get; set; }
-		public int Height { get; set; }
 		public int RealWidth { get; set; }
 		public int RealHeight { get; set; }
 		public double Rate { get; set; }

@@ -54,8 +54,7 @@ namespace HueScreenAmbience
 					Source = "Capture",
 					Rate = _config.Model.FfmpegCaptureSettings.InputFrameRate,
 					RealWidth = _config.Model.FfmpegCaptureSettings.Width,
-					RealHeight = _config.Model.FfmpegCaptureSettings.Height,
-					SizeReduction = _config.Model.ReadResolutionReduce
+					RealHeight = _config.Model.FfmpegCaptureSettings.Height
 				};
 			}
 			else
@@ -93,8 +92,7 @@ namespace HueScreenAmbience
 					Source = $"[{monitor.OutputId}] {monitor.Name}",
 					Rate = monitor.RefreshRate,
 					RealWidth = monitor.Width,
-					RealHeight = monitor.Height,
-					SizeReduction = _config.Model.ReadResolutionReduce
+					RealHeight = monitor.Height
 				};
 			}
 			catch (Exception ex)
@@ -110,21 +108,8 @@ namespace HueScreenAmbience
 			_zoneTotals = new PixelZonesTotals(_zones.Length);
 			if (_zones.Length == 0)
 				throw new Exception("0 Light zones created");
-			var newWidth = ScreenInfo.Width;
-			var newHeight = ScreenInfo.Height;
-			if (_config.Model.ImageRect.HasValue)
-			{
-				if (_config.Model.ReadResolutionReduce > 1.0f)
-				{
-					newWidth = (int)Math.Floor(_config.Model.ImageRect.Value.Width / _config.Model.ReadResolutionReduce);
-					newHeight = (int)Math.Floor(_config.Model.ImageRect.Value.Height / _config.Model.ReadResolutionReduce);
-				}
-				else
-				{
-					newWidth = _config.Model.ImageRect.Value.Width;
-					newHeight = _config.Model.ImageRect.Value.Height;
-				}
-			}
+			var newWidth = ScreenInfo.RealWidth;
+			var newHeight = ScreenInfo.RealHeight;
 			var row = 0;
 			for (var i = 0; i < _zones.Length; ++i)
 			{
@@ -139,7 +124,8 @@ namespace HueScreenAmbience
 				var yMax = row == _config.Model.ZoneRows - 1
 					? newHeight
 					: (newHeight / (double)_config.Model.ZoneRows) * (row + 1);
-				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), newWidth * ScreenInfo.BitDepth, ScreenInfo.BitDepth, _zoneTotals, i);
+				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax),
+					newWidth * ScreenInfo.BitDepth, ScreenInfo.BitDepth, _config.Model.ReadSkipPixels, _zoneTotals, i);
 				if (col == _config.Model.ZoneColumns - 1)
 					row += 1;
 			}
@@ -170,27 +156,7 @@ namespace HueScreenAmbience
 		public async Task ReadScreenLoopDx()
 		{
 			IsRunning = true;
-			var newWidth = ScreenInfo.Width;
-			var newHeight = ScreenInfo.Height;
 			var frameStream = new MemoryStream(ScreenInfo.RealWidth * ScreenInfo.RealHeight * ScreenInfo.BitDepth);
-			MemoryStream cropFrameStream = null;
-			if (_config.Model.ImageRect.HasValue)
-			{
-				cropFrameStream = new MemoryStream(_config.Model.ImageRect.Value.Width * _config.Model.ImageRect.Value.Height * ScreenInfo.BitDepth);
-				if (_config.Model.ReadResolutionReduce > 1.0f)
-				{
-					newWidth = (int)Math.Floor(_config.Model.ImageRect.Value.Width / _config.Model.ReadResolutionReduce);
-					newHeight = (int)Math.Floor(_config.Model.ImageRect.Value.Height / _config.Model.ReadResolutionReduce);
-				}
-				else
-				{
-					newWidth = _config.Model.ImageRect.Value.Width;
-					newHeight = _config.Model.ImageRect.Value.Height;
-				}
-			}
-			MemoryStream sizeFrameStream = null;
-			if (_config.Model.ReadResolutionReduce > 1.0f)
-				sizeFrameStream = new MemoryStream(newWidth * newHeight * ScreenInfo.BitDepth);
 
 			do
 			{
@@ -231,8 +197,7 @@ namespace HueScreenAmbience
 					var captureTime = (DateTime.UtcNow - t).TotalMilliseconds;
 					t = DateTime.UtcNow;
 
-					BitmapProcessor.ReadBitmap(frameStream, ScreenInfo.RealWidth, ScreenInfo.RealHeight, newWidth, newHeight, _config.Model.ReadResolutionReduce,
-						_config.Model.ZoneRows, _config.Model.ZoneColumns, _zones, _zoneTotals, ScreenInfo.BitDepth, sizeFrameStream, cropFrameStream, _config.Model.ImageRect);
+					BitmapProcessor.ReadBitmap(frameStream, _config.Model.ReadSkipPixels, _config.Model.ZoneRows, _config.Model.ZoneColumns, _zones, _zoneTotals, ScreenInfo.BitDepth);
 
 					var readTime = (DateTime.UtcNow - t).TotalMilliseconds;
 
@@ -277,10 +242,6 @@ namespace HueScreenAmbience
 				}
 			} while (IsRunning);
 			await frameStream.DisposeAsync();
-			if (cropFrameStream != null)
-				await cropFrameStream.DisposeAsync();
-			if (sizeFrameStream != null)
-				await sizeFrameStream.DisposeAsync();
 		}
 
 		public void StopScreenLoop()
@@ -308,16 +269,7 @@ namespace HueScreenAmbience
 			public double Rate;
 			public int RealWidth;
 			public int RealHeight;
-			public float SizeReduction;
 			public int BitDepth = 4;
-			public int Width
-			{
-				get => SizeReduction == 0 ? RealWidth : (int)Math.Floor(RealWidth / SizeReduction);
-			}
-			public int Height
-			{
-				get => SizeReduction == 0 ? RealHeight : (int)Math.Floor(RealHeight / SizeReduction);
-			}
 		}
 
 		public void Dispose()

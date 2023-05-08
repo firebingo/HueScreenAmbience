@@ -104,8 +104,6 @@ namespace HueScreenAmbience.Sockets
 									Id = _screen.ScreenInfo.Source,
 									RealHeight = _screen.ScreenInfo.RealHeight,
 									RealWidth = _screen.ScreenInfo.RealWidth,
-									Height = _screen.ScreenInfo.Height,
-									Width = _screen.ScreenInfo.Width,
 									Rate = _screen.ScreenInfo.Rate
 								}
 							}

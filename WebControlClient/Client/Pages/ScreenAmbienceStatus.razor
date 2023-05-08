@@ -35,7 +35,7 @@ else
 		<fieldset>
 			<legend>Stats</legend>
 			<p>
-				<span>Monitor:</span>&nbsp;<span>@(ServerStatus?.ScreenInfo != null ? $"{ServerStatus.ScreenInfo.Id} - {ServerStatus.ScreenInfo.RealWidth}x{ServerStatus.ScreenInfo.RealHeight}@{ServerStatus.ScreenInfo.Rate} ({ServerStatus.ScreenInfo.Width}x{ServerStatus.ScreenInfo.Height})" : string.Empty)</span>
+				<span>Monitor:</span>&nbsp;<span>@(ServerStatus?.ScreenInfo != null ? $"{ServerStatus.ScreenInfo.Id} - {ServerStatus.ScreenInfo.RealWidth}x{ServerStatus.ScreenInfo.RealHeight}@{ServerStatus.ScreenInfo.Rate} ({ServerStatus.ScreenInfo.RealWidth}x{ServerStatus.ScreenInfo.RealHeight})" : string.Empty)</span>
 			</p>
 			<p>
 				<span>Frame:</span>&nbsp;<span>@((ServerStatus?.Frame ?? 0).ToString())</span>

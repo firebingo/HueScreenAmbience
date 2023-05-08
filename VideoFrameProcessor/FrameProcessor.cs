@@ -13,22 +13,19 @@ namespace VideoFrameProcessor
 			try
 			{
 				stream.Seek(0, SeekOrigin.Begin);
-				var newWidth = (int)Math.Floor(width / config.Model.ReadResolutionReduce);
-				var newHeight = (int)Math.Floor(height / config.Model.ReadResolutionReduce);
-				resizeMemStream = new MemoryStream(newWidth * newHeight * 4);
-				var (zones, zoneTotals) = SetupPixelZones(newWidth, newHeight, config.Model.ZoneRows, config.Model.ZoneColumns);
-				BitmapProcessor.ReadBitmap(stream, width, height, newWidth, newHeight, config.Model.ReadResolutionReduce, config.Model.ZoneRows, config.Model.ZoneColumns, zones, zoneTotals, 4, resizeMemStream);
+				var (zones, zoneTotals) = SetupPixelZones(width, height, config.Model.ZoneRows, config.Model.ZoneColumns, config.Model.ReadSkipPixels);
+				BitmapProcessor.ReadBitmap(stream, config.Model.ReadSkipPixels, config.Model.ZoneRows, config.Model.ZoneColumns, zones, zoneTotals, 4);
 
 				zoneTotals.CalculateAverages();
 
-				newWidth = (int)Math.Floor(config.Model.ZoneColumns * config.Model.ResizeScale);
-				newHeight = (int)Math.Floor(config.Model.ZoneRows * config.Model.ResizeScale);
+				width = (int)Math.Floor(config.Model.ZoneColumns * config.Model.ResizeScale);
+				height = (int)Math.Floor(config.Model.ZoneRows * config.Model.ResizeScale);
 
 				var image = new MemoryStream(config.Model.ZoneColumns * config.Model.ZoneRows * 3);
-				var blurImage = new MemoryStream(newWidth * newHeight * 3);
+				var blurImage = new MemoryStream(width * height * 3);
 
-				(image, blurImage) = BitmapProcessor.PreparePostBitmap(zones, config.Model.ZoneColumns, config.Model.ZoneRows, newWidth, newHeight, config.Model.ResizeFilter, config.Model.ResizeSigma, image, blurImage);
-				await ImageHandler.WriteImageToFile(blurImage, newWidth, newHeight, Path.Combine(outPath, $"out{frame.ToString().PadLeft(6, '0')}.png"), pixelFormat: PixelFormat.Rgb24);
+				(image, blurImage) = BitmapProcessor.PreparePostBitmap(zones, config.Model.ZoneColumns, config.Model.ZoneRows, width, height, config.Model.ResizeFilter, config.Model.ResizeSigma, image, blurImage);
+				await ImageHandler.WriteImageToFile(blurImage, width, height, Path.Combine(outPath, $"out{frame.ToString().PadLeft(6, '0')}.png"), pixelFormat: PixelFormat.Rgb24);
 				await blurImage.DisposeAsync();
 				await image.DisposeAsync();
 				foreach (var zone in zones)
@@ -49,7 +46,7 @@ namespace VideoFrameProcessor
 			}
 		}
 
-		private static (PixelZone[] zones, PixelZonesTotals zoneTotals) SetupPixelZones(int width, int height, int rows, int columns)
+		private static (PixelZone[] zones, PixelZonesTotals zoneTotals) SetupPixelZones(int width, int height, int rows, int columns, int skipPixels)
 		{
 			var zoneTotals = new PixelZonesTotals(columns * rows);
 			var zones = new PixelZone[columns * rows];
@@ -69,7 +66,7 @@ namespace VideoFrameProcessor
 				var yMax = row == rows - 1
 					? height
 					: (height / (double)rows) * (row + 1);
-				zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), width * 4, 4, zoneTotals, i);
+				zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), width * 4, 4, skipPixels, zoneTotals, i);
 				if (col == columns - 1)
 					row += 1;
 			}

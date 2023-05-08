@@ -22,9 +22,7 @@ namespace VideoFrameProcessor
 			{
 				if (File.Exists("Data/Config.json"))
 				{
-					var readJson = JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText("Data/Config.json"), _jsonOptions);
-					if (readJson == null)
-						throw new Exception("Failed to read config");
+					var readJson = JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText("Data/Config.json"), _jsonOptions) ?? throw new Exception("Failed to read config");
 					_config = readJson;
 					ValidateConfig();
 					SaveConfig();
@@ -58,7 +56,7 @@ namespace VideoFrameProcessor
 		{
 			_config.ZoneColumns = Math.Max(1, _config.ZoneColumns);
 			_config.ZoneRows = Math.Max(1, _config.ZoneRows);
-			_config.ReadResolutionReduce = Math.Clamp(_config.ReadResolutionReduce, 1.0f, 10.0f);
+			_config.ReadSkipPixels = (_config.ReadSkipPixels == 1 || _config.ReadSkipPixels == 2 || _config.ReadSkipPixels == 4) ? _config.ReadSkipPixels : 2;
 		}
 	}
 
@@ -71,6 +69,6 @@ namespace VideoFrameProcessor
 		public float ResizeScale { get; set; } = 12.0f;
 		public float ResizeSigma { get; set; } = 0.8f;
 		public ImageFilter ResizeFilter { get; set; } = ImageFilter.Gaussian;
-		public float ReadResolutionReduce { get; set; } = 2.0f;
+		public int ReadSkipPixels { get; set; } = 2;
 	}
 }

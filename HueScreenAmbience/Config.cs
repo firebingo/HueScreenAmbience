@@ -69,14 +69,11 @@ namespace HueScreenAmbience
 			_config.LightStripSettings.SaturateColors = Math.Clamp(_config.LightStripSettings.SaturateColors, 0.0f, 5.0f);
 			_config.ZoneColumns = Math.Max(1, _config.ZoneColumns);
 			_config.ZoneRows = Math.Max(1, _config.ZoneRows);
-			_config.ReadResolutionReduce = Math.Clamp(_config.ReadResolutionReduce, 1.0f, 10.0f);
+			_config.ReadSkipPixels = (_config.ReadSkipPixels == 1 || _config.ReadSkipPixels == 2 || _config.ReadSkipPixels == 4) ? _config.ReadSkipPixels : 2;
 			_config.ScreenReadFrameRate = Math.Max(1, _config.ScreenReadFrameRate);
 			_config.SocketSettings.ListenPort = Math.Clamp(_config.SocketSettings.ListenPort, 1, 65535);
 			_config.FfmpegCaptureSettings.BufferMultiplier = Math.Clamp(_config.FfmpegCaptureSettings.BufferMultiplier, 4, 32);
 			_config.FfmpegCaptureSettings.ThreadQueueSize = Math.Clamp(_config.FfmpegCaptureSettings.ThreadQueueSize, 1, 4096);
-
-			if (_config.BitmapRect.HasValue)
-				_config.ImageRect = new SixLabors.ImageSharp.Rectangle(_config.BitmapRect.Value.top, _config.BitmapRect.Value.left, _config.BitmapRect.Value.width, _config.BitmapRect.Value.height);
 
 			if (!IPAddress.TryParse(_config.LightStripSettings.RemoteAddress, out _))
 			{
@@ -129,11 +126,8 @@ namespace HueScreenAmbience
 		public bool DumpPngs { get; set; } = false;
 		public string ImageDumpLocation { get; set; } = "Images";
 		public bool IntrinsicsEnabled { get; set; } = false;
-		public float ReadResolutionReduce { get; set; } = 2.0f;
+		public int ReadSkipPixels { get; set; } = 2;
 		public bool DebugTimings { get; set; } = false;
-		public JsonRect? BitmapRect { get; set; } = null;
-		[JsonIgnore]
-		public SixLabors.ImageSharp.Rectangle? ImageRect = null;
 		public LightStripSettings LightStripSettings { get; set; } = new LightStripSettings();
 	}
 
@@ -202,8 +196,7 @@ namespace HueScreenAmbience
 		{
 			get
 			{
-				if (_remoteAddressIp == null)
-					_remoteAddressIp = IPAddress.Parse(RemoteAddress);
+				_remoteAddressIp ??= IPAddress.Parse(RemoteAddress);
 				return _remoteAddressIp;
 			}
 		}
@@ -248,8 +241,7 @@ namespace HueScreenAmbience
 		{
 			get
 			{
-				if (_listenIp == null)
-					_listenIp = IPAddress.Parse(ListenAddress);
+				_listenIp ??= IPAddress.Parse(ListenAddress);
 				return _listenIp;
 			}
 		}

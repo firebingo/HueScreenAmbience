@@ -93,7 +93,7 @@ namespace BitmapZoneProcessor
 		public int* AvgB;
 		public ZonePixelRange* PixelRanges;
 
-		public PixelZone(int row, int column, int xMin, int xMax, int yMin, int yMax, int stride, int bitDepth, PixelZonesTotals totals, int totalsIndex)
+		public PixelZone(int row, int column, int xMin, int xMax, int yMin, int yMax, int stride, int bitDepth, int skipPixels, PixelZonesTotals totals, int totalsIndex)
 		{
 			Row = row;
 			Column = column;
@@ -108,7 +108,7 @@ namespace BitmapZoneProcessor
 			AvgR = totals.AvgR + totalsIndex;
 			AvgG = totals.AvgG + totalsIndex;
 			AvgB = totals.AvgB + totalsIndex;
-			*Count = Width * Height;
+			*Count = (Width * Height) / skipPixels;
 
 			//The zones cover a rectangular area of the image, but the images are stored in a sequential array, so we need to have a range
 			// for each y coordinate that the rectangle covers.

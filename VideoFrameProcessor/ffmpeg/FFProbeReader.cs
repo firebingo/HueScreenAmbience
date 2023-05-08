@@ -12,7 +12,7 @@ namespace VideoFrameProcessor.ffmpeg
 			p.StartInfo.UseShellExecute = false;
 			p.StartInfo.RedirectStandardOutput = true;
 			p.StartInfo.FileName = "ffprobe.exe";
-			p.StartInfo.Arguments = $"-select_streams v:0 -print_format json -show_entries stream -i {filePath}";
+			p.StartInfo.Arguments = $@"-select_streams v:0 -print_format json -show_entries stream -i {filePath}";
 			p.Start();
 			var stream = p.StandardOutput.BaseStream;
 			p.WaitForExit();
