@@ -38,7 +38,6 @@ namespace BitmapZoneProcessor
 				TotalR[i] = 0;
 				TotalG[i] = 0;
 				TotalB[i] = 0;
-				Count[i] = 0;
 				AvgR[i] = 0;
 				AvgG[i] = 0;
 				AvgB[i] = 0;
@@ -109,6 +108,7 @@ namespace BitmapZoneProcessor
 			AvgR = totals.AvgR + totalsIndex;
 			AvgG = totals.AvgG + totalsIndex;
 			AvgB = totals.AvgB + totalsIndex;
+			*Count = Width * Height;
 
 			//The zones cover a rectangular area of the image, but the images are stored in a sequential array, so we need to have a range
 			// for each y coordinate that the rectangle covers.

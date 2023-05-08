@@ -60,7 +60,6 @@ namespace BitmapZoneProcessor
 									*z[i].TotalB += posP[0];
 									*z[i].TotalG += posP[1];
 									*z[i].TotalR += posP[2];
-									*z[i].Count += 1;
 								}
 							}
 						}
