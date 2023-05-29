@@ -2,14 +2,24 @@
 using SharpGen.Runtime;
 using System;
 using System.IO;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
+using Vortice.Mathematics;
 
 namespace HueScreenAmbience.DXGICaptureScreen
 {
+	[StructLayout(LayoutKind.Explicit, Size = 16)]
+	struct PS_C_BUFFER
+	{
+		[FieldOffset(0)]
+		public Vector4 values;
+	}
+
 	public class DxCapture : IDisposable
 	{
 		private readonly int _width = 0;
@@ -22,6 +32,15 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		private readonly IDXGIOutput6 _output6;
 		private readonly IDXGIOutputDuplication _duplicatedOutput;
 		private readonly ID3D11Texture2D _screenTexture;
+		private readonly ID3D11ShaderResourceView _screenResourceView;
+		private readonly ID3D11Texture2D _scaleTexture;
+		private readonly ID3D11RenderTargetView _scaleRenderView;
+		private readonly ID3D11Texture2D _readTexture;
+		private readonly ID3D11VertexShader _vertexShader;
+		private readonly ID3D11PixelShader _scaleShader;
+		private readonly ID3D11SamplerState _samplerState;
+		private readonly ID3D11Buffer _pixelCBuffer;
+		private readonly Viewport _viewport;
 		private readonly FileLogger _logger;
 
 		private bool _readingFrame = false;
@@ -46,8 +65,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 
 				var textureDesc = new Texture2DDescription
 				{
-					CPUAccessFlags = CpuAccessFlags.Read | CpuAccessFlags.Write,
-					BindFlags = BindFlags.None,
+					CPUAccessFlags = CpuAccessFlags.None,
+					BindFlags = BindFlags.ShaderResource,
 					Format = Format.B8G8R8A8_UNorm,
 					Width = _width,
 					Height = _height,
@@ -55,10 +74,78 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					MipLevels = 1,
 					ArraySize = 1,
 					SampleDescription = { Count = 1, Quality = 0 },
-					Usage = ResourceUsage.Staging
+					Usage = ResourceUsage.Default
 				};
+				var shrvDesc = new ShaderResourceViewDescription
+				{
+					Format = textureDesc.Format,
+					ViewDimension = ShaderResourceViewDimension.Texture2D
+				};
+				shrvDesc.Texture2D.MostDetailedMip = 0;
+				shrvDesc.Texture2D.MipLevels = 1;
 
 				_screenTexture = _device.CreateTexture2D(textureDesc);
+				_screenResourceView = _device.CreateShaderResourceView(_screenTexture, shrvDesc);
+
+				textureDesc = new Texture2DDescription
+				{
+					CPUAccessFlags = CpuAccessFlags.None,
+					BindFlags = BindFlags.RenderTarget,
+					Format = Format.B8G8R8A8_UNorm,
+					Width = 16,
+					Height = 9,
+					MiscFlags = ResourceOptionFlags.None,
+					MipLevels = 1,
+					ArraySize = 1,
+					SampleDescription = { Count = 1, Quality = 0 },
+					Usage = ResourceUsage.Default
+				};
+				_scaleTexture = _device.CreateTexture2D(textureDesc);
+
+				var renderDesc = new RenderTargetViewDescription
+				{
+					Format = textureDesc.Format,
+					ViewDimension = RenderTargetViewDimension.Texture2D
+				};
+				renderDesc.Texture2D.MipSlice = 0;
+				_scaleRenderView = _device.CreateRenderTargetView(_scaleTexture, renderDesc);
+
+				textureDesc = new Texture2DDescription
+				{
+					CPUAccessFlags = CpuAccessFlags.Read | CpuAccessFlags.Write,
+					BindFlags = BindFlags.None,
+					Format = Format.B8G8R8A8_UNorm,
+					Width = 16,
+					Height = 9,
+					MiscFlags = ResourceOptionFlags.None,
+					MipLevels = 1,
+					ArraySize = 1,
+					SampleDescription = { Count = 1, Quality = 0 },
+					Usage = ResourceUsage.Staging
+				};
+				_readTexture = _device.CreateTexture2D(textureDesc);
+
+				var bytes = File.ReadAllBytes("DXGICaptureScreen/Zones.cso");
+				_scaleShader = _device.CreatePixelShader(bytes);
+				bytes = File.ReadAllBytes("DXGICaptureScreen/VertexShader.cso");
+				_vertexShader = _device.CreateVertexShader(bytes);
+				
+				var samplerDesc = new SamplerDescription();
+				samplerDesc.Filter = Filter.MinMagMipLinear;
+				samplerDesc.AddressU = TextureAddressMode.Clamp;
+				samplerDesc.AddressV = TextureAddressMode.Clamp;
+				samplerDesc.AddressW = TextureAddressMode.Clamp;
+				samplerDesc.MipLODBias = 0.0f;
+				samplerDesc.MaxAnisotropy = 1;
+				samplerDesc.ComparisonFunc = ComparisonFunction.Always;
+				samplerDesc.BorderColor = new Color4(0, 0, 0, 0);
+				samplerDesc.MinLOD = 0;
+				samplerDesc.MaxLOD = 1000.0f;
+				_samplerState = _device.CreateSamplerState(samplerDesc);
+
+				_pixelCBuffer = _device.CreateConstantBuffer<PS_C_BUFFER>();
+
+				_viewport = new Viewport(16, 9);
 			}
 			catch (Exception ex)
 			{
@@ -88,7 +175,28 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						}
 					}
 
-					var mapSource = _deviceContext.Map(_screenTexture, 0, MapMode.Read);
+					//_deviceContext.ClearRenderTargetView(_scaleRenderView, new Color4(1.0f, 1.0f, 1.0f, 1.0f));
+					_deviceContext.OMSetRenderTargets(_scaleRenderView);
+					_deviceContext.RSSetViewport(_viewport);
+					_deviceContext.VSSetShader(_vertexShader);
+					//var shaderVal = new PS_C_BUFFER()
+					//{
+					//	values = new Vector4(0.5f, 0.5f, 0.5f, 0.5f)
+					//};
+					//_deviceContext.UpdateSubresource(in shaderVal, _pixelCBuffer);
+					_deviceContext.PSSetSamplers(0, 1, new ID3D11SamplerState[1] { _samplerState });
+					_deviceContext.PSSetShaderResources(0, 1, new ID3D11ShaderResourceView[1] { _screenResourceView });
+					//_deviceContext.PSSetConstantBuffers(0, 1, new ID3D11Buffer[1] { _pixelCBuffer });
+					_deviceContext.PSSetShader(_scaleShader);
+					_deviceContext.IASetPrimitiveTopology(PrimitiveTopology.TriangleStrip);
+					_deviceContext.Draw(4, 0);
+					
+					_deviceContext.Flush();
+
+					_deviceContext.CopyResource(_readTexture, _scaleTexture);
+					//_deviceContext.CopyResource(_readTexture, _screenTexture);
+
+					var mapSource = _deviceContext.Map(_readTexture, 0, MapMode.Read);
 
 					var sourcePtr = mapSource.DataPointer;
 					unsafe
@@ -97,16 +205,16 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						fixed (byte* destBytePtr = &frameData[0])
 						{
 							var destPtr = (IntPtr)destBytePtr;
-							for (int y = 0; y < _height; y++)
+							for (int y = 0; y < 9; y++)
 							{
-								MemoryHelpers.CopyMemory(destPtr, sourcePtr, mapSource.RowPitch);
+								MemoryHelpers.CopyMemory(destPtr, sourcePtr, 16);
 								sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
-								destPtr = IntPtr.Add(destPtr, mapSource.RowPitch);
+								destPtr = IntPtr.Add(destPtr, 16);
 							}
 						}
 					}
 
-					_deviceContext.Unmap(_screenTexture, 0);
+					_deviceContext.Unmap(_readTexture, 0);
 					returnChange = true;
 				}
 
@@ -135,13 +243,17 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		{
 			while (_readingFrame)
 				Thread.Sleep(0);
-			_factory?.Dispose();
-			_adapter?.Dispose();
-			_device?.Dispose();
+			_screenResourceView?.Dispose();
+			_screenTexture?.Dispose();
+			_scaleTexture?.Dispose();
+			_scaleRenderView?.Dispose();
+			_scaleShader?.Dispose();
 			_output?.Dispose();
 			_output6?.Dispose();
 			_duplicatedOutput?.Dispose();
-			_screenTexture?.Dispose();
+			_factory?.Dispose();
+			_adapter?.Dispose();
+			_device?.Dispose();
 			GC.SuppressFinalize(this);
 		}
 	}

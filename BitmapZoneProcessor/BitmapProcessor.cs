@@ -13,6 +13,7 @@ namespace BitmapZoneProcessor
 			zoneTotals.ResetAverages();
 
 			var useImage = image;
+			System.Threading.Tasks.Task.Run(() => ImageHandler.WriteImageToFile(useImage, width, height, $"Images/{DateTime.Now.Ticks.ToString().PadLeft(5, '0')}.png", pixelFormat: PixelFormat.Bgr32));
 			//If this is passed it is expected that the zones passed are also based on this reduced resolution for now.
 			// As the other comment below mentions maybe look into a better way of determining how reading the bitmap figures
 			// out what zone to add values to.
