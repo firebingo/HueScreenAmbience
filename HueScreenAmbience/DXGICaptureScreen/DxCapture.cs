@@ -17,7 +17,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 	struct PS_C_BUFFER
 	{
 		[FieldOffset(0)]
-		public Vector4 values;
+		public Int4 values;
 	}
 
 	public class DxCapture : IDisposable
@@ -92,8 +92,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					CPUAccessFlags = CpuAccessFlags.None,
 					BindFlags = BindFlags.RenderTarget,
 					Format = Format.B8G8R8A8_UNorm,
-					Width = 16,
-					Height = 9,
+					Width = 1280,
+					Height = 720,
 					MiscFlags = ResourceOptionFlags.None,
 					MipLevels = 1,
 					ArraySize = 1,
@@ -115,8 +115,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					CPUAccessFlags = CpuAccessFlags.Read | CpuAccessFlags.Write,
 					BindFlags = BindFlags.None,
 					Format = Format.B8G8R8A8_UNorm,
-					Width = 16,
-					Height = 9,
+					Width = 1280,
+					Height = 720,
 					MiscFlags = ResourceOptionFlags.None,
 					MipLevels = 1,
 					ArraySize = 1,
@@ -143,9 +143,16 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				samplerDesc.MaxLOD = 1000.0f;
 				_samplerState = _device.CreateSamplerState(samplerDesc);
 
-				_pixelCBuffer = _device.CreateConstantBuffer<PS_C_BUFFER>();
+				var bufDesc = new BufferDescription()
+				{
+					CPUAccessFlags = CpuAccessFlags.None,
+					BindFlags = BindFlags.ConstantBuffer,
+					ByteWidth = 16,
+					Usage = ResourceUsage.Default
+				};
+				_pixelCBuffer = _device.CreateBuffer(bufDesc);
 
-				_viewport = new Viewport(16, 9);
+				_viewport = new Viewport(1280, 720);
 			}
 			catch (Exception ex)
 			{
@@ -179,18 +186,18 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					_deviceContext.OMSetRenderTargets(_scaleRenderView);
 					_deviceContext.RSSetViewport(_viewport);
 					_deviceContext.VSSetShader(_vertexShader);
-					//var shaderVal = new PS_C_BUFFER()
-					//{
-					//	values = new Vector4(0.5f, 0.5f, 0.5f, 0.5f)
-					//};
-					//_deviceContext.UpdateSubresource(in shaderVal, _pixelCBuffer);
+					var shaderVal = new PS_C_BUFFER()
+					{
+						values = new Int4(1, 0, 0, 1)
+					};
+					_deviceContext.UpdateSubresource(shaderVal, _pixelCBuffer);
 					_deviceContext.PSSetSamplers(0, 1, new ID3D11SamplerState[1] { _samplerState });
 					_deviceContext.PSSetShaderResources(0, 1, new ID3D11ShaderResourceView[1] { _screenResourceView });
-					//_deviceContext.PSSetConstantBuffers(0, 1, new ID3D11Buffer[1] { _pixelCBuffer });
+					_deviceContext.PSSetConstantBuffers(0, 1, new ID3D11Buffer[1] { _pixelCBuffer });
 					_deviceContext.PSSetShader(_scaleShader);
 					_deviceContext.IASetPrimitiveTopology(PrimitiveTopology.TriangleStrip);
 					_deviceContext.Draw(4, 0);
-					
+
 					_deviceContext.Flush();
 
 					_deviceContext.CopyResource(_readTexture, _scaleTexture);
@@ -205,11 +212,11 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						fixed (byte* destBytePtr = &frameData[0])
 						{
 							var destPtr = (IntPtr)destBytePtr;
-							for (int y = 0; y < 9; y++)
+							for (int y = 0; y < 720; y++)
 							{
-								MemoryHelpers.CopyMemory(destPtr, sourcePtr, 16);
+								MemoryHelpers.CopyMemory(destPtr, sourcePtr, mapSource.RowPitch);
 								sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
-								destPtr = IntPtr.Add(destPtr, 16);
+								destPtr = IntPtr.Add(destPtr, mapSource.RowPitch);
 							}
 						}
 					}

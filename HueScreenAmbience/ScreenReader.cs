@@ -172,7 +172,7 @@ namespace HueScreenAmbience
 			IsRunning = true;
 			var newWidth = ScreenInfo.Width;
 			var newHeight = ScreenInfo.Height;
-			var frameStream = new MemoryStream(16 * 9 * ScreenInfo.BitDepth);
+			var frameStream = new MemoryStream(1280 * 720 * ScreenInfo.BitDepth);
 			MemoryStream cropFrameStream = null;
 			if (_config.Model.ImageRect.HasValue)
 			{
@@ -233,7 +233,7 @@ namespace HueScreenAmbience
 
 
 
-					BitmapProcessor.ReadBitmap(frameStream, 16, 9, newWidth, newHeight, _config.Model.ReadResolutionReduce,
+					BitmapProcessor.ReadBitmap(frameStream, 1280, 720, newWidth, newHeight, _config.Model.ReadResolutionReduce,
 						_config.Model.ZoneRows, _config.Model.ZoneColumns, _zones, _zoneTotals, ScreenInfo.BitDepth, sizeFrameStream, cropFrameStream, _config.Model.ImageRect);
 
 					var readTime = (DateTime.UtcNow - t).TotalMilliseconds;
