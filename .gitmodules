@@ -1,0 +1,3 @@
+[submodule "NanoLeafAPI"]
+	path = NanoLeafAPI
+	url = https://github.com/firebingo/NanoLeafAPI.git
