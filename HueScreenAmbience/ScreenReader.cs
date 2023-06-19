@@ -1,8 +1,10 @@
 ﻿using BitmapZoneProcessor;
 using HueScreenAmbience.DXGICaptureScreen;
 using HueScreenAmbience.LightStrip;
+using HueScreenAmbience.NanoLeaf;
 using HueScreenAmbience.RGB;
 using LightsShared;
+using NanoLeafAPI;
 using System;
 using System.IO;
 using System.Threading;
@@ -23,6 +25,7 @@ namespace HueScreenAmbience
 		private ZoneProcessor _zoneProcesser;
 		private RGBLighter _rgbLighter;
 		private StripLighter _stripLighter;
+		private NanoLeafClient _nanoLeafClient;
 		private FileLogger _logger;
 		private DxCapture _dxCapture;
 		private FFMpegCapture.FFMpegCapture _ffmpegCapture;
@@ -71,6 +74,7 @@ namespace HueScreenAmbience
 			if (!_config.Model.FfmpegCaptureSettings.UseFFMpeg)
 				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
+			_nanoLeafClient = _map.GetService(typeof(NanoLeafClient)) as NanoLeafClient;
 		}
 
 		public void GetScreenInfo()
@@ -146,7 +150,7 @@ namespace HueScreenAmbience
 			Ready = true;
 		}
 
-		public void InitScreenLoop()
+		public async Task InitScreenLoop()
 		{
 			if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
 			{
@@ -165,6 +169,8 @@ namespace HueScreenAmbience
 
 			if (_config.Model.LightStripSettings.UseLightStrip)
 				_stripLighter.Start();
+			if (_config.Model.NanoLeafSettings.UseNanoLeaf)
+				await _nanoLeafClient.Start();
 		}
 
 		public async Task ReadScreenLoopDx()
@@ -244,7 +250,6 @@ namespace HueScreenAmbience
 
 					var postReadTime = (DateTime.UtcNow - t).TotalMilliseconds;
 
-
 					var dt = DateTime.UtcNow - start;
 					if (++_averageIter >= _averageValues.Length)
 						_averageIter = 0;
@@ -267,7 +272,7 @@ namespace HueScreenAmbience
 				{
 					Console.WriteLine(ex);
 					_ = Task.Run(() => _logger.WriteLog(ex.ToString()));
-					StopScreenLoop();
+					await StopScreenLoop();
 				}
 				finally
 				{
@@ -283,7 +288,7 @@ namespace HueScreenAmbience
 				await sizeFrameStream.DisposeAsync();
 		}
 
-		public void StopScreenLoop()
+		public async Task StopScreenLoop()
 		{
 			if (!IsRunning)
 				return;
@@ -299,6 +304,8 @@ namespace HueScreenAmbience
 				_dxCapture.Dispose();
 				_rgbLighter?.Stop();
 			}
+			if(_config.Model.NanoLeafSettings.UseNanoLeaf)
+				await _nanoLeafClient?.Stop();
 			_stripLighter?.Stop();
 		}
 

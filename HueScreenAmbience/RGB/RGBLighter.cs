@@ -154,7 +154,7 @@ namespace HueScreenAmbience.RGB
 				if ((DateTime.UtcNow - _lastChangeTime).TotalMilliseconds < _frameTimeSpan.TotalMilliseconds)
 					return;
 
-				var start = DateTime.UtcNow;
+				//var start = DateTime.UtcNow;
 				var red = _config.Model.RgbDeviceSettings.KeyboardResReduce;
 
 				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Keyboard))

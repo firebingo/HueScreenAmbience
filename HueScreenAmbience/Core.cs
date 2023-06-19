@@ -305,7 +305,7 @@ namespace HueScreenAmbience
 			var res = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS | WindowsApi.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
 #endif
 
-			_screen.InitScreenLoop();
+			await _screen.InitScreenLoop();
 			if (_config.Model.HueSettings.UseHue)
 				await _hueClient.OnStartReading();
 

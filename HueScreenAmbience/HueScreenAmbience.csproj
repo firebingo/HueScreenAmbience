@@ -52,6 +52,7 @@
 		<ProjectReference Include="..\BitmapZoneProcessor\BitmapZoneProcessor.csproj" />
 		<ProjectReference Include="..\Iot.Device.Bindings\Iot.Device.Bindings.csproj" />
 		<ProjectReference Include="..\LightsShared\LightsShared.csproj" />
+		<ProjectReference Include="..\NanoLeafAPI\NanoLeafAPI\NanoLeafAPI.csproj" />
 		<ProjectReference Include="..\WebControlClient\Shared\WebControlClient.Shared.csproj" />
 	</ItemGroup>
 

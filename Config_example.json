@@ -70,6 +70,20 @@
   "readResolutionReduce": 2.0, //Reduce captured screen image size (ex. 2.0 is res * 0.5, 1920x1080->960x540). Adjust value based on screen resolution. getting image size to around 720p or lower is recommended.
   "debugTimings": false, //Whether or not to ouput timings of processing loop to console. Useful for debugging.
   "bitmapRect": null, //A rect to cut out of the captured screen for use. format is {"top": 0,"left": 0,"width": 1280,"height": 720}.
+  "nanoLeafSettings": {
+    "useNanoLeaf": true, //Whether or not to use nano leaf panels
+    "remoteAddress": "", //Remote address of the panels
+    "port": 16021,
+    "authToken": "", //Auth token given by panels
+    "updateFrameRate": 60, //Can be used to throttle rate that panels are updated at
+    "colorMultiplier": 1.1, //Multiply values sent to lights by this 0.0-2.0
+    "colorChangeThreshold": 0, //a byte value (0-255) that if next color is within this range dont change colors. can help reduce flickering.
+    "minRoundColor": 4, //A byte value (0-255). If the r+g+b for a light is less than this value it will be rounded to 0.
+    "blendLastColorAmount": 0.3, //A value to blend the current color by the last color. This reduces response time a bit to give smoother color changes. 0.6 is a good value to start. (0.0-1.0)
+    "layoutResReduce": 4, //Reduces the sample size of the panel layout.
+    "flipX": true, //Flips the panel x coordinates
+    "extraOrientationAdjustAngle": 0 //Extra angle to add to the panels global orientation. Start adjusting by small values like 0.1.
+  },
   "lightStripSettings": {
     "useLightStrip": true, //Whether or not to use a light strip
     "remoteAddress": "192.168.1.135", //Remote address of client for device that is connected to light strip for

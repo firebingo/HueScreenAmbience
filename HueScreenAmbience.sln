@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30406.217
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33530.505
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HueScreenAmbience", "HueScreenAmbience\HueScreenAmbience.csproj", "{37281E69-9542-454C-B17A-1E91C86D2C67}"
 EndProject
@@ -27,6 +27,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NanoLeafAPI", "NanoLeafAPI\NanoLeafAPI\NanoLeafAPI.csproj", "{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -110,6 +112,14 @@ Global
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|ARM.Build.0 = Release|Any CPU
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|x64.ActiveCfg = Release|x64
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|x64.Build.0 = Release|x64
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|ARM.Build.0 = Debug|Any CPU
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|x64.ActiveCfg = Debug|x64
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|x64.Build.0 = Debug|x64
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|ARM.ActiveCfg = Release|Any CPU
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|ARM.Build.0 = Release|Any CPU
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|x64.ActiveCfg = Release|x64
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

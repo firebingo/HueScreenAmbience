@@ -1,8 +1,11 @@
 ﻿using BitmapZoneProcessor;
 using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
+using HueScreenAmbience.NanoLeaf;
 using HueScreenAmbience.RGB;
 using LightsShared;
+using NanoLeafAPI;
+using NanoLeafAPI.Models;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
@@ -19,11 +22,13 @@ namespace HueScreenAmbience
 		private MemoryStream _hueImageMemStream;
 		private MemoryStream _lstripImageMemStream;
 		private MemoryStream _rgbImageMemStream;
+		private MemoryStream _nanoLeafImageMemStream;
 		private Config _config;
 		private HueCore _hueClient;
 		private FileLogger _logger;
 		private RGBLighter _rgbLighter;
 		private StripLighter _stripLighter;
+		private NanoLeafClient _nanoLeafClient;
 
 		public void InstallServices(IServiceProvider _map)
 		{
@@ -33,6 +38,7 @@ namespace HueScreenAmbience
 			if (_config.Model.RgbDeviceSettings.UseDevices)
 				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
 			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
+			_nanoLeafClient = _map.GetService(typeof(NanoLeafClient)) as NanoLeafClient;
 		}
 
 		public async Task PostRead(PixelZone[] zones, PixelZonesTotals zoneTotals, long frame)
@@ -124,6 +130,17 @@ namespace HueScreenAmbience
 						_stripLighter.UpdateFromImage(_lstripImageMemStream, newWidth, newHeight, frame);
 					}));
 				}
+				if(_config.Model.NanoLeafSettings.UseNanoLeaf)
+				{
+					_nanoLeafImageMemStream ??= new MemoryStream(newWidth * newHeight * 3);
+					_nanoLeafImageMemStream.Seek(0, SeekOrigin.Begin);
+					_blurImageMemStream.Seek(0, SeekOrigin.Begin);
+					await _blurImageMemStream.CopyToAsync(_nanoLeafImageMemStream);
+					processingTasks.Add(Task.Run(async () =>
+					{
+						await _nanoLeafClient.UpdateFromImage(_nanoLeafImageMemStream, newWidth, newHeight);
+					}));
+				}
 
 				//Console.WriteLine($"PostRead ChangeLightColor Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
@@ -170,6 +187,7 @@ namespace HueScreenAmbience
 				_hueImageMemStream?.Seek(0, SeekOrigin.Begin);
 				_rgbImageMemStream?.Seek(0, SeekOrigin.Begin);
 				_lstripImageMemStream?.Seek(0, SeekOrigin.Begin);
+				_nanoLeafImageMemStream?.Seek(0, SeekOrigin.Begin);
 			}
 		}
 	}

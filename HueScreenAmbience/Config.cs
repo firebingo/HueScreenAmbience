@@ -67,6 +67,8 @@ namespace HueScreenAmbience
 			_config.LightStripSettings.RemotePort = Math.Clamp(_config.LightStripSettings.RemotePort, 1, 65535);
 			_config.LightStripSettings.BlendLastColorAmount = Math.Clamp(_config.LightStripSettings.BlendLastColorAmount, 0.0f, 1.0f);
 			_config.LightStripSettings.SaturateColors = Math.Clamp(_config.LightStripSettings.SaturateColors, 0.0f, 5.0f);
+			_config.NanoLeafSettings.ColorMultiplier = Math.Clamp(_config.NanoLeafSettings.ColorMultiplier, 0.0f, 2.0f);
+			_config.NanoLeafSettings.BlendLastColorAmount = Math.Clamp(_config.NanoLeafSettings.BlendLastColorAmount, 0.0f, 1.0f);
 			_config.ZoneColumns = Math.Max(1, _config.ZoneColumns);
 			_config.ZoneRows = Math.Max(1, _config.ZoneRows);
 			_config.ReadResolutionReduce = Math.Clamp(_config.ReadResolutionReduce, 1.0f, 10.0f);
@@ -134,6 +136,7 @@ namespace HueScreenAmbience
 		public JsonRect? BitmapRect { get; set; } = null;
 		[JsonIgnore]
 		public SixLabors.ImageSharp.Rectangle? ImageRect = null;
+		public NanoLeafSettings NanoLeafSettings { get; set; } = new NanoLeafSettings();
 		public LightStripSettings LightStripSettings { get; set; } = new LightStripSettings();
 	}
 
@@ -152,7 +155,7 @@ namespace HueScreenAmbience
 		public byte MinColorValue { get; set; } = 0;
 		public byte MinRoundColor { get; set; } = 4;
 		public float ColorMultiplier { get; set; } = 1.0f;
-		public byte ColorChangeThreshold { get; set; } = 15;
+		public byte ColorChangeThreshold { get; set; } = 0;
 		public float BlendLastColorAmount { get; set; } = 0.4f;
 	}
 
@@ -256,5 +259,32 @@ namespace HueScreenAmbience
 		public string SslCertLocation { get; set; } = string.Empty;
 		public string SslCertPassword { get; set; } = string.Empty;
 		public SslProtocols SslProtocol { get; set; } = SslProtocols.Tls12 | SslProtocols.Tls13;
+	}
+
+	public class NanoLeafSettings
+	{
+		public bool UseNanoLeaf { get; set; } = false;
+		public string RemoteAddress { get; set; } = "127.0.0.1";
+		private IPAddress _remoteAddressIp;
+		[JsonIgnore]
+		public IPAddress RemoteAddressIp
+		{
+			get
+			{
+				if (_remoteAddressIp == null)
+					_remoteAddressIp = IPAddress.Parse(RemoteAddress);
+				return _remoteAddressIp;
+			}
+		}
+		public ushort Port { get; set; } = 16021;
+		public string AuthToken { get; set; }
+		public int UpdateFrameRate { get; set; } = 60;
+		public float ColorMultiplier { get; set; } = 1.0f;
+		public byte ColorChangeThreshold { get; set; } = 0;
+		public byte MinRoundColor { get; set; } = 4;
+		public float BlendLastColorAmount { get; set; } = 0.4f;
+		public int LayoutResReduce { get; set; } = 4;
+		public bool FlipX { get; set; } = true;
+		public double ExtraOrientationAdjustAngle { get; set; } = 0;
 	}
 }

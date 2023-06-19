@@ -1,9 +1,11 @@
 ﻿using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
+using HueScreenAmbience.NanoLeaf;
 using HueScreenAmbience.RGB;
 using HueScreenAmbience.Sockets;
 using LightsShared;
 using Microsoft.Extensions.DependencyInjection;
+using NanoLeafAPI;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -21,6 +23,7 @@ namespace HueScreenAmbience
 		private HueCore _hueClient = null;
 		private RGBLighter _rgbLighter = null;
 		private StripLighter _stripLighter = null;
+		private NanoLeafClient _nanoLeafClient = null;
 		private SocketHandler _socketServer = null;
 		private IServiceProvider _map = null;
 
@@ -91,6 +94,7 @@ namespace HueScreenAmbience
 				_rgbLighter.InstallServices(_map);
 				_stripLighter.InstallServices(_map);
 				_socketServer.InstallServices(_map);
+				_nanoLeafClient.InstallServices(_map);
 
 				inputThread?.Start();
 				await _core.Start(isHeadless);
@@ -148,6 +152,7 @@ namespace HueScreenAmbience
 			_rgbLighter = new RGBLighter();
 			_stripLighter = new StripLighter();
 			_socketServer = new SocketHandler();
+			_nanoLeafClient = new NanoLeafClient();
 
 			var services = new ServiceCollection();
 			if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
@@ -161,7 +166,8 @@ namespace HueScreenAmbience
 				.AddSingleton(_screen)
 				.AddSingleton(_zoneProcesser)
 				.AddSingleton(_stripLighter)
-				.AddSingleton(_socketServer);
+				.AddSingleton(_socketServer)
+				.AddSingleton(_nanoLeafClient);
 			}
 			else
 			{
@@ -175,7 +181,8 @@ namespace HueScreenAmbience
 				.AddSingleton(_zoneProcesser)
 				.AddSingleton(_rgbLighter)
 				.AddSingleton(_stripLighter)
-				.AddSingleton(_socketServer);
+				.AddSingleton(_socketServer)
+				.AddSingleton(_nanoLeafClient);
 			}
 			var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
 			return provider;
