@@ -203,7 +203,7 @@ namespace HueScreenAmbience
 		{
 			var validInput = false;
 			var adapters = DxEnumerate.GetAdapters();
-			if (!adapters?.Any() ?? true)
+			if (adapters.Count == 0)
 			{
 				Console.WriteLine("No adapters found.");
 				Console.ReadLine();
@@ -242,7 +242,7 @@ namespace HueScreenAmbience
 			var validInput = false;
 			var displays = DxEnumerate.GetMonitors(_config.Model.AdapterId);
 
-			if (!displays?.Any() ?? true)
+			if (displays.Count == 0)
 			{
 				Console.WriteLine("No monitors found.");
 				Console.ReadLine();
@@ -321,7 +321,7 @@ namespace HueScreenAmbience
 			//Allow windows to sleep again
 			var res = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS);
 #endif
-			_screen.StopScreenLoop();
+			await _screen.StopScreenLoop();
 
 			if (_config.Model.HueSettings.UseHue)
 				await _hueClient.OnStopReading();

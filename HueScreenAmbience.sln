@@ -23,12 +23,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Iot.Device.Bindings", "Iot.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LightsShared", "LightsShared\LightsShared.csproj", "{F6382746-A155-447A-BB72-2BDF24A3DB9D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NanoLeafAPI", "NanoLeafAPI\NanoLeafAPI\NanoLeafAPI.csproj", "{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2AA72D1B-AAC4-4C36-9845-7B18CB4E9E20}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NanoLeafAPI", "NanoLeafAPI\NanoLeafAPI\NanoLeafAPI.csproj", "{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -98,33 +98,32 @@ Global
 		{3A9FB31D-9722-47FB-9F4D-86D34D4FB918}.Release|x64.Build.0 = Release|Any CPU
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|ARM.ActiveCfg = Debug|Any CPU
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|ARM.Build.0 = Debug|Any CPU
-		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|x64.Build.0 = Debug|Any CPU
+		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|x64.ActiveCfg = Debug|x64
+		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Debug|x64.Build.0 = Debug|x64
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Release|ARM.ActiveCfg = Release|Any CPU
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Release|ARM.Build.0 = Release|Any CPU
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Release|x64.ActiveCfg = Release|x64
 		{4126F0BA-8C70-4C1B-8E94-5BB18D1151EE}.Release|x64.Build.0 = Release|x64
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|ARM.ActiveCfg = Debug|Any CPU
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|ARM.Build.0 = Debug|Any CPU
-		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|x64.Build.0 = Debug|Any CPU
+		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|x64.ActiveCfg = Debug|x64
+		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Debug|x64.Build.0 = Debug|x64
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|ARM.ActiveCfg = Release|Any CPU
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|ARM.Build.0 = Release|Any CPU
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|x64.ActiveCfg = Release|x64
 		{F6382746-A155-447A-BB72-2BDF24A3DB9D}.Release|x64.Build.0 = Release|x64
 		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|ARM.ActiveCfg = Debug|Any CPU
 		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|ARM.Build.0 = Debug|Any CPU
-		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|x64.ActiveCfg = Debug|x64
-		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|x64.Build.0 = Debug|x64
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Debug|x64.Build.0 = Debug|Any CPU
 		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|ARM.ActiveCfg = Release|Any CPU
 		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|ARM.Build.0 = Release|Any CPU
-		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|x64.ActiveCfg = Release|x64
-		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|x64.Build.0 = Release|x64
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|x64.ActiveCfg = Release|Any CPU
+		{82B71ECD-2824-49C6-8CED-F9A1FD9ACDAF}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {734C5D0F-D81E-4266-A8CB-AE9F71CBC8E6}
 	EndGlobalSection
 EndGlobal
