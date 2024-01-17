@@ -35,15 +35,15 @@
 
 	<ItemGroup>
 		<PackageReference Include="HidSharp" Version="2.1.0" />
-		<PackageReference Include="HueApi" Version="1.5.0" />
+		<PackageReference Include="HueApi" Version="1.6.0" />
 		<PackageReference Include="HueApi.ColorConverters" Version="1.5.0" />
 		<PackageReference Include="HueApi.Entertainment" Version="1.5.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-		<PackageReference Include="RGB.NET.Core" Version="1.0.0" />
-		<PackageReference Include="RGB.NET.Devices.Corsair" Version="1.0.0" />
-		<PackageReference Include="RGB.NET.Devices.Logitech" Version="1.0.0" />
-		<PackageReference Include="RGB.NET.Devices.Razer" Version="1.0.0" />
-		<PackageReference Include="RGB.NET.Layout" Version="1.0.0" />
+		<PackageReference Include="RGB.NET.Core" Version="2.0.0" />
+		<PackageReference Include="RGB.NET.Devices.Corsair" Version="2.0.0" />
+		<PackageReference Include="RGB.NET.Devices.Logitech" Version="2.0.0" />
+		<PackageReference Include="RGB.NET.Devices.Razer" Version="2.0.0" />
+		<PackageReference Include="RGB.NET.Layout" Version="2.0.0" />
 		<PackageReference Include="System.Management" Version="8.0.0" />
 		<PackageReference Include="Vortice.Direct3D11" Version="3.3.4" />
 	</ItemGroup>
@@ -57,13 +57,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="x64\" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Reference Include="RGB.NET.Devices.Asus">
-	    <HintPath>..\..\..\Corsair\RGB.NET\bin\net7.0\RGB.NET.Devices.Asus.dll</HintPath>
-	  </Reference>
+		<Reference Include="RGB.NET.Devices.Asus">
+			<HintPath>..\..\..\Corsair\RGB.NET\bin\net8.0\RGB.NET.Devices.Asus.dll</HintPath>
+		</Reference>
 	</ItemGroup>
 
 	<ItemGroup>

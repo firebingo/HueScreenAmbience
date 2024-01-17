@@ -5,7 +5,6 @@ using HueScreenAmbience.RGB;
 using HueScreenAmbience.Sockets;
 using LightsShared;
 using Microsoft.Extensions.DependencyInjection;
-using NanoLeafAPI;
 using System;
 using System.Collections.Generic;
 using System.Threading;

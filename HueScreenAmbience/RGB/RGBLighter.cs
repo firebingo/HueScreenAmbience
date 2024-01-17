@@ -78,14 +78,43 @@ namespace HueScreenAmbience.RGB
 						}
 					}
 				}
-				CorsairDeviceProvider.Instance.Dispose();
-				CorsairDeviceProvider.Instance.Exception -= Instance_Exception;
-				RazerDeviceProvider.Instance.Dispose();
-				RazerDeviceProvider.Instance.Exception -= Instance_Exception;
-				LogitechDeviceProvider.Instance.Dispose();
-				LogitechDeviceProvider.Instance.Exception -= Instance_Exception;
-				AsusDeviceProvider.Instance.Dispose();
-				AsusDeviceProvider.Instance.Exception -= Instance_Exception;
+				try
+				{
+					//This just causes it to crash? no exception thrown?
+					//CorsairDeviceProvider.Instance.Dispose();
+					CorsairDeviceProvider.Instance.Exception -= Instance_Exception;
+				}
+				catch (Exception ex)
+				{
+					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				}
+				try
+				{
+					RazerDeviceProvider.Instance.Dispose();
+					RazerDeviceProvider.Instance.Exception -= Instance_Exception;
+				}
+				catch (Exception ex)
+				{
+					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				}
+				try
+				{
+					LogitechDeviceProvider.Instance.Dispose();
+					LogitechDeviceProvider.Instance.Exception -= Instance_Exception;
+				}
+				catch (Exception ex)
+				{
+					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				}
+				try
+				{
+					AsusDeviceProvider.Instance.Dispose();
+					AsusDeviceProvider.Instance.Exception -= Instance_Exception;
+				}
+				catch (Exception ex)
+				{
+					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				}
 				_surface.Exception -= Surface_Exception;
 				_surface.Dispose();
 				_surface = null;
@@ -108,11 +137,15 @@ namespace HueScreenAmbience.RGB
 				deviceMask |= RGBDeviceType.Mainboard;
 			if (_config.Model.RgbDeviceSettings.UseLightstrip)
 				deviceMask |= RGBDeviceType.LedStripe;
-			Console.WriteLine("Loading rgb devices...");
-			if (!CorsairDeviceProvider.Instance.IsInitialized)
-				CorsairDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
-			CorsairDeviceProvider.Instance.Exception += Instance_Exception;
-			_surface.Load(CorsairDeviceProvider.Instance, deviceMask, throwExceptions: true);
+			try
+			{
+				Console.WriteLine("Loading rgb devices...");
+				if (!CorsairDeviceProvider.Instance.IsInitialized)
+					CorsairDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+				CorsairDeviceProvider.Instance.Exception += Instance_Exception;
+				_surface.Load(CorsairDeviceProvider.Instance, deviceMask, throwExceptions: true);
+			}
+			catch { }
 
 			//razer sdk may not exist because it has to be in system directories.
 			try
@@ -124,15 +157,23 @@ namespace HueScreenAmbience.RGB
 			}
 			catch { }
 
-			if (!LogitechDeviceProvider.Instance.IsInitialized)
-				LogitechDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
-			LogitechDeviceProvider.Instance.Exception += Instance_Exception;
-			_surface.Load(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
+			try
+			{
+				if (!LogitechDeviceProvider.Instance.IsInitialized)
+					LogitechDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+				LogitechDeviceProvider.Instance.Exception += Instance_Exception;
+				_surface.Load(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
+			}
+			catch { }
 
-			if (!AsusDeviceProvider.Instance.IsInitialized)
-				AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
-			AsusDeviceProvider.Instance.Exception += Instance_Exception;
-			_surface.Load(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
+			try
+			{
+				if (!AsusDeviceProvider.Instance.IsInitialized)
+					AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+				AsusDeviceProvider.Instance.Exception += Instance_Exception;
+				_surface.Load(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
+			}
+			catch { }
 
 			_surface.AlignDevices();
 
@@ -221,6 +262,10 @@ namespace HueScreenAmbience.RGB
 					{
 						led.Color = color;
 					}
+					//if(device is AsusMainboardRGBDevice ab)
+					//{
+					//	ab.Update();
+					//}
 				}
 				//Console.WriteLine($"Keyboard calc time: {(DateTime.UtcNow - start).TotalMilliseconds}");
 

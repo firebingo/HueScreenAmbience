@@ -82,7 +82,7 @@ namespace HueScreenAmbience.NanoLeaf
 				}
 
 				//Flip points then bring them back into positive
-				if(_config.Model.NanoLeafSettings.FlipX)
+				if (_config.Model.NanoLeafSettings.FlipX)
 				{
 					foreach (var panel in _usePanels)
 					{

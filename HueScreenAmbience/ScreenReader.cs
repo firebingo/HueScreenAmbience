@@ -4,7 +4,6 @@ using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.NanoLeaf;
 using HueScreenAmbience.RGB;
 using LightsShared;
-using NanoLeafAPI;
 using System;
 using System.IO;
 using System.Threading;
@@ -296,17 +295,39 @@ namespace HueScreenAmbience
 			IsRunning = false;
 			if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
 			{
-				_ffmpegCapture.Stop();
-				_ffmpegCapture.Dispose();
+				try
+				{
+					_ffmpegCapture.Stop();
+					_ffmpegCapture.Dispose();
+				}
+				catch { }
 			}
 			else
 			{
-				_dxCapture.Dispose();
-				_rgbLighter?.Stop();
+				try
+				{
+					_dxCapture.Dispose();
+				}
+				catch { }
+				try
+				{
+					_rgbLighter?.Stop();
+				}
+				catch { }
 			}
-			if(_config.Model.NanoLeafSettings.UseNanoLeaf)
-				await _nanoLeafClient?.Stop();
-			_stripLighter?.Stop();
+			if (_config.Model.NanoLeafSettings.UseNanoLeaf)
+			{
+				try
+				{
+					await _nanoLeafClient?.Stop();
+				}
+				catch { }
+			}
+			try
+			{
+				_stripLighter?.Stop();
+			}
+			catch { }
 		}
 
 		public class ScreenDimensions

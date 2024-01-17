@@ -4,8 +4,6 @@ using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.NanoLeaf;
 using HueScreenAmbience.RGB;
 using LightsShared;
-using NanoLeafAPI;
-using NanoLeafAPI.Models;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
@@ -130,7 +128,7 @@ namespace HueScreenAmbience
 						_stripLighter.UpdateFromImage(_lstripImageMemStream, newWidth, newHeight, frame);
 					}));
 				}
-				if(_config.Model.NanoLeafSettings.UseNanoLeaf)
+				if (_config.Model.NanoLeafSettings.UseNanoLeaf)
 				{
 					_nanoLeafImageMemStream ??= new MemoryStream(newWidth * newHeight * 3);
 					_nanoLeafImageMemStream.Seek(0, SeekOrigin.Begin);
