@@ -2,6 +2,7 @@
 using LightsShared;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Device.Spi;
 using System.IO;
@@ -266,30 +267,24 @@ namespace LightStripClient
 
 			unsafe
 			{
-				byte[] readBuffer = new byte[sizeof(int)];
-				for (var i = 0; i < sizeof(int); ++i)
-				{
-					readBuffer[i] = (byte)_readStream.ReadByte();
-				}
+				byte[] readBuffer = ArrayPool<byte>.Shared.Rent(sizeof(int));
+				_readStream.Read(readBuffer, 0, sizeof(int));
 				header.LightServerVersion = BitConverter.ToInt32(readBuffer);
+				ArrayPool<byte>.Shared.Return(readBuffer);
 
-				readBuffer = new byte[sizeof(long)];
-				for (var i = 0; i < sizeof(long); ++i)
-				{
-					readBuffer[i] = (byte)_readStream.ReadByte();
-				}
+				readBuffer = ArrayPool<byte>.Shared.Rent(sizeof(long));
+				_readStream.Read(readBuffer, 0, sizeof(long));
 				header.FrameCount = BitConverter.ToInt64(readBuffer);
+				ArrayPool<byte>.Shared.Return(readBuffer);
 
 				header.SequenceCount = (byte)_readStream.ReadByte();
 
 				header.SequenceNumber = (byte)_readStream.ReadByte();
 
-				readBuffer = new byte[sizeof(int)];
-				for (var i = 0; i < sizeof(int); ++i)
-				{
-					readBuffer[i] = (byte)_readStream.ReadByte();
-				}
+				readBuffer = ArrayPool<byte>.Shared.Rent(sizeof(int));
+				_readStream.Read(readBuffer, 0, sizeof(int));
 				header.ColorByteCount = BitConverter.ToInt32(readBuffer);
+				ArrayPool<byte>.Shared.Return(readBuffer);
 			}
 
 			return header;
