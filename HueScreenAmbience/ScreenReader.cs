@@ -119,13 +119,13 @@ namespace HueScreenAmbience
 			{
 				if (_config.Model.ReadResolutionReduce > 1.0f)
 				{
-					newWidth = (int)Math.Floor(_config.Model.ImageRect.Value.Width / _config.Model.ReadResolutionReduce);
-					newHeight = (int)Math.Floor(_config.Model.ImageRect.Value.Height / _config.Model.ReadResolutionReduce);
+					newWidth = (uint)Math.Floor(_config.Model.ImageRect.Value.Width / _config.Model.ReadResolutionReduce);
+					newHeight = (uint)Math.Floor(_config.Model.ImageRect.Value.Height / _config.Model.ReadResolutionReduce);
 				}
 				else
 				{
-					newWidth = _config.Model.ImageRect.Value.Width;
-					newHeight = _config.Model.ImageRect.Value.Height;
+					newWidth = (uint)_config.Model.ImageRect.Value.Width;
+					newHeight = (uint)_config.Model.ImageRect.Value.Height;
 				}
 			}
 			var row = 0;
@@ -142,7 +142,7 @@ namespace HueScreenAmbience
 				var yMax = row == _config.Model.ZoneRows - 1
 					? newHeight
 					: (newHeight / (double)_config.Model.ZoneRows) * (row + 1);
-				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), newWidth * ScreenInfo.BitDepth, ScreenInfo.BitDepth, _zoneTotals, i);
+				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), (int)newWidth * ScreenInfo.BitDepth, ScreenInfo.BitDepth, _zoneTotals, i);
 				if (col == _config.Model.ZoneColumns - 1)
 					row += 1;
 			}
@@ -153,7 +153,7 @@ namespace HueScreenAmbience
 		{
 			if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
 			{
-				_ffmpegCapture = new FFMpegCapture.FFMpegCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.FfmpegCaptureSettings.InputWidth, _config.Model.FfmpegCaptureSettings.InputHeight,
+				_ffmpegCapture = new FFMpegCapture.FFMpegCapture((int)ScreenInfo.RealWidth, (int)ScreenInfo.RealHeight, _config.Model.FfmpegCaptureSettings.InputWidth, _config.Model.FfmpegCaptureSettings.InputHeight,
 					_config.Model.FfmpegCaptureSettings.FrameRate, _config.Model.FfmpegCaptureSettings.InputSource, _config.Model.FfmpegCaptureSettings.InputFormat, _config.Model.FfmpegCaptureSettings.InputPixelFormat,
 					_config.Model.FfmpegCaptureSettings.InputPixelFormatType, _config.Model.FfmpegCaptureSettings.InputFrameRate, _config.Model.FfmpegCaptureSettings.BufferMultiplier,
 					_config.Model.FfmpegCaptureSettings.ThreadQueueSize, _logger, _config.Model.FfmpegCaptureSettings.FfmpegStdError, _config.Model.FfmpegCaptureSettings.UseGpu);
@@ -177,25 +177,25 @@ namespace HueScreenAmbience
 			IsRunning = true;
 			var newWidth = ScreenInfo.Width;
 			var newHeight = ScreenInfo.Height;
-			var frameStream = new MemoryStream(ScreenInfo.RealWidth * ScreenInfo.RealHeight * ScreenInfo.BitDepth);
+			var frameStream = new MemoryStream((int)ScreenInfo.RealWidth * (int)ScreenInfo.RealHeight * ScreenInfo.BitDepth);
 			MemoryStream cropFrameStream = null;
 			if (_config.Model.ImageRect.HasValue)
 			{
 				cropFrameStream = new MemoryStream(_config.Model.ImageRect.Value.Width * _config.Model.ImageRect.Value.Height * ScreenInfo.BitDepth);
 				if (_config.Model.ReadResolutionReduce > 1.0f)
 				{
-					newWidth = (int)Math.Floor(_config.Model.ImageRect.Value.Width / _config.Model.ReadResolutionReduce);
-					newHeight = (int)Math.Floor(_config.Model.ImageRect.Value.Height / _config.Model.ReadResolutionReduce);
+					newWidth = (uint)Math.Floor(_config.Model.ImageRect.Value.Width / _config.Model.ReadResolutionReduce);
+					newHeight = (uint)Math.Floor(_config.Model.ImageRect.Value.Height / _config.Model.ReadResolutionReduce);
 				}
 				else
 				{
-					newWidth = _config.Model.ImageRect.Value.Width;
-					newHeight = _config.Model.ImageRect.Value.Height;
+					newWidth = (uint)_config.Model.ImageRect.Value.Width;
+					newHeight = (uint)_config.Model.ImageRect.Value.Height;
 				}
 			}
 			MemoryStream sizeFrameStream = null;
 			if (_config.Model.ReadResolutionReduce > 1.0f)
-				sizeFrameStream = new MemoryStream(newWidth * newHeight * ScreenInfo.BitDepth);
+				sizeFrameStream = new MemoryStream((int)newWidth * (int)newHeight * ScreenInfo.BitDepth);
 
 			do
 			{
@@ -236,7 +236,7 @@ namespace HueScreenAmbience
 					var captureTime = (DateTime.UtcNow - t).TotalMilliseconds;
 					t = DateTime.UtcNow;
 
-					BitmapProcessor.ReadBitmap(frameStream, ScreenInfo.RealWidth, ScreenInfo.RealHeight, newWidth, newHeight, _config.Model.ReadResolutionReduce,
+					BitmapProcessor.ReadBitmap(frameStream, (int)ScreenInfo.RealWidth, (int)ScreenInfo.RealHeight, (int)newWidth, (int)newHeight, _config.Model.ReadResolutionReduce,
 						_config.Model.ZoneRows, _config.Model.ZoneColumns, _zones, _zoneTotals, ScreenInfo.BitDepth, sizeFrameStream, cropFrameStream, _config.Model.ImageRect);
 
 					var readTime = (DateTime.UtcNow - t).TotalMilliseconds;
@@ -334,17 +334,17 @@ namespace HueScreenAmbience
 		{
 			public string Source;
 			public double Rate;
-			public int RealWidth;
-			public int RealHeight;
+			public uint RealWidth;
+			public uint RealHeight;
 			public float SizeReduction;
 			public int BitDepth = 4;
-			public int Width
+			public uint Width
 			{
-				get => SizeReduction == 0 ? RealWidth : (int)Math.Floor(RealWidth / SizeReduction);
+				get => SizeReduction == 0 ? RealWidth : (uint)Math.Floor(RealWidth / SizeReduction);
 			}
-			public int Height
+			public uint Height
 			{
-				get => SizeReduction == 0 ? RealHeight : (int)Math.Floor(RealHeight / SizeReduction);
+				get => SizeReduction == 0 ? RealHeight : (uint)Math.Floor(RealHeight / SizeReduction);
 			}
 		}
 

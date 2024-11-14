@@ -20,6 +20,7 @@ namespace HueScreenAmbience.Hue
 {
 	public class HueCore
 	{
+		private bool _isRunning = false;
 		private LocalHueApi _client = null;
 		private StreamingHueClient _streamClient = null;
 		private LocatedBridge _useBridge = null;
@@ -193,6 +194,7 @@ namespace HueScreenAmbience.Hue
 
 					_streamClient.ManualUpdate(_streamGroup);
 				}
+				_isRunning = true;
 			}
 			catch (Exception ex)
 			{
@@ -203,6 +205,9 @@ namespace HueScreenAmbience.Hue
 
 		public async Task OnStopReading()
 		{
+			if (!_isRunning)
+				return;
+
 			if (_config.Model.HueSettings.HueType == HueType.Basic && _client != null)
 			{
 				if (_config.Model.HueSettings.TurnLightOnIfOff)
@@ -234,6 +239,7 @@ namespace HueScreenAmbience.Hue
 				_streamClient = null;
 				await AutoConnectAttempt();
 			}
+			_isRunning = false;
 		}
 
 		public async Task ChangeLightColorBasic(Rgb24 c)

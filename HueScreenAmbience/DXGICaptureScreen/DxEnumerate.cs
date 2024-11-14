@@ -8,19 +8,19 @@ namespace HueScreenAmbience.DXGICaptureScreen
 {
 	public class DxEnumeratedAdapter
 	{
-		public int AdapterId { get; set; }
+		public uint AdapterId { get; set; }
 		public string Name { get; set; }
 	}
 
 	public class DxEnumeratedDisplay
 	{
-		public int OutputId { get; set; }
+		public uint OutputId { get; set; }
 		public string Name { get; set; }
-		public int Width { get; set; }
-		public int Height { get; set; }
+		public uint Width { get; set; }
+		public uint Height { get; set; }
 		public double RefreshRate { get; set; }
 		public string Format { get; set; }
-		public int Bpp { get; set; }
+		public uint Bpp { get; set; }
 		public string ColorSpace { get; set; }
 	}
 
@@ -32,7 +32,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			try
 			{
 				DXGI.CreateDXGIFactory2<IDXGIFactory7>(false, out var factory);
-				for (var i = 0; factory.EnumAdapterByGpuPreference(i, GpuPreference.Unspecified, out IDXGIAdapter1 adapter).Success; ++i)
+				for (uint i = 0; factory.EnumAdapterByGpuPreference(i, GpuPreference.Unspecified, out IDXGIAdapter1 adapter).Success; ++i)
 				{
 					if (adapter == null)
 						continue;
@@ -53,7 +53,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			return displays;
 		}
 
-		public static IDXGIAdapter1 GetAdapter1(int adapterId, IDXGIFactory7 factory)
+		public static IDXGIAdapter1 GetAdapter1(uint adapterId, IDXGIFactory7 factory)
 		{
 			if (factory.EnumAdapterByGpuPreference(adapterId, GpuPreference.Unspecified, out IDXGIAdapter1 adapter).Success && adapter is not null)
 				return adapter;
@@ -61,7 +61,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			return null;
 		}
 
-		public static IDXGIOutput GetOutput(int outputId, IDXGIAdapter1 adapter)
+		public static IDXGIOutput GetOutput(uint outputId, IDXGIAdapter1 adapter)
 		{
 			if (adapter.EnumOutputs(outputId, out IDXGIOutput output).Success && output is not null)
 				return output;
@@ -69,16 +69,16 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			return null;
 		}
 
-		public static List<DxEnumeratedDisplay> GetMonitors(int adapterId)
+		public static List<DxEnumeratedDisplay> GetMonitors(uint adapterId)
 		{
 			var displays = new List<DxEnumeratedDisplay>();
 			try
 			{
 				DXGI.CreateDXGIFactory2<IDXGIFactory7>(false, out var factory);
 				using var adapter = GetAdapter1(adapterId, factory);
-				D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, new FeatureLevel[] { FeatureLevel.Level_11_1 }, out var device);
+				D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, [FeatureLevel.Level_11_1], out var device);
 
-				for (var i = 0; adapter.EnumOutputs(i, out IDXGIOutput output).Success; ++i)
+				for (uint i = 0; adapter.EnumOutputs(i, out IDXGIOutput output).Success; ++i)
 				{
 					if (output == null)
 						continue;
@@ -109,7 +109,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			return displays;
 		}
 
-		public static DxEnumeratedDisplay GetMonitor(int adapterId, int id)
+		public static DxEnumeratedDisplay GetMonitor(uint adapterId, uint id)
 		{
 			DxEnumeratedDisplay display = null;
 			try

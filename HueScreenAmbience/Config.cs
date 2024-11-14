@@ -123,8 +123,8 @@ namespace HueScreenAmbience
 		public RGBDeviceSettings RgbDeviceSettings { get; set; } = new RGBDeviceSettings();
 		public FFMpegCaptureSettings FfmpegCaptureSettings { get; set; } = new FFMpegCaptureSettings();
 		public SocketSettings SocketSettings { get; set; } = new SocketSettings();
-		public int AdapterId { get; set; } = 0;
-		public int MonitorId { get; set; } = 0;
+		public uint AdapterId { get; set; } = 0;
+		public uint MonitorId { get; set; } = 0;
 		public int ZoneColumns { get; set; } = 1;
 		public int ZoneRows { get; set; } = 1;
 		public int ScreenReadFrameRate { get; set; } = 24;
@@ -222,8 +222,8 @@ namespace HueScreenAmbience
 	{
 		public bool UseFFMpeg { get; set; } = false;
 		public bool LightsLocal { get; set; } = false;
-		public int Width { get; set; } = 1280;
-		public int Height { get; set; } = 720;
+		public uint Width { get; set; } = 1280;
+		public uint Height { get; set; } = 720;
 		public int FrameRate { get; set; } = 18;
 		public int SkipFrames { get; set; } = 100;
 		public int InputWidth { get; set; } = 1280;

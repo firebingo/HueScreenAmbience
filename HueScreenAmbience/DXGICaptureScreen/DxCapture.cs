@@ -12,8 +12,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 {
 	public class DxCapture : IDisposable
 	{
-		private readonly int _width = 0;
-		private readonly int _height = 0;
+		private readonly uint _width = 0;
+		private readonly uint _height = 0;
 		private readonly IDXGIFactory7 _factory;
 		private readonly IDXGIAdapter1 _adapter;
 		private readonly ID3D11Device _device;
@@ -26,7 +26,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 
 		private bool _readingFrame = false;
 
-		public DxCapture(int width, int height, int adapter, int monitor, FileLogger logger)
+		public DxCapture(uint width, uint height, uint adapter, uint monitor, FileLogger logger)
 		{
 			try
 			{
@@ -36,7 +36,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 
 				DXGI.CreateDXGIFactory2<IDXGIFactory7>(false, out _factory);
 				_adapter = DxEnumerate.GetAdapter1(adapter, _factory);
-				D3D11.D3D11CreateDevice(_adapter, DriverType.Unknown, DeviceCreationFlags.None, new FeatureLevel[] { FeatureLevel.Level_11_1 }, out var device, out var context);
+				D3D11.D3D11CreateDevice(_adapter, DriverType.Unknown, DeviceCreationFlags.None, new FeatureLevel[] { FeatureLevel.Level_11_1 }, out var device, out ID3D11DeviceContext context);
 				_device = device;
 				_deviceContext = context;
 
@@ -100,8 +100,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 							for (int y = 0; y < _height; y++)
 							{
 								MemoryHelpers.CopyMemory(destPtr, sourcePtr, mapSource.RowPitch);
-								sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
-								destPtr = IntPtr.Add(destPtr, mapSource.RowPitch);
+								sourcePtr = IntPtr.Add(sourcePtr, (int)mapSource.RowPitch);
+								destPtr = IntPtr.Add(destPtr, (int)mapSource.RowPitch);
 							}
 						}
 					}

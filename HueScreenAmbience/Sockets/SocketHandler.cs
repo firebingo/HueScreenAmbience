@@ -44,9 +44,9 @@ namespace HueScreenAmbience.Sockets
 				if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.SslCertLocation) && File.Exists(_config.Model.SocketSettings.SslCertLocation))
 				{
 					if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.SslCertPassword))
-						cert = new X509Certificate2(_config.Model.SocketSettings.SslCertLocation, _config.Model.SocketSettings.SslCertPassword);
+						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.SslCertLocation, _config.Model.SocketSettings.SslCertPassword);
 					else
-						cert = new X509Certificate2(_config.Model.SocketSettings.SslCertLocation);
+						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.SslCertLocation, string.Empty);
 				}
 				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort, _config.Model.SocketSettings.AspnetConsoleLog, cert, _config.Model.SocketSettings.SslProtocol);
 				_socketServer.OnClientMessage += HandleClientCommand;
@@ -102,10 +102,10 @@ namespace HueScreenAmbience.Sockets
 								ScreenInfo = new ScreenInfo()
 								{
 									Id = _screen.ScreenInfo.Source,
-									RealHeight = _screen.ScreenInfo.RealHeight,
-									RealWidth = _screen.ScreenInfo.RealWidth,
-									Height = _screen.ScreenInfo.Height,
-									Width = _screen.ScreenInfo.Width,
+									RealHeight = (int)_screen.ScreenInfo.RealHeight,
+									RealWidth = (int)_screen.ScreenInfo.RealWidth,
+									Height = (int)_screen.ScreenInfo.Height,
+									Width = (int)_screen.ScreenInfo.Width,
 									Rate = _screen.ScreenInfo.Rate
 								}
 							}
