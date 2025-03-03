@@ -57,7 +57,7 @@ namespace HueScreenAmbience.Hue
 			if (_lastLightColors != null)
 				_lastLightColors.Clear();
 			else
-				_lastLightColors = new Dictionary<byte, Rgb24>();
+				_lastLightColors = [];
 			await AutoConnectAttempt();
 		}
 
@@ -102,7 +102,7 @@ namespace HueScreenAmbience.Hue
 
 		public static async Task<IEnumerable<LocatedBridge>> GetBridges()
 		{
-			IBridgeLocator locator = new HttpBridgeLocator();
+			var locator = new HttpBridgeLocator();
 			return await locator.LocateBridgesAsync(TimeSpan.FromSeconds(5));
 		}
 
@@ -310,9 +310,8 @@ namespace HueScreenAmbience.Hue
 					var r = Math.Floor(image.ReadByte() * _config.Model.HueSettings.ColorMultiplier);
 					var g = Math.Floor(image.ReadByte() * _config.Model.HueSettings.ColorMultiplier);
 					var b = Math.Floor(image.ReadByte() * _config.Model.HueSettings.ColorMultiplier);
-					if (_lastLightColors.ContainsKey(light.Id))
+					if (_lastLightColors.TryGetValue(light.Id, out var lastColor))
 					{
-						var lastColor = _lastLightColors[light.Id];
 						var blendAmount = 1.0f - _config.Model.HueSettings.BlendLastColorAmount;
 						if (blendAmount != 0.0f)
 						{

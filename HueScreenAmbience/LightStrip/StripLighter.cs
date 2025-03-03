@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Device.Spi;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -75,9 +74,9 @@ namespace HueScreenAmbience.LightStrip
 				if (_lights != null)
 					_lights.Clear();
 				else
-					_lights = new List<StripLighterLight>();
+					_lights = [];
 
-				if (_config.Model.LightStripSettings.Lights?.Any() ?? false)
+				if (_config.Model.LightStripSettings.Lights?.Count > 0)
 				{
 					foreach (var light in _config.Model.LightStripSettings.Lights)
 					{
@@ -114,8 +113,7 @@ namespace HueScreenAmbience.LightStrip
 				}
 				else
 				{
-					if (_lightClientSocket != null)
-						_lightClientSocket.Dispose();
+					_lightClientSocket?.Dispose();
 
 					_lightClientSocket = new Socket(_config.Model.LightStripSettings.RemoteAddressIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
 					_lightClientEndpoint = new IPEndPoint(_config.Model.LightStripSettings.RemoteAddressIp, _config.Model.LightStripSettings.RemotePort);
@@ -128,7 +126,7 @@ namespace HueScreenAmbience.LightStrip
 						}
 						_serializeStreams.Clear();
 					}
-					_serializeStreams = new Dictionary<byte, MemoryStream>();
+					_serializeStreams = [];
 					//each light takes 3 bytes for its color
 					_packetColorSize = _packetMaxSize - _packetHeaderSize;
 					_packetCount = (byte)Math.Ceiling((_lights.Count * _colorByteCount) / (double)(_packetColorSize));
@@ -213,7 +211,7 @@ namespace HueScreenAmbience.LightStrip
 
 				var start = DateTime.UtcNow;
 
-				if (!_lights?.Any() ?? true)
+				if (!(_lights?.Count > 0))
 					return;
 				if (_updating)
 					return;

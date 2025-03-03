@@ -6,7 +6,7 @@ namespace VideoFrameProcessor.ffmpeg
 	public class FFProbeModel
 	{
 		[JsonPropertyName("streams")]
-		public List<FFProbeStream> Streams { get; set; } = new List<FFProbeStream>();
+		public List<FFProbeStream> Streams { get; set; } = [];
 	}
 
 	public class FFProbeStream

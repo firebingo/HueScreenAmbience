@@ -137,7 +137,7 @@ namespace HueScreenAmbience
 				_socketServer.Stop(),
 				_core.StopScreenReading()
 			};
-			Task.WaitAll(tasks.ToArray(), 5000);
+			Task.WaitAll([.. tasks], 5000);
 		}
 
 		private IServiceProvider ConfigureServices(bool isHeadless)

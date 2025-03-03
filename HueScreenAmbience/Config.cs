@@ -205,8 +205,7 @@ namespace HueScreenAmbience
 		{
 			get
 			{
-				if (_remoteAddressIp == null)
-					_remoteAddressIp = IPAddress.Parse(RemoteAddress);
+				_remoteAddressIp ??= IPAddress.Parse(RemoteAddress);
 				return _remoteAddressIp;
 			}
 		}
@@ -215,7 +214,7 @@ namespace HueScreenAmbience
 		public float BlendLastColorAmount { get; set; } = 0.4f;
 		public float SaturateColors { get; set; } = 1.0f;
 		public int UpdateFrameRate { get; set; } = 24;
-		public List<SimplePointF> Lights { get; set; } = new List<SimplePointF>();
+		public List<SimplePointF> Lights { get; set; } = [];
 	}
 
 	public class FFMpegCaptureSettings
@@ -251,8 +250,7 @@ namespace HueScreenAmbience
 		{
 			get
 			{
-				if (_listenIp == null)
-					_listenIp = IPAddress.Parse(ListenAddress);
+				_listenIp ??= IPAddress.Parse(ListenAddress);
 				return _listenIp;
 			}
 		}
@@ -271,8 +269,7 @@ namespace HueScreenAmbience
 		{
 			get
 			{
-				if (_remoteAddressIp == null)
-					_remoteAddressIp = IPAddress.Parse(RemoteAddress);
+				_remoteAddressIp ??= IPAddress.Parse(RemoteAddress);
 				return _remoteAddressIp;
 			}
 		}

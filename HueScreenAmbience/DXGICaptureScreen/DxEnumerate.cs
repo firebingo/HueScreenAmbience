@@ -116,7 +116,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			{
 				DXGI.CreateDXGIFactory2<IDXGIFactory7>(false, out var factory);
 				using var adapter = GetAdapter1(adapterId, factory);
-				D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, new FeatureLevel[] { FeatureLevel.Level_11_1 }, out var device);
+				D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, [FeatureLevel.Level_11_1], out var device);
 				using var output = GetOutput(id, adapter);
 				if (output == null)
 					return null;

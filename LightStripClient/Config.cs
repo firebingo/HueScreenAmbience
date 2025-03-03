@@ -24,9 +24,7 @@ namespace LightStripClient
 			{
 				if (File.Exists("Data/Config.json"))
 				{
-					var readJson = JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText("Data/Config.json"), _jsonOptions);
-					if (readJson == null)
-						throw new Exception("Failed to read config");
+					var readJson = JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText("Data/Config.json"), _jsonOptions) ?? throw new Exception("Failed to read config");
 					_config = readJson;
 					ValidateConfig();
 					SaveConfig();
@@ -81,8 +79,7 @@ namespace LightStripClient
 			{
 				if (RemoteAddress == null)
 					return null;
-				if (_remoteAddressIp == null)
-					_remoteAddressIp = IPAddress.Parse(RemoteAddress);
+				_remoteAddressIp ??= IPAddress.Parse(RemoteAddress);
 				return _remoteAddressIp;
 			}
 		}
@@ -105,8 +102,7 @@ namespace LightStripClient
 		{
 			get
 			{
-				if (_listenIp == null)
-					_listenIp = IPAddress.Parse(ListenAddress);
+				_listenIp ??= IPAddress.Parse(ListenAddress);
 				return _listenIp;
 			}
 		}

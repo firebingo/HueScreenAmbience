@@ -38,7 +38,7 @@ namespace LightStripClient
 		private SpiDevice? _device;
 		private Ws2812b? _lightStrip;
 		private bool _running;
-		private byte[] _buffer = Array.Empty<byte>();
+		private byte[] _buffer = [];
 		private readonly MemoryStream _readStream;
 		private long _currentFrame = -1;
 		private byte _packetCount;
@@ -106,7 +106,7 @@ namespace LightStripClient
 
 			_buffer = new byte[_packetMaxSize];
 
-			_packets = new Dictionary<byte, List<Rgb24>>();
+			_packets = [];
 
 			var settings = new SpiConnectionSettings(0, 0)
 			{
@@ -176,7 +176,7 @@ namespace LightStripClient
 						_packets.Clear();
 						for (byte i = 0; i < _packetCount; ++i)
 						{
-							_packets.Add(i, new List<Rgb24>());
+							_packets.Add(i, []);
 						}
 					}
 					//If we get a previous frame just ignore it

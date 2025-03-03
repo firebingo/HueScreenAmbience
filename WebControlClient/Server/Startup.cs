@@ -29,7 +29,7 @@ namespace WebControlClient.Server
 			{
 				options.Providers.Add<GzipCompressionProvider>();
 				options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
-					new[] { "application/json", "text/css", "text/javascript", "font/woff2", "image/svg+xml" }
+					["application/json", "text/css", "text/javascript", "font/woff2", "image/svg+xml"]
 				);
 			});
 		}

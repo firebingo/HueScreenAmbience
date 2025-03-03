@@ -57,7 +57,7 @@ namespace LightsShared.Sockets
 			_cancelToken = _cancelSource.Token;
 			_connectedClients = new ConcurrentDictionary<Guid, WebSocket>();
 
-			_webHost = WebHost.CreateDefaultBuilder(Array.Empty<string>())
+			_webHost = WebHost.CreateDefaultBuilder([])
 				.UseKestrel((hostingContext, options) =>
 				{
 					var localendpoint = IPEndPoint.Parse($"127.0.0.1:{listenPort}");
@@ -206,7 +206,7 @@ namespace LightsShared.Sockets
 					bufferStream.SetLength(totalRead);
 					data = await readStream.ReadToEndAsync();
 
-					if (!data.StartsWith("{"))
+					if (!data.StartsWith('{'))
 					{
 						await socket.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "", _cancelToken);
 						try

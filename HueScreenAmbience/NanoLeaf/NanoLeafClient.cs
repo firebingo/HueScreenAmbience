@@ -12,7 +12,7 @@ namespace HueScreenAmbience.NanoLeaf
 {
 	public class NanoLeafClient : IAsyncDisposable
 	{
-		private NanoLeafController _controller { get; set; }
+		private NanoLeafController _controller;
 		private FileLogger _logger;
 		private Config _config;
 
@@ -52,7 +52,7 @@ namespace HueScreenAmbience.NanoLeaf
 
 				_frame = new ExtControlFrame()
 				{
-					Panels = new List<ExtControlPanel>()
+					Panels = []
 				};
 				float bigX = 0;
 				float bigY = 0;

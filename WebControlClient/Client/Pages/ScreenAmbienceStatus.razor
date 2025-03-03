@@ -166,6 +166,7 @@ else
 		var ports = await localStorage.GetItemAsStringAsync("saipport", _cancelSource.Token);
 		if (!string.IsNullOrWhiteSpace(ports))
 			PortValue = ports;
+		await InvokeAsync(StateHasChanged);
 		if (AutoConnect)
 			await OnConnectClick();
 	}

@@ -26,7 +26,7 @@ namespace HueScreenAmbience.RGB
 
 		public RGBLighter()
 		{
-			_colors = new int[] { 0, 0, 0 };
+			_colors = [0, 0, 0];
 		}
 
 		public void InstallServices(IServiceProvider _map)

@@ -111,7 +111,7 @@ namespace WebControlClient.Client.Sockets
 					bufferStream.SetLength(totalRead);
 					data = await readStream.ReadToEndAsync();
 
-					if (!data.StartsWith("{"))
+					if (!data.StartsWith('{'))
 					{
 						await _socket.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "", _cancelToken);
 						try
