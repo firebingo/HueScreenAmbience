@@ -29,7 +29,10 @@
     "colorChangeThreshold": 5, //Byte threshold to determine if key color should change. This helps memory pressure by possibly not having to change key very frame even if it is the same.
     "colorMultiplier": 1.0, //Multiply values sent to rgb device by this 0.0-2.0
     "keyboardResReduce": 4, //Reduces the sample size of the keyboard layout. This is for layouts from rgb.net that represent keys as larger rects.
-    "updateFrameRate": 60 //Can be used to throttle rate that rgb devices are allowed to update at
+    "updateFrameRate": 60, //Can be used to throttle rate that rgb devices are allowed to update at
+	"useOpenRGB": true, //Whether to use openrgb device provider instead of individual device apis. Requires openrgb to be installed. May help with some device sdks being bad and not working most of the time.
+    "openRGBPort": 6742, //Port for openrgb server
+    "openRGBAddress": "127.0.0.1" //IP for openrgb server
   },
   "ffmpegCaptureSettings": {
     "useFFMpeg": false, //Whether or not we are reading video input from ffmpeg. Requires ffmpeg to be in PATH.

@@ -4,6 +4,7 @@ using RGB.NET.Core;
 using RGB.NET.Devices.Asus;
 using RGB.NET.Devices.Corsair;
 using RGB.NET.Devices.Logitech;
+using RGB.NET.Devices.OpenRGB;
 using RGB.NET.Devices.Razer;
 using System;
 using System.IO;
@@ -137,43 +138,76 @@ namespace HueScreenAmbience.RGB
 				deviceMask |= RGBDeviceType.Mainboard;
 			if (_config.Model.RgbDeviceSettings.UseLightstrip)
 				deviceMask |= RGBDeviceType.LedStripe;
-			try
-			{
-				Console.WriteLine("Loading rgb devices...");
-				if (!CorsairDeviceProvider.Instance.IsInitialized)
-					CorsairDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
-				CorsairDeviceProvider.Instance.Exception += Instance_Exception;
-				_surface.Load(CorsairDeviceProvider.Instance, deviceMask, throwExceptions: true);
-			}
-			catch { }
 
-			//razer sdk may not exist because it has to be in system directories.
-			try
+			Console.WriteLine("Loading rgb devices...");
+			if (_config.Model.RgbDeviceSettings.UseOpenRGB)
 			{
-				if (!RazerDeviceProvider.Instance.IsInitialized)
-					RazerDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
-				RazerDeviceProvider.Instance.Exception += Instance_Exception;
-				_surface.Load(RazerDeviceProvider.Instance, deviceMask, throwExceptions: true);
+				try
+				{
+					if (!OpenRGBDeviceProvider.Instance.IsInitialized)
+					{
+						OpenRGBDeviceProvider.Instance.AddDeviceDefinition(new OpenRGBServerDefinition()
+						{
+							Port = 6742,
+							Ip = _config.Model.RgbDeviceSettings.OpenRGBIp.ToString(),
+							ClientName = "HueScreenAmbience"
+						});
+						OpenRGBDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+					}
+					//OpenRGBDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+					OpenRGBDeviceProvider.Instance.Exception += Instance_Exception;
+					_surface.Load(OpenRGBDeviceProvider.Instance, deviceMask, throwExceptions: true);
+				}
+				catch { }
 			}
-			catch { }
+			else
+			{
+				try
+				{
+					if (!CorsairDeviceProvider.Instance.IsInitialized)
+						CorsairDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+					CorsairDeviceProvider.Instance.Exception += Instance_Exception;
+					_surface.Load(CorsairDeviceProvider.Instance, deviceMask, throwExceptions: true);
+				}
+				catch { }
 
-			try
-			{
-				if (!LogitechDeviceProvider.Instance.IsInitialized)
-					LogitechDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
-				LogitechDeviceProvider.Instance.Exception += Instance_Exception;
-				_surface.Load(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
-			}
-			catch { }
+				//razer sdk may not exist because it has to be in system directories.
+				try
+				{
+					if (!RazerDeviceProvider.Instance.IsInitialized)
+						RazerDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+					RazerDeviceProvider.Instance.Exception += Instance_Exception;
+					_surface.Load(RazerDeviceProvider.Instance, deviceMask, throwExceptions: true);
+				}
+				catch { }
 
-			try
-			{
-				if (!AsusDeviceProvider.Instance.IsInitialized)
-					AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
-				AsusDeviceProvider.Instance.Exception += Instance_Exception;
-				_surface.Load(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
+				try
+				{
+					if (!LogitechDeviceProvider.Instance.IsInitialized)
+						LogitechDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+					LogitechDeviceProvider.Instance.Exception += Instance_Exception;
+					_surface.Load(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
+				}
+				catch { }
+
+				try
+				{
+					if (!AsusDeviceProvider.Instance.IsInitialized)
+						AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+					AsusDeviceProvider.Instance.Exception += Instance_Exception;
+					_surface.Load(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
+				}
+				catch { }
+
+				try
+				{
+					if (!AsusDeviceProvider.Instance.IsInitialized)
+						AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+					AsusDeviceProvider.Instance.Exception += Instance_Exception;
+					_surface.Load(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
+				}
+				catch { }
 			}
-			catch { }
 
 			_surface.AlignDevices();
 
@@ -247,12 +281,12 @@ namespace HueScreenAmbience.RGB
 						var lastColorB = key.Color.B * 255;
 						//Only set the key color if it has changed enough.
 						//This is to hopefully slow down the amount of allocations needed for the RGB.Net Color.
-						if (!(lastColorR >= r - _colorChangeThreshold && lastColorR <= r + _colorChangeThreshold &&
-							lastColorG >= g - _colorChangeThreshold && lastColorG <= g + _colorChangeThreshold &&
-							lastColorB >= b - _colorChangeThreshold && lastColorB <= b + _colorChangeThreshold))
-						{
-							key.Color = new Color(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
-						}
+						//if (!(lastColorR >= r - _colorChangeThreshold && lastColorR <= r + _colorChangeThreshold &&
+						//	lastColorG >= g - _colorChangeThreshold && lastColorG <= g + _colorChangeThreshold &&
+						//	lastColorB >= b - _colorChangeThreshold && lastColorB <= b + _colorChangeThreshold))
+						//{
+						key.Color = new Color(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
+						//}
 					}
 				}
 				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Mouse || x.DeviceInfo.DeviceType == RGBDeviceType.Mainboard || x.DeviceInfo.DeviceType == RGBDeviceType.LedStripe))

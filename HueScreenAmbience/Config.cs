@@ -92,6 +92,12 @@ namespace HueScreenAmbience
 			}
 			_ = _config.SocketSettings.ListenIp;
 
+			if (!IPAddress.TryParse(_config.RgbDeviceSettings.OpenRGBAddress, out _))
+			{
+				_config.RgbDeviceSettings.OpenRGBAddress = "127.0.0.1";
+			}
+			_ = _config.RgbDeviceSettings.OpenRGBIp;
+
 			for (var i = 0; i < _config.LightStripSettings.Lights.Count; ++i)
 			{
 				var x = Math.Clamp(_config.LightStripSettings.Lights[i].X, 0.0f, 1.0f);
@@ -181,6 +187,19 @@ namespace HueScreenAmbience
 		public byte ColorChangeThreshold { get; set; } = 5;
 		public int KeyboardResReduce { get; set; } = 4;
 		public int UpdateFrameRate { get; set; } = 60;
+		public bool UseOpenRGB { get; set; } = false;
+		public short OpenRGBPort { get; set; } = 6742;
+		public string OpenRGBAddress { get; set; } = "127.0.0.1";
+		private IPAddress _openRGBIp;
+		[JsonIgnore]
+		public IPAddress OpenRGBIp
+		{
+			get
+			{
+				_openRGBIp ??= IPAddress.Parse(OpenRGBAddress);
+				return _openRGBIp;
+			}
+		}
 	}
 
 	public struct SimplePointF
