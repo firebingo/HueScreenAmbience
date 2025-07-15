@@ -44,10 +44,10 @@ namespace WebControlClient.Server
 			}
 			else
 			{
+				app.UseResponseCompression();
 				app.UseExceptionHandler("/Error");
 			}
 
-			app.UseResponseCompression();
 			app.UseBlazorFrameworkFiles();
 			app.UseStaticFiles(new StaticFileOptions
 			{

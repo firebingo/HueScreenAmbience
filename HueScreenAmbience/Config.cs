@@ -273,8 +273,12 @@ namespace HueScreenAmbience
 				return _listenIp;
 			}
 		}
-		public string SslCertLocation { get; set; } = string.Empty;
-		public string SslCertPassword { get; set; } = string.Empty;
+		public string PfxCertLocation { get; set; } = string.Empty;
+		public string PfxCertPassword { get; set; } = string.Empty;
+		public string PemCertLocation { get; set; } = string.Empty;
+		public string PemCertPrivateKeyLocation { get; set; } = string.Empty;
+		public string PemCertPassword { get; set; } = string.Empty;
+		public bool PkcsCertHack { get; set; } = true;
 		public SslProtocols SslProtocol { get; set; } = SslProtocols.Tls12 | SslProtocols.Tls13;
 	}
 

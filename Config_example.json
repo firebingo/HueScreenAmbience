@@ -58,8 +58,12 @@
     "aspnetConsoleLog": false, //Enable logging of websocket server to console
     "listenPort": 34780, //Port for server to listen on.
     "listenAddress": "0.0.0.0", //Ip to bind server to.
-    "sslCertLocation": "cert.pfx", //Path to a certificate to enable ssl for websocket connect. Optional.
-    "sslCertPassword": "password", //Password for certificate. Optional.
+    "pfxCertLocation": "cert.pfx", //Path to a certificate to enable ssl for websocket connect. Optional.
+    "pfxCertPassword": "password", //Password for certificate. Optional.
+	"pemCertLocation": "cert.pem", //Path to a certificate to enable ssl for websocket connect. Optional.
+	"pemCertPrivateKeyLocation": "privkey.pem", //Path to a certificate to enable ssl for websocket connect. Optional.
+    "pemCertPassword": "password", //Password for certificate. Optional.
+	"pkcsCertHack": true, //Necessary on windows for pem certs. https://stackoverflow.com/questions/79215915/why-does-my-asp-net-core-app-fail-to-load-pem-certificates-without-creating-an-e
     "sslProtocol": 15360 //Do not change unless you know how the SslProtocols enum works. Default value corrosponds to Tls12 and Tls13.
   },
   "adapterId": 0, //The id of the graphics adapter to use.
