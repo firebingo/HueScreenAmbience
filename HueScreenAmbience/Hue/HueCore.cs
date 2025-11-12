@@ -79,7 +79,7 @@ namespace HueScreenAmbience.Hue
 				IsConnectedToBridge = true;
 				if (_config.Model.HueSettings.RoomId != Guid.Empty)
 				{
-					var rooms = await _client.GetRoomsAsync();
+					var rooms = await _client.Room.GetAllAsync();
 					if (rooms != null && rooms.Data.Count != 0)
 					{
 						UseRoom = rooms.Data.FirstOrDefault(x => x.Id == _config.Model.HueSettings.RoomId);
@@ -135,9 +135,9 @@ namespace HueScreenAmbience.Hue
 		public async Task<IEnumerable<Room>> GetRooms()
 		{
 			if (_config.Model.HueSettings.HueType == HueType.Basic)
-				return (await _client.GetRoomsAsync()).Data;
+				return (await _client.Room.GetAllAsync()).Data;
 			else
-				return (await _streamClient.LocalHueApi.GetRoomsAsync()).Data;
+				return (await _streamClient.LocalHueApi.Room.GetAllAsync()).Data;
 		}
 
 		public async Task<IEnumerable<EntertainmentConfiguration>> GetEntertainmentGroups()
@@ -176,7 +176,7 @@ namespace HueScreenAmbience.Hue
 					{
 						var command = new UpdateGroupedLight();
 						command.TurnOn();
-						await _client.UpdateGroupedLightAsync(_useRoomGroupLight, command);
+						await _client.GroupedLight.UpdateAsync(_useRoomGroupLight, command);
 					}
 				}
 				else if (_config.Model.HueSettings.HueType == HueType.Entertainment)
@@ -214,7 +214,7 @@ namespace HueScreenAmbience.Hue
 				{
 					var command = new UpdateGroupedLight();
 					command.TurnOff();
-					await _client.UpdateGroupedLightAsync(_useRoomGroupLight, command);
+					await _client.GroupedLight.UpdateAsync(_useRoomGroupLight, command);
 				}
 			}
 			else if (_config.Model.HueSettings.HueType == HueType.Entertainment && _streamClient != null)
@@ -277,7 +277,7 @@ namespace HueScreenAmbience.Hue
 			_sendingCommand = true;
 			try
 			{
-				await _client.UpdateGroupedLightAsync(_useRoomGroupLight, command);
+				await _client.GroupedLight.UpdateAsync(_useRoomGroupLight, command);
 			}
 			catch (Exception ex)
 			{

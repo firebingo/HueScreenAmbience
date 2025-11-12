@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -28,7 +29,7 @@ namespace LightsShared.Sockets
 
 	public class SocketServer
 	{
-		private IWebHost _webHost;
+		private IHost _webHost;
 		private Thread _cleanThread;
 		private ConcurrentDictionary<Guid, WebSocket> _connectedClients;
 		private CancellationTokenSource _cancelSource;
@@ -57,34 +58,38 @@ namespace LightsShared.Sockets
 			_cancelToken = _cancelSource.Token;
 			_connectedClients = new ConcurrentDictionary<Guid, WebSocket>();
 
-			_webHost = WebHost.CreateDefaultBuilder([])
-				.UseKestrel((hostingContext, options) =>
+			var builder = Host.CreateDefaultBuilder()
+				.ConfigureWebHostDefaults(builder =>
 				{
-					var localendpoint = IPEndPoint.Parse($"127.0.0.1:{listenPort}");
-					var endpoint = IPEndPoint.Parse($"{listenIp}:{listenPort}");
-					options.Listen(localendpoint);
-					if (cert != null)
+					builder
+					.UseKestrel((hostingContext, options) =>
 					{
-						options.ConfigureHttpsDefaults(o =>
+						var localendpoint = IPEndPoint.Parse($"127.0.0.1:{listenPort}");
+						var endpoint = IPEndPoint.Parse($"{listenIp}:{listenPort}");
+						options.Listen(localendpoint);
+						if (cert != null)
 						{
-							o.SslProtocols = sslProtocol;
-						});
-						options.Listen(endpoint, listenOptions =>
-						{
-							listenOptions.UseHttps(cert);
-						});
-					}
-					else
-						options.Listen(endpoint);
-				})
-				.UseEnvironment("Development")
-				.Configure((app) =>
-				{
-					app.UseWebSockets(new WebSocketOptions()
+							options.ConfigureHttpsDefaults(o =>
+							{
+								o.SslProtocols = sslProtocol;
+							});
+							options.Listen(endpoint, listenOptions =>
+							{
+								listenOptions.UseHttps(cert);
+							});
+						}
+						else
+							options.Listen(endpoint);
+					})
+					.UseEnvironment("Development")
+					.Configure((app) =>
 					{
-						KeepAliveInterval = TimeSpan.FromSeconds(30)
+						app.UseWebSockets(new WebSocketOptions()
+						{
+							KeepAliveInterval = TimeSpan.FromSeconds(30)
+						});
+						app.Use(OnHttpRequest);
 					});
-					app.Use(OnHttpRequest);
 				})
 				.ConfigureLogging((context, logging) =>
 				{
@@ -94,8 +99,9 @@ namespace LightsShared.Sockets
 						logging.AddConsole();
 						logging.AddDebug();
 					}
-				})
-				.Build();
+				});
+			_webHost = builder.Build();
+
 			_cleanThread = new Thread(SocketCleanLoop)
 			{
 				Name = "Socket Hub Client Clean Thread",
