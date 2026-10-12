@@ -1,12 +1,14 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.Intrinsics;
 
 namespace BitmapZoneProcessor
 {
 	public static class BitmapProcessor
 	{
 		public static void ReadBitmap(MemoryStream image, int width, int height, int newWidth, int newHeight, float resReduce, int zoneRows, int zoneColumns, PixelZone[] zones,
-			PixelZonesTotals zoneTotals, int bitDepth = 4, MemoryStream resizeStream = null, MemoryStream cropStream = null, SixLabors.ImageSharp.Rectangle? bitmapRect = null)
+			PixelZonesTotals zoneTotals, int bitDepth = 4, MemoryStream resizeStream = null, MemoryStream cropStream = null, SixLabors.ImageSharp.Rectangle? bitmapRect = null,
+			bool useIntrinsics = false)
 		{
 			var start = DateTime.UtcNow;
 			//Reset zones
@@ -42,27 +44,84 @@ namespace BitmapZoneProcessor
 			{
 				var t1 = DateTime.UtcNow;
 
-				fixed (byte* p = &(useImage.GetBuffer()[0]))
+				fixed (byte* p = useImage.GetBuffer())
 				{
-					long pos = 0;
-					byte* posP;
-					fixed (PixelZone* z = &zones[0])
+					long totB = 0;
+					long totG = 0;
+					long totR = 0;
+					byte* rowPtr;
+					byte* rowEnd;
+
+					for (var i = 0; i < zones.Length; ++i)
 					{
-						for (var i = 0; i < zones.Length; ++i)
+						var zone = zones[i];
+						var ranges = zone.PixelRanges;
+						var zoneHeight = zone.Height;
+						totB = totG = totR = 0;
+
+						if (bitDepth == 4 && Vector128.IsHardwareAccelerated && useIntrinsics)
 						{
-							for (var j = 0; j < z[i].Height; ++j)
+							for (var j = 0; j < zoneHeight; ++j)
 							{
-								for (var k = 0; k < z[i].PixelRanges[j].Length; k += bitDepth)
+								var range = ranges[j];
+								rowPtr = p + range.Start;
+								rowEnd = rowPtr + range.Length;
+
+								//SIMD accumulator vector containing 4x uint32 channels: [TotalB, TotalG, TotalR, TotalA].
+								var vTotals = Vector128<uint>.Zero;
+
+								//Process 4 pixels (16 contiguous bytes: [B0, G0, R0, A0, B1, G1, R1, A1, B2, G2, R2, A2, B3, G3, R3, A3]) per iteration.
+								while (rowPtr + 16 <= rowEnd)
 								{
-									//Colors are in BGRA32 format
-									pos = z[i].PixelRanges[j].Start + k;
-									posP = &p[pos];
-									*z[i].TotalB += posP[0];
-									*z[i].TotalG += posP[1];
-									*z[i].TotalR += posP[2];
+									//Load 16 bytes into a 128-bit SIMD register.
+									var vBytes = Vector128.Load(rowPtr);
+
+									//Widen 8-bit bytes to 16-bit ushorts to prevent overflow during addition.
+									var (low16, high16) = Vector128.Widen(vBytes);
+									//Further widen 16-bit ushorts to 32-bit uints for accumulation.
+									var (low32_0, low32_1) = Vector128.Widen(low16);
+									var (high32_0, high32_1) = Vector128.Widen(high16);
+
+									//Sum all 4 pixels into the SIMD channel accumulator.
+									vTotals += (low32_0 + low32_1) + (high32_0 + high32_1);
+									rowPtr += 16;
+								}
+
+								//Extract accumulated Blue, Green, and Red totals (elements 0, 1, 2) from SIMD register into scalar registers.
+								totB += vTotals.GetElement(0);
+								totG += vTotals.GetElement(1);
+								totR += vTotals.GetElement(2);
+
+								//Process any leftover pixels (fewer than 4 pixels / 16 bytes) at the end of the row.
+								while (rowPtr < rowEnd)
+								{
+									totB += rowPtr[0];
+									totG += rowPtr[1];
+									totR += rowPtr[2];
+									rowPtr += 4;
 								}
 							}
 						}
+						else
+						{
+							for (var j = 0; j < zoneHeight; ++j)
+							{
+								var range = ranges[j];
+								rowPtr = p + range.Start;
+								rowEnd = rowPtr + range.Length;
+								while (rowPtr < rowEnd)
+								{
+									totB += rowPtr[0];
+									totG += rowPtr[1];
+									totR += rowPtr[2];
+									rowPtr += bitDepth;
+								}
+							}
+						}
+						
+						*zone.TotalB += (int)totB;
+						*zone.TotalG += (int)totG;
+						*zone.TotalR += (int)totR;
 					}
 				}
 

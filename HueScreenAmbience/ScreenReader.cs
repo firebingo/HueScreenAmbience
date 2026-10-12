@@ -174,27 +174,28 @@ namespace HueScreenAmbience
 
 		public async Task ReadScreenLoopDx()
 		{
+			var config = _config.Model;
 			IsRunning = true;
 			var newWidth = ScreenInfo.Width;
 			var newHeight = ScreenInfo.Height;
 			var frameStream = new MemoryStream((int)ScreenInfo.RealWidth * (int)ScreenInfo.RealHeight * ScreenInfo.BitDepth);
 			MemoryStream cropFrameStream = null;
-			if (_config.Model.ImageRect.HasValue)
+			if (config.ImageRect.HasValue)
 			{
-				cropFrameStream = new MemoryStream(_config.Model.ImageRect.Value.Width * _config.Model.ImageRect.Value.Height * ScreenInfo.BitDepth);
-				if (_config.Model.ReadResolutionReduce > 1.0f)
+				cropFrameStream = new MemoryStream(config.ImageRect.Value.Width * config.ImageRect.Value.Height * ScreenInfo.BitDepth);
+				if (config.ReadResolutionReduce > 1.0f)
 				{
-					newWidth = (uint)Math.Floor(_config.Model.ImageRect.Value.Width / _config.Model.ReadResolutionReduce);
-					newHeight = (uint)Math.Floor(_config.Model.ImageRect.Value.Height / _config.Model.ReadResolutionReduce);
+					newWidth = (uint)Math.Floor(config.ImageRect.Value.Width / config.ReadResolutionReduce);
+					newHeight = (uint)Math.Floor(config.ImageRect.Value.Height / config.ReadResolutionReduce);
 				}
 				else
 				{
-					newWidth = (uint)_config.Model.ImageRect.Value.Width;
-					newHeight = (uint)_config.Model.ImageRect.Value.Height;
+					newWidth = (uint)config.ImageRect.Value.Width;
+					newHeight = (uint)config.ImageRect.Value.Height;
 				}
 			}
 			MemoryStream sizeFrameStream = null;
-			if (_config.Model.ReadResolutionReduce > 1.0f)
+			if (config.ReadResolutionReduce > 1.0f)
 				sizeFrameStream = new MemoryStream((int)newWidth * (int)newHeight * ScreenInfo.BitDepth);
 
 			do
@@ -204,7 +205,7 @@ namespace HueScreenAmbience
 				{
 					var updatedFrame = false;
 					var t = start;
-					if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
+					if (config.FfmpegCaptureSettings.UseFFMpeg)
 						updatedFrame = _ffmpegCapture.GetFrame(frameStream);
 					else
 						updatedFrame = _dxCapture.GetFrame(frameStream);
@@ -212,7 +213,7 @@ namespace HueScreenAmbience
 
 					//If we are on pi and have skip frames set wait until we are past the frame number before we start trying to read.
 					// This is done because initialization for the hdmi connection can take a bit before we get real frames back.
-					if (_config.Model.FfmpegCaptureSettings.UseFFMpeg && _frame < _config.Model.FfmpegCaptureSettings.SkipFrames)
+					if (config.FfmpegCaptureSettings.UseFFMpeg && _frame < config.FfmpegCaptureSettings.SkipFrames)
 					{
 						_lastPostReadTime = DateTime.UtcNow;
 						await _zoneProcesser.PostRead(_zones, _zoneTotals, _frame);
@@ -236,8 +237,8 @@ namespace HueScreenAmbience
 					var captureTime = (DateTime.UtcNow - t).TotalMilliseconds;
 					t = DateTime.UtcNow;
 
-					BitmapProcessor.ReadBitmap(frameStream, (int)ScreenInfo.RealWidth, (int)ScreenInfo.RealHeight, (int)newWidth, (int)newHeight, _config.Model.ReadResolutionReduce,
-						_config.Model.ZoneRows, _config.Model.ZoneColumns, _zones, _zoneTotals, ScreenInfo.BitDepth, sizeFrameStream, cropFrameStream, _config.Model.ImageRect);
+					BitmapProcessor.ReadBitmap(frameStream, (int)ScreenInfo.RealWidth, (int)ScreenInfo.RealHeight, (int)newWidth, (int)newHeight, config.ReadResolutionReduce,
+						config.ZoneRows, config.ZoneColumns, _zones, _zoneTotals, ScreenInfo.BitDepth, sizeFrameStream, cropFrameStream, config.ImageRect, config.IntrinsicsEnabled);
 
 					var readTime = (DateTime.UtcNow - t).TotalMilliseconds;
 
@@ -255,7 +256,7 @@ namespace HueScreenAmbience
 					_averageValues[_averageIter] = dt.TotalMilliseconds;
 					//if (dt.TotalMilliseconds > 25)
 					//{
-					if (_config.Model.DebugTimings)
+					if (config.DebugTimings)
 					{
 						Console.WriteLine($"Capture Time:     {captureTime}");
 						Console.WriteLine($"Read Time:        {readTime}");
