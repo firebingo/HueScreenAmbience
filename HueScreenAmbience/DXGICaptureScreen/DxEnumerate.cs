@@ -8,20 +8,20 @@ namespace HueScreenAmbience.DXGICaptureScreen
 {
 	public class DxEnumeratedAdapter
 	{
-		public uint AdapterId { get; set; }
-		public string Name { get; set; }
+		public uint AdapterId { get; init; }
+		public string Name { get; init; }
 	}
 
 	public class DxEnumeratedDisplay
 	{
-		public uint OutputId { get; set; }
-		public string Name { get; set; }
-		public uint Width { get; set; }
-		public uint Height { get; set; }
-		public double RefreshRate { get; set; }
-		public string Format { get; set; }
-		public uint Bpp { get; set; }
-		public string ColorSpace { get; set; }
+		public uint OutputId { get; init; }
+		public string Name { get; init; }
+		public uint Width { get; init; }
+		public uint Height { get; init; }
+		public decimal RefreshRate { get; init; }
+		public string Format { get; init; }
+		public uint Bpp { get; init; }
+		public string ColorSpace { get; init; }
 	}
 
 	public static class DxEnumerate
@@ -33,7 +33,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			{
 				DXGI.CreateDXGIFactory2<IDXGIFactory7>(false, out var factory);
 				for (uint i = 0;
-				     factory.EnumAdapterByGpuPreference(i, GpuPreference.Unspecified, out IDXGIAdapter1 adapter)
+				     factory!.EnumAdapterByGpuPreference(i, GpuPreference.Unspecified, out IDXGIAdapter1 adapter)
 				     .Success;
 				     ++i)
 				{
@@ -91,14 +91,14 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						continue;
 
 					using var output6 = output.QueryInterface<IDXGIOutput6>();
-					using var duplicatedOutput = output6.DuplicateOutput1(device, 1, new[] { Format.B8G8R8A8_UNorm });
+					using var duplicatedOutput = output6.DuplicateOutput1(device!, 1, new[] { Format.B8G8R8A8_UNorm });
 					displays.Add(new DxEnumeratedDisplay
 					{
 						OutputId = i,
 						Name = output.Description.DeviceName,
 						Width = duplicatedOutput.Description.ModeDescription.Width,
 						Height = duplicatedOutput.Description.ModeDescription.Height,
-						RefreshRate = duplicatedOutput.Description.ModeDescription.RefreshRate.Numerator /
+						RefreshRate = (decimal)duplicatedOutput.Description.ModeDescription.RefreshRate.Numerator /
 						              duplicatedOutput.Description.ModeDescription.RefreshRate.Denominator,
 						Format = duplicatedOutput.Description.ModeDescription.Format.ToString(),
 						Bpp = output6.Description1.BitsPerColor,
@@ -107,8 +107,8 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					output.Dispose();
 				}
 
-				factory.Dispose();
-				device.Dispose();
+				factory!.Dispose();
+				device!.Dispose();
 			}
 			catch (Exception ex)
 			{
@@ -131,21 +131,21 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				if (output == null)
 					return null;
 				using var output6 = output.QueryInterface<IDXGIOutput6>();
-				using var duplicatedOutput = output6.DuplicateOutput1(device, 1, new[] { Format.B8G8R8A8_UNorm });
+				using var duplicatedOutput = output6.DuplicateOutput1(device!, 1, new[] { Format.B8G8R8A8_UNorm });
 				display = new DxEnumeratedDisplay
 				{
 					OutputId = id,
 					Name = output.Description.DeviceName,
 					Width = duplicatedOutput.Description.ModeDescription.Width,
 					Height = duplicatedOutput.Description.ModeDescription.Height,
-					RefreshRate = duplicatedOutput.Description.ModeDescription.RefreshRate.Numerator /
+					RefreshRate = (decimal)duplicatedOutput.Description.ModeDescription.RefreshRate.Numerator /
 					              duplicatedOutput.Description.ModeDescription.RefreshRate.Denominator,
 					Format = duplicatedOutput.Description.ModeDescription.Format.ToString(),
 					Bpp = output6.Description1.BitsPerColor,
 					ColorSpace = output6.Description1.ColorSpace.ToString()
 				};
 
-				factory.Dispose();
+				factory!.Dispose();
 				device.Dispose();
 			}
 			catch (Exception ex)

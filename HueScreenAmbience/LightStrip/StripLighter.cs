@@ -39,7 +39,7 @@ namespace HueScreenAmbience.LightStrip
 			1 + //packet sequence number
 			Marshal.SizeOf(0); //color byte count
 
-		public static readonly int LightServerVersion = 0;
+		private static readonly int _lightServerVersion = 0;
 		private readonly Rgb24 _resetColor = new Rgb24(0, 0, 0);
 		private Config _config;
 		private byte _currentStream;
@@ -84,10 +84,10 @@ namespace HueScreenAmbience.LightStrip
 			GC.SuppressFinalize(this);
 		}
 
-		public void InstallServices(IServiceProvider _map)
+		public void InstallServices(IServiceProvider map)
 		{
-			_config = _map.GetService(typeof(Config)) as Config;
-			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
+			_config = map.GetService(typeof(Config)) as Config;
+			_logger = map.GetService(typeof(FileLogger)) as FileLogger;
 		}
 
 		public void Start()
@@ -172,7 +172,7 @@ namespace HueScreenAmbience.LightStrip
 			}
 			catch (Exception ex)
 			{
-				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 			}
 		}
 
@@ -231,7 +231,7 @@ namespace HueScreenAmbience.LightStrip
 			}
 			catch (Exception ex)
 			{
-				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 			}
 
 			_updating = false;
@@ -261,13 +261,13 @@ namespace HueScreenAmbience.LightStrip
 			}
 			catch (Exception ex)
 			{
-				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 			}
 
 			_updating = false;
 		}
 
-		public void UpdateImageServer(MemoryStream image, int width, int height, long frame)
+		private void UpdateImageServer(MemoryStream image, int width, int height, long frame)
 		{
 			SerializeLightMetadata(frame);
 			foreach (var light in _lights)
@@ -289,7 +289,7 @@ namespace HueScreenAmbience.LightStrip
 			_lastChangeTime = DateTime.UtcNow;
 		}
 
-		public void UpdateImagePi(MemoryStream image, int width, int height)
+		private void UpdateImagePi(MemoryStream image, int width, int height)
 		{
 			for (var i = 0; i < _lights.Count; ++i)
 			{
@@ -300,7 +300,7 @@ namespace HueScreenAmbience.LightStrip
 			_lightStrip?.Update();
 		}
 
-		public void UpdateLightColor(MemoryStream image, StripLighterLight light, int width, int height)
+		private void UpdateLightColor(MemoryStream image, StripLighterLight light, int width, int height)
 		{
 			int x;
 			int y;
@@ -350,16 +350,12 @@ namespace HueScreenAmbience.LightStrip
 		{
 			var lightByteTotal = _lights.Count * _colorByteCount;
 			var lightBytesLeft = lightByteTotal;
-			//Make sure we are splitting on 3 byte rgb boundry so we dont get bytes for the same color in different packets
+			//Make sure we are splitting on 3 byte rgb boundary so we don't get bytes for the same color in different packets
 			var packetMod = _packetColorSize - _packetColorSize % _colorByteCount;
 			foreach (var stream in _serializeStreams)
 			{
-				var colorBytes = 0;
-				if (lightBytesLeft > packetMod)
-					colorBytes = packetMod;
-				else
-					colorBytes = lightBytesLeft;
-				stream.Value.Write(BitConverter.GetBytes(LightServerVersion));
+				var colorBytes = lightBytesLeft > packetMod ? packetMod : lightBytesLeft;
+				stream.Value.Write(BitConverter.GetBytes(_lightServerVersion));
 				stream.Value.Write(BitConverter.GetBytes(frame));
 				stream.Value.WriteByte(_packetCount);
 				stream.Value.WriteByte(stream.Key);

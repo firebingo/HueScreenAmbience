@@ -34,11 +34,11 @@
 
 	public class ScreenInfo
 	{
-		public string Id { get; set; }
-		public int Width { get; set; }
-		public int Height { get; set; }
-		public int RealWidth { get; set; }
-		public int RealHeight { get; set; }
-		public double Rate { get; set; }
+		public string Id { get; init; }
+		public int Width { get; init; }
+		public int Height { get; init; }
+		public int RealWidth { get; init; }
+		public int RealHeight { get; init; }
+		public decimal Rate { get; init; }
 	}
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -54,8 +55,9 @@ namespace LightStripCalculator
 				//Pushes in the coordinates of the lights by an amount so they are not sampling the very edge of the screen.
 				var borderDecrease = 1.0f;
 				var borderInS = commandLine["border_decrease"];
-				if (!string.IsNullOrWhiteSpace(borderInS) && (!float.TryParse(borderInS, out borderDecrease) ||
-				                                              borderDecrease <= 0.0f || borderDecrease > 1.0f))
+				if (!string.IsNullOrWhiteSpace(borderInS) &&
+				    (!float.TryParse(borderInS, CultureInfo.InvariantCulture, out borderDecrease) ||
+				     borderDecrease <= 0.0f || borderDecrease > 1.0f))
 				{
 					Console.WriteLine("invalid border decrease");
 					Console.ReadLine();
@@ -147,13 +149,12 @@ namespace LightStripCalculator
 
 				if (File.Exists("lightlist.json"))
 					File.Delete("lightlist.json");
-				using var fileOut = File.OpenWrite("lightlist.json");
+				await using var fileOut = File.OpenWrite("lightlist.json");
 				var list = dictFloat.OrderBy(x => x.Key).Select(x => x.Value).ToList();
 				await JsonSerializer.SerializeAsync(fileOut, list, new JsonSerializerOptions
 				{
 					WriteIndented = true
 				});
-				fileOut.Close();
 				Console.WriteLine($"List written to {Path.GetFullPath("lightlist.json")}");
 				Console.ReadLine();
 			}

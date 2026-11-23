@@ -34,11 +34,13 @@ namespace BitmapZoneProcessor
 			// and that resizeStream is the correct length for these values.
 			//Reducing the resolution of the desktop capture takes time but it saves a lot of time on reading the image
 			//TODO: Investigate just skipping this and reading the bitmap as a function of the reduce resolution value as it would
-			// effectivly produce the same result as point sampling to a lower resolution first. This could save memory pressure from
+			// effectively produce the same result as point sampling to a lower resolution first. This could save memory pressure from
 			// rescaling the image. But it may make determining what zone to add values to more complicated.
 			if (width != newWidth || height != newHeight)
+			{
 				useImage = ImageHandler.ResizeImage(useImage, width, height, resizeStream, newWidth, newHeight,
 					pixelFormat: PixelFormat.Bgr32);
+			}
 			//Console.WriteLine($"Resize Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 
 			//System.Threading.Tasks.Task.Run(() => ImageHandler.WriteImageToFile(useImage, newWidth, newHeight, $"Images/{DateTime.Now.Ticks.ToString().PadLeft(5, '0')}.png", pixelFormat: PixelFormat.Bgr32));
@@ -51,9 +53,9 @@ namespace BitmapZoneProcessor
 
 				fixed (byte* p = useImage.GetBuffer())
 				{
-					long totB = 0;
-					long totG = 0;
-					long totR = 0;
+					long totB;
+					long totG;
+					long totR;
 					byte* rowPtr;
 					byte* rowEnd;
 

@@ -36,8 +36,7 @@ namespace BitmapZoneProcessor
 			Rectangle rect, PixelFormat pixelFormat = PixelFormat.Rgba32)
 		{
 			image.Seek(0, SeekOrigin.Begin);
-			Image simage = null;
-			simage = pixelFormat switch
+			Image simage = pixelFormat switch
 			{
 				PixelFormat.Rgb24 => Image.LoadPixelData<Rgb24>(image.GetBuffer(), width, height),
 				PixelFormat.Bgr32 => Image.LoadPixelData<Bgra32>(image.GetBuffer(), width, height),
@@ -162,7 +161,7 @@ namespace BitmapZoneProcessor
 			return newImage;
 		}
 
-		public static IResampler ImageFilterToResampler(ImageFilter filter)
+		private static IResampler ImageFilterToResampler(ImageFilter filter)
 		{
 			return filter switch
 			{

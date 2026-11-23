@@ -20,7 +20,7 @@ namespace HueScreenAmbience.Hue
 {
 	public class HueCore
 	{
-		private const string _appName = "HUEScreenAmbience";
+		private const string AppName = "HUEScreenAmbience";
 		private CancellationTokenSource _cancelSource;
 		private CancellationToken _cancelToken;
 		private LocalHueApi _client;
@@ -61,7 +61,7 @@ namespace HueScreenAmbience.Hue
 			await AutoConnectAttempt();
 		}
 
-		public async Task<bool> AutoConnectAttempt()
+		private async Task<bool> AutoConnectAttempt()
 		{
 			if (string.IsNullOrWhiteSpace(_config.Model.HueSettings.AppKey) ||
 			    string.IsNullOrWhiteSpace(_config.Model.HueSettings.Ip))
@@ -72,7 +72,7 @@ namespace HueScreenAmbience.Hue
 			return IsConnectedToBridge;
 		}
 
-		public async Task ConnectToBridge()
+		private async Task ConnectToBridge()
 		{
 			if (_config.Model.HueSettings.HueType == HueType.Basic)
 			{
@@ -81,10 +81,11 @@ namespace HueScreenAmbience.Hue
 				if (_config.Model.HueSettings.RoomId != Guid.Empty)
 				{
 					var rooms = await _client.Room.GetAllAsync();
-					if (rooms != null && rooms.Data.Count != 0)
+					if (rooms.Data.Count != 0)
 					{
 						UseRoom = rooms.Data.FirstOrDefault(x => x.Id == _config.Model.HueSettings.RoomId);
-						_useRoomGroupLight = UseRoom.Services.FirstOrDefault(x => x.Rtype == "grouped_light").Rid;
+						_useRoomGroupLight = UseRoom?.Services?.FirstOrDefault(x => x.Rtype == "grouped_light")?.Rid ??
+						                     Guid.Empty;
 					}
 				}
 			}
@@ -96,7 +97,7 @@ namespace HueScreenAmbience.Hue
 				if (_config.Model.HueSettings.RoomId != Guid.Empty)
 				{
 					var rooms = await _streamClient.LocalHueApi.GetEntertainmentGroups();
-					if (rooms != null && rooms.Data.Count != 0)
+					if (rooms.Data.Count != 0)
 						UseEntertainment = rooms.Data.FirstOrDefault(x => x.Id == _config.Model.HueSettings.RoomId);
 				}
 			}
@@ -115,8 +116,8 @@ namespace HueScreenAmbience.Hue
 
 		public async Task RegisterBridge(string name)
 		{
-			var appKey = await LocalHueApi.RegisterAsync(_useBridge.IpAddress, _appName, name);
-			_client = new LocalHueApi(_useBridge.IpAddress, appKey.Username);
+			var appKey = await LocalHueApi.RegisterAsync(_useBridge.IpAddress, AppName, name);
+			_client = new LocalHueApi(_useBridge.IpAddress, appKey!.Username);
 			_config.Model.HueSettings.Ip = _useBridge.IpAddress;
 			_config.Model.HueSettings.AppKey = appKey.Username;
 			_config.SaveConfig();
@@ -125,8 +126,9 @@ namespace HueScreenAmbience.Hue
 
 		public async Task RegisterBridgeEntertainment(string name)
 		{
-			var appKey = await LocalHueApi.RegisterAsync(_useBridge.IpAddress, _appName, name, true);
-			_streamClient = new StreamingHueClient(_useBridge.IpAddress, appKey.Username, appKey.StreamingClientKey);
+			var appKey = await LocalHueApi.RegisterAsync(_useBridge.IpAddress, AppName, name, true);
+			_streamClient =
+				new StreamingHueClient(_useBridge.IpAddress, appKey!.Username!, appKey!.StreamingClientKey!);
 			_config.Model.HueSettings.Ip = _useBridge.IpAddress;
 			_config.Model.HueSettings.AppKey = appKey.Username;
 			_config.Model.HueSettings.EntertainmentKey = appKey.StreamingClientKey;
@@ -151,7 +153,7 @@ namespace HueScreenAmbience.Hue
 		public void SetRoom(Room room)
 		{
 			UseRoom = room;
-			_useRoomGroupLight = UseRoom.Services.FirstOrDefault(x => x.Rtype == "grouped_light").Rid;
+			_useRoomGroupLight = UseRoom.Services?.FirstOrDefault(x => x.Rtype == "grouped_light")?.Rid ?? Guid.Empty;
 			UseEntertainment = null;
 			_config.Model.HueSettings.RoomId = UseRoom.Id;
 			_config.SaveConfig();

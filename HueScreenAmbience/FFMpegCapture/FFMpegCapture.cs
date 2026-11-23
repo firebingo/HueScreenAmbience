@@ -9,22 +9,22 @@ namespace HueScreenAmbience.FFMpegCapture
 {
 	public unsafe class FFMpegCapture : IDisposable
 	{
-		private readonly int _bufferMultiplier = 4;
+		private readonly int _bufferMultiplier;
 		private readonly bool _ffmpegOutput;
 		private readonly int _frameLength;
 		private readonly int _frameRate;
 		private readonly int _height;
-		private readonly string _inputFormat = "";
+		private readonly string _inputFormat;
 		private readonly int _inputFrameRate;
 		private readonly int _inputHeight;
-		private readonly string _inputPixelFormat = "";
-		private readonly string _inputPixelFormatType = "";
-		private readonly string _inputSource = "";
+		private readonly string _inputPixelFormat;
+		private readonly string _inputPixelFormatType;
+		private readonly string _inputSource;
 		private readonly int _inputWidth;
 
 		private readonly FileLogger _logger;
 		private readonly byte[] _presentBuffer;
-		private readonly int _threadQueueSize = 128;
+		private readonly int _threadQueueSize;
 		private readonly bool _useGpu;
 		private readonly int _width;
 		private Process _ffmpegProcess;
@@ -81,7 +81,7 @@ namespace HueScreenAmbience.FFMpegCapture
 		//The read/write loop for this is triple buffered.
 		// The ffmpeg read process writes and exchanges between _readyBuffer and _progressBuffer.
 		// The read frame process reads and exchanges between _presentBuffer and _readyBuffer.
-		// _readlock is a int being treated as a bool and controlled through Interlocked.
+		// _readlock is an int being treated as a bool and controlled through Interlocked.
 		// When ffmpeg finishes reading a frame it sets it to 0.
 		// When a frame is requested it reads _readLock and sets it to 1. If the value it read was 0 it means
 		//  it is safe to read the frame from the current buffer then swap again.
@@ -99,12 +99,9 @@ namespace HueScreenAmbience.FFMpegCapture
 				_ffmpegProcess.StartInfo.RedirectStandardOutput = true;
 				_ffmpegProcess.StartInfo.FileName = "ffmpeg";
 				//rgb32 and bgr32 are flipped for some reason??
-				if (_useGpu)
-					_ffmpegProcess.StartInfo.Arguments =
-						$"-hwaccel cuda -hwaccel_output_format cuda -f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -vf \"format=nv12,hwupload,scale_cuda=w={_width}:h={_height},hwdownload,format=nv12\" -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -thread_queue_size {_threadQueueSize} -f rawvideo pipe:1";
-				else
-					_ffmpegProcess.StartInfo.Arguments =
-						$"-f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -s {_width}x{_height} -thread_queue_size {_threadQueueSize} -f rawvideo pipe:1";
+				_ffmpegProcess.StartInfo.Arguments = _useGpu
+					? $"-hwaccel cuda -hwaccel_output_format cuda -f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -vf \"format=nv12,hwupload,scale_cuda=w={_width}:h={_height},hwdownload,format=nv12\" -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -thread_queue_size {_threadQueueSize} -f rawvideo pipe:1"
+					: $"-f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -s {_width}x{_height} -thread_queue_size {_threadQueueSize} -f rawvideo pipe:1";
 
 				_isRunning = true;
 				_ffmpegThread = new Thread(ReadLoop);
@@ -116,8 +113,10 @@ namespace HueScreenAmbience.FFMpegCapture
 				if (!_ffmpegOutput)
 				{
 					_ffmpegStdErrorStream = _ffmpegProcess.StandardError.BaseStream;
-					_ffmpegStdErrorThread = new Thread(ReadStdErrorLoop);
-					_ffmpegStdErrorThread.Name = "FFMPEG StdError Thread";
+					_ffmpegStdErrorThread = new Thread(ReadStdErrorLoop)
+					{
+						Name = "FFMPEG StdError Thread"
+					};
 					_ffmpegStdErrorThread.Start();
 				}
 
@@ -129,7 +128,7 @@ namespace HueScreenAmbience.FFMpegCapture
 			}
 		}
 
-		public void ReadLoop()
+		private void ReadLoop()
 		{
 			var rowSize = _width * 4;
 			var buffer = new byte[rowSize];
@@ -162,25 +161,23 @@ namespace HueScreenAmbience.FFMpegCapture
 					else
 					{
 						bytesRead = _ffmpegStream.Read(buffer, 0, buffer.Length);
-						if (bytesRead != 0)
+						if (bytesRead == 0) continue;
+						fixed (byte* bufferPtr = &buffer[0])
 						{
-							fixed (byte* bufferPtr = &buffer[0])
+							var j = frameBytesRead;
+							for (var i = 0; i < bytesRead; ++i)
 							{
-								var j = frameBytesRead;
-								for (var i = 0; i < bytesRead; ++i)
-								{
-									framePtr[j++] = bufferPtr[i];
-								}
+								framePtr[j++] = bufferPtr[i];
 							}
-
-							frameBytesRead += bytesRead;
 						}
+
+						frameBytesRead += bytesRead;
 					}
 				}
 			} while (_isRunning);
 		}
 
-		public void ReadStdErrorLoop()
+		private void ReadStdErrorLoop()
 		{
 			var buffer = new byte[8192];
 			do
@@ -214,12 +211,10 @@ namespace HueScreenAmbience.FFMpegCapture
 		public void Stop()
 		{
 			_isRunning = false;
-			if (_ffmpegProcess != null)
-			{
-				_ffmpegProcess.StandardOutput.Close();
-				if (!_ffmpegOutput)
-					_ffmpegProcess.StandardError.Close();
-			}
+			if (_ffmpegProcess == null) return;
+			_ffmpegProcess.StandardOutput.Close();
+			if (!_ffmpegOutput)
+				_ffmpegProcess.StandardError.Close();
 		}
 	}
 }

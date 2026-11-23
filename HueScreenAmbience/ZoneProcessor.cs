@@ -28,20 +28,19 @@ namespace HueScreenAmbience
 		private MemoryStream _smallImageMemStream;
 		private StripLighter _stripLighter;
 
-		public void InstallServices(IServiceProvider _map)
+		public void InstallServices(IServiceProvider map)
 		{
-			_config = _map.GetService(typeof(Config)) as Config;
-			_hueClient = _map.GetService(typeof(HueCore)) as HueCore;
-			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
-			if (_config.Model.RgbDeviceSettings.UseDevices)
-				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
-			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
-			_nanoLeafClient = _map.GetService(typeof(NanoLeafClient)) as NanoLeafClient;
+			_config = map.GetService(typeof(Config)) as Config;
+			_hueClient = map.GetService(typeof(HueCore)) as HueCore;
+			_logger = map.GetService(typeof(FileLogger)) as FileLogger;
+			if (_config!.Model.RgbDeviceSettings.UseDevices)
+				_rgbLighter = map.GetService(typeof(RGBLighter)) as RGBLighter;
+			_stripLighter = map.GetService(typeof(StripLighter)) as StripLighter;
+			_nanoLeafClient = map.GetService(typeof(NanoLeafClient)) as NanoLeafClient;
 		}
 
 		public async Task PostRead(PixelZone[] zones, PixelZonesTotals zoneTotals, long frame)
 		{
-			(MemoryStream image, MemoryStream blurImage) images = (null, null);
 			var columns = zones.OrderByDescending(x => x.Column).First().Column + 1;
 			var rows = zones.OrderByDescending(x => x.Row).First().Row + 1;
 
@@ -70,7 +69,7 @@ namespace HueScreenAmbience
 
 				time = DateTime.UtcNow;
 
-				images = BitmapProcessor.PreparePostBitmap(zones, columns, rows, newWidth, newHeight,
+				var images = BitmapProcessor.PreparePostBitmap(zones, columns, rows, newWidth, newHeight,
 					_config.Model.ZoneProcessSettings.ResizeFilter, _config.Model.ZoneProcessSettings.ResizeSigma,
 					_smallImageMemStream, _blurImageMemStream);
 

@@ -22,7 +22,6 @@ namespace HueScreenAmbience.DXGICaptureScreen
 		private readonly IDXGIOutput _output;
 		private readonly IDXGIOutput6 _output6;
 		private readonly ID3D11Texture2D _screenTexture;
-		private readonly uint _width;
 
 		private bool _readingFrame;
 
@@ -31,7 +30,6 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			try
 			{
 				_logger = logger;
-				_width = width;
 				_height = height;
 
 				DXGI.CreateDXGIFactory2(false, out _factory);
@@ -50,7 +48,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 					CPUAccessFlags = CpuAccessFlags.Read | CpuAccessFlags.Write,
 					BindFlags = BindFlags.None,
 					Format = Format.B8G8R8A8_UNorm,
-					Width = _width,
+					Width = width,
 					Height = _height,
 					MiscFlags = ResourceOptionFlags.None,
 					MipLevels = 1,
@@ -101,7 +99,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 							_deviceContext.CopyResource(_screenTexture, screenTexture2D);
 						else
 						{
-							screenResource?.Dispose();
+							screenResource.Dispose();
 							_duplicatedOutput?.ReleaseFrame();
 							return false;
 						}

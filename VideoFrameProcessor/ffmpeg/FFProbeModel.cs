@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace VideoFrameProcessor.ffmpeg
@@ -30,8 +31,8 @@ namespace VideoFrameProcessor.ffmpeg
 				if (!_frameRate.HasValue && RFrameRate != null)
 				{
 					var s = RFrameRate.Split("/");
-					var d1 = decimal.Parse(s[0]);
-					var d2 = decimal.Parse(s[1]);
+					var d1 = decimal.Parse(s[0], CultureInfo.InvariantCulture);
+					var d2 = decimal.Parse(s[1], CultureInfo.InvariantCulture);
 					_frameRate = d1 / d2;
 				}
 
@@ -52,8 +53,8 @@ namespace VideoFrameProcessor.ffmpeg
 				if (!_durationSeconds.HasValue && TimeBase != null)
 				{
 					var s = TimeBase.Split("/");
-					var d1 = decimal.Parse(s[0]);
-					var d2 = decimal.Parse(s[1]);
+					var d1 = decimal.Parse(s[0], CultureInfo.InvariantCulture);
+					var d2 = decimal.Parse(s[1], CultureInfo.InvariantCulture);
 					_durationSeconds = d1 / d2 * DurationTs;
 				}
 

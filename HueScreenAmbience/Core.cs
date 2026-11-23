@@ -34,11 +34,9 @@ namespace HueScreenAmbience
 		{
 			try
 			{
-				var bridgeIPs = await HueCore.GetBridges();
-				if (!bridgeIPs?.Any() ?? false)
+				var bridgeIPs = (await HueCore.GetBridges())?.ToList();
+				if (bridgeIPs == null || bridgeIPs.Count == 0)
 					return false;
-
-				var bridges = bridgeIPs.ToList();
 
 				var validInput = false;
 				do
@@ -46,7 +44,7 @@ namespace HueScreenAmbience
 					Console.Clear();
 					Console.WriteLine("Found Bridges:");
 					var i = 1;
-					foreach (var b in bridges)
+					foreach (var b in bridgeIPs)
 					{
 						Console.WriteLine($"{i++}: ip:{b.IpAddress} id:{b.BridgeId}");
 					}
@@ -54,38 +52,35 @@ namespace HueScreenAmbience
 
 					Console.WriteLine("Input a bridge(#) to connect to: ");
 					var read = Console.ReadLine();
-					var readInt = -1;
-					if (int.TryParse(read, out readInt))
+					if (!int.TryParse(read, out var readInt)) continue;
+					if (readInt > bridgeIPs.Count || readInt < 1)
+						continue;
+					validInput = true;
+					_hueClient.SetBridge(bridgeIPs[readInt - 1]);
+					var nameValid = false;
+					do
 					{
-						if (readInt > bridges.Count || readInt < 1)
-							continue;
-						validInput = true;
-						_hueClient.SetBridge(bridges[readInt - 1]);
-						var nameValid = false;
-						do
+						try
 						{
-							try
-							{
-								Console.Clear();
-								Console.WriteLine(
-									"Input Device Name and press Link Button on HUE Bridge before hitting enter: ");
-								var deviceName = Console.ReadLine().Trim();
-								if (string.IsNullOrWhiteSpace(deviceName) || deviceName.Length > 19 ||
-								    deviceName.Contains(' '))
-									continue;
-								nameValid = true;
-								if (_config.Model.HueSettings.HueType == HueType.Basic)
-									await _hueClient.RegisterBridge(deviceName);
-								else
-									await _hueClient.RegisterBridgeEntertainment(deviceName);
-							}
-							catch (Exception ex)
-							{
-								Console.WriteLine(ex.Message);
-								Console.ReadLine();
-							}
-						} while (!nameValid);
-					}
+							Console.Clear();
+							Console.WriteLine(
+								"Input Device Name and press Link Button on HUE Bridge before hitting enter: ");
+							var deviceName = Console.ReadLine()?.Trim();
+							if (string.IsNullOrWhiteSpace(deviceName) || deviceName.Length > 19 ||
+							    deviceName.Contains(' '))
+								continue;
+							nameValid = true;
+							if (_config.Model.HueSettings.HueType == HueType.Basic)
+								await _hueClient.RegisterBridge(deviceName);
+							else
+								await _hueClient.RegisterBridgeEntertainment(deviceName);
+						}
+						catch (Exception ex)
+						{
+							Console.WriteLine(ex.Message);
+							Console.ReadLine();
+						}
+					} while (!nameValid);
 				} while (!validInput);
 
 				return true;
@@ -128,9 +123,9 @@ namespace HueScreenAmbience
 			if (!_hueClient.IsConnectedToBridge)
 				return false;
 
-			var groups = await _hueClient.GetRooms();
+			var groups = (await _hueClient.GetRooms())?.ToList();
 
-			if (!groups?.Any() ?? true)
+			if (groups == null || groups.Count == 0)
 			{
 				Console.WriteLine("No rooms defined on bridge. Please use another HUE app to define a room.");
 				Console.ReadLine();
@@ -145,18 +140,16 @@ namespace HueScreenAmbience
 				var i = 1;
 				foreach (var r in groups)
 				{
-					Console.WriteLine($"{i++}: Name: {r.Metadata.Name}");
+					Console.WriteLine($"{i++}: Name: {r.Metadata?.Name}");
 				}
 
 				Console.WriteLine("Input a room(#) to connect to: ");
 				var read = Console.ReadLine();
-				if (int.TryParse(read, out var readInt))
-				{
-					if (readInt > groups.Count() || readInt < 1)
-						continue;
-					validInput = true;
-					_hueClient.SetRoom(groups.ElementAt(readInt - 1));
-				}
+				if (!int.TryParse(read, out var readInt)) continue;
+				if (readInt > groups.Count || readInt < 1)
+					continue;
+				validInput = true;
+				_hueClient.SetRoom(groups.ElementAt(readInt - 1));
 			} while (!validInput);
 
 			return true;
@@ -167,9 +160,9 @@ namespace HueScreenAmbience
 			if (!_hueClient.IsConnectedToBridge)
 				return false;
 
-			var groups = await _hueClient.GetEntertainmentGroups();
+			var groups = (await _hueClient.GetEntertainmentGroups())?.ToList();
 
-			if (!groups?.Any() ?? true)
+			if (groups == null || groups.Count == 0)
 			{
 				Console.WriteLine(
 					"No entertainment groups defined on bridge. Please use another HUE app to define a group.");
@@ -185,18 +178,16 @@ namespace HueScreenAmbience
 				var i = 1;
 				foreach (var r in groups)
 				{
-					Console.WriteLine($"{i++}: Name: {r.Metadata.Name}");
+					Console.WriteLine($"{i++}: Name: {r.Metadata?.Name}");
 				}
 
 				Console.WriteLine("Input a group(#) to connect to: ");
 				var read = Console.ReadLine();
-				if (int.TryParse(read, out var readInt))
-				{
-					if (readInt > groups.Count() || readInt < 1)
-						continue;
-					validInput = true;
-					_hueClient.SetEntertainmentRoom(groups.ElementAt(readInt - 1));
-				}
+				if (!int.TryParse(read, out var readInt)) continue;
+				if (readInt > groups.Count || readInt < 1)
+					continue;
+				validInput = true;
+				_hueClient.SetEntertainmentRoom(groups.ElementAt(readInt - 1));
 			} while (!validInput);
 
 			return true;
@@ -307,8 +298,8 @@ namespace HueScreenAmbience
 #if ANYCPU
 #else
 			//This should prevent windows from going to sleep as entering idle or sleep state seems to break several things.
-			var res = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS |
-			                                             WindowsApi.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
+			_ = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS |
+			                                       WindowsApi.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
 #endif
 
 			await _screen.InitScreenLoop();
@@ -325,7 +316,7 @@ namespace HueScreenAmbience
 #if ANYCPU
 #else
 			//Allow windows to sleep again
-			var res = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS);
+			_ = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS);
 #endif
 			await _screen.StopScreenLoop();
 

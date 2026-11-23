@@ -3,7 +3,7 @@
         <div class="title-bar">
             <div class="title-bar-text">@Title</div>
             <div class="title-bar-controls">
-                <button hidden="@HideClose" @onclick="(() => OnClose?.Invoke())" aria-label="Close"></button>
+                <button hidden="@HideClose" @onclick="() => OnClose?.Invoke()" aria-label="Close"></button>
             </div>
         </div>
         <div class="window-body">
@@ -20,8 +20,10 @@
                         case ModalType.Warning:
                             <img src="/images/IconWarning.png"/>
                             break;
-                        default:
+                        case ModalType.None:
                             break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
                 }
                 <p>@Body</p>
@@ -46,22 +48,19 @@
     [Parameter]
     public bool Open
     {
-        get { return _open; }
+        get => _open;
         set
         {
             _open = value;
-            if (_open)
+            if (!_open) return;
+            Buttons ??= [];
+            if (Buttons.Count == 0)
             {
-                if (Buttons == null)
-                    Buttons = new List<ModalButton>();
-                if (Buttons.Count == 0)
+                Buttons.Add(new ModalButton
                 {
-                    Buttons.Add(new ModalButton()
-                    {
-                        Text = "Ok",
-                        OnClick = OnClose
-                    });
-                }
+                    Text = "Ok",
+                    OnClick = OnClose
+                });
             }
         }
     }
@@ -76,10 +75,10 @@
     public ModalType Type { get; set; } = ModalType.None;
 
     [Parameter]
-    public bool HideClose { get; set; } = false;
+    public bool HideClose { get; set; }
 
     [Parameter]
-    public List<ModalButton> Buttons { get; set; } = null;
+    public List<ModalButton> Buttons { get; set; }
 
     [Parameter]
     public Action OnClose { get; set; }

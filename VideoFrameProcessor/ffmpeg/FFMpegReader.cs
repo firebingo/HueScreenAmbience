@@ -23,7 +23,6 @@ namespace VideoFrameProcessor.ffmpeg
 			using var frame = new MemoryStream(frameLength);
 			var frameTasks = new List<Task>();
 			var frameBytesRead = 0;
-			var bytesRead = 0;
 			do
 			{
 				while (frameTasks.Count >= config.Model.FrameConcurrency)
@@ -43,7 +42,7 @@ namespace VideoFrameProcessor.ffmpeg
 
 				if (frameBytesRead + config.Model.BufferSize > frameLength)
 				{
-					bytesRead = stream.Read(buffer, 0, frameLength - frameBytesRead);
+					_ = stream.Read(buffer, 0, frameLength - frameBytesRead);
 					frame.Write(buffer);
 					var frameProcessStream = new MemoryStream(frameLength);
 					frame.Seek(0, SeekOrigin.Begin);
@@ -55,12 +54,10 @@ namespace VideoFrameProcessor.ffmpeg
 				}
 				else
 				{
-					bytesRead = stream.Read(buffer, 0, buffer.Length);
-					if (bytesRead != 0)
-					{
-						frameBytesRead += bytesRead;
-						frame.Write(buffer);
-					}
+					var bytesRead = stream.Read(buffer, 0, buffer.Length);
+					if (bytesRead == 0) continue;
+					frameBytesRead += bytesRead;
+					frame.Write(buffer);
 				}
 			} while (!p.HasExited);
 

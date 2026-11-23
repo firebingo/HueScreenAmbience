@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
 using System.Security.Authentication;
@@ -22,8 +22,8 @@ namespace LightsShared.Sockets
 {
 	public class SocketMessageEventArgs
 	{
-		public Guid ClientId { get; set; }
-		public ClientMessage Message { get; set; }
+		public Guid ClientId { get; init; }
+		public ClientMessage Message { get; init; }
 	}
 
 	public class SocketServer
@@ -90,11 +90,9 @@ namespace LightsShared.Sockets
 				.ConfigureLogging((context, logging) =>
 				{
 					logging.ClearProviders();
-					if (log)
-					{
-						logging.AddConsole();
-						logging.AddDebug();
-					}
+					if (!log) return;
+					logging.AddConsole();
+					logging.AddDebug();
 				});
 			_webHost = builder.Build();
 
@@ -107,7 +105,7 @@ namespace LightsShared.Sockets
 			_cleanThread.Start();
 		}
 
-		public async Task OnHttpRequest(HttpContext context, Func<Task> next)
+		private async Task OnHttpRequest(HttpContext context, Func<Task> next)
 		{
 			if (context.WebSockets.IsWebSocketRequest)
 			{
@@ -131,19 +129,19 @@ namespace LightsShared.Sockets
 				}
 			}
 			else
-				await next?.Invoke();
+			{
+				if (next != null)
+					await next.Invoke();
+			}
 		}
 
-		public void SocketCleanLoop()
+		private void SocketCleanLoop()
 		{
 			do
 			{
-				var removeClients = new List<Guid>();
-				foreach (var client in _connectedClients)
-				{
-					if (client.Value.State == WebSocketState.Closed || client.Value.State == WebSocketState.Aborted)
-						removeClients.Add(client.Key);
-				}
+				var removeClients = (from client in _connectedClients
+					where client.Value.State is WebSocketState.Closed or WebSocketState.Aborted
+					select client.Key).ToList();
 
 				foreach (var r in removeClients)
 				{
@@ -156,19 +154,18 @@ namespace LightsShared.Sockets
 			} while (!_cancelToken.IsCancellationRequested);
 		}
 
-		public async Task SocketClientLoop(Guid clientId)
+		private async Task SocketClientLoop(Guid clientId)
 		{
 			using var bufferStream = new MemoryStream(4096);
 			using var readStream = new StreamReader(bufferStream, Encoding.UTF8);
 			var buffer = new byte[4096];
-			var data = string.Empty;
 			do
 			{
 				try
 				{
 					if (!_connectedClients.TryGetValue(clientId, out var socket))
 						break;
-					if (socket.State == WebSocketState.Closed || socket.State == WebSocketState.Aborted)
+					if (socket.State is WebSocketState.Closed or WebSocketState.Aborted)
 					{
 						_connectedClients.TryRemove(clientId, out _);
 						break;
@@ -191,19 +188,19 @@ namespace LightsShared.Sockets
 						{
 							receiveResult = await socket.ReceiveAsync(buffer, _cancelToken);
 							totalRead += receiveResult.Count;
-							await bufferStream.WriteAsync(buffer, 0, receiveResult.Count);
+							await bufferStream.WriteAsync(buffer, 0, receiveResult.Count, _cancelToken);
 						} while (receiveResult.EndOfMessage);
 					}
 					else
 					{
 						totalRead += receiveResult.Count;
-						await bufferStream.WriteAsync(buffer, 0, receiveResult.Count);
+						await bufferStream.WriteAsync(buffer, 0, receiveResult.Count, _cancelToken);
 					}
 
 					bufferStream.Seek(0, SeekOrigin.Begin);
 					//Since the memory stream is reused trim it to the actual length of bytes read.
 					bufferStream.SetLength(totalRead);
-					data = await readStream.ReadToEndAsync();
+					var data = await readStream.ReadToEndAsync(_cancelToken);
 
 					if (!data.StartsWith('{'))
 					{
@@ -219,25 +216,21 @@ namespace LightsShared.Sockets
 					}
 
 					var model = JsonSerializer.Deserialize<ClientMessage>(data, DefaultJsonOptions.JsonOptions);
-					var invokeList = new List<Task>();
 					var eventArgs = new SocketMessageEventArgs
 					{
 						ClientId = clientId,
 						Message = model
 					};
-					foreach (var i in OnClientMessage.GetInvocationList())
-					{
-						invokeList.Add(((OnClientMessageEventHandler)i)(this, eventArgs));
-					}
-
-					await Task.WhenAll(invokeList);
+					var invocations = OnClientMessage?.GetInvocationList();
+					await Task.WhenAll(
+						invocations?.Select(i => ((OnClientMessageEventHandler)i)(this, eventArgs)) ?? []);
 				}
 				catch (Exception ex)
 				{
 					_ = Task.Run(() => { _logger?.WriteLog(ex.ToString()); });
 				}
 
-				await Task.Delay(5);
+				await Task.Delay(5, _cancelToken);
 			} while (!_cancelToken.IsCancellationRequested);
 		}
 
@@ -263,7 +256,7 @@ namespace LightsShared.Sockets
 		public async Task Stop()
 		{
 			await DisconnectClients();
-			_cancelSource.Cancel();
+			await _cancelSource.CancelAsync();
 			if (_webHost != null)
 			{
 				await _webHost.StopAsync();

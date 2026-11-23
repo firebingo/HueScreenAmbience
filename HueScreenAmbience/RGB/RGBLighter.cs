@@ -16,7 +16,7 @@ namespace HueScreenAmbience.RGB
 {
 	public class RGBLighter : IDisposable
 	{
-		private readonly int[] _colors;
+		private readonly int[] _colors = [0, 0, 0];
 		private byte _colorChangeThreshold = 5;
 		private Config _config;
 		private TimeSpan _frameTimeSpan;
@@ -26,14 +26,9 @@ namespace HueScreenAmbience.RGB
 		private bool _started;
 		private RGBSurface _surface;
 
-		public RGBLighter()
-		{
-			_colors = [0, 0, 0];
-		}
-
 		public void Dispose()
 		{
-			foreach (var device in _surface?.Devices)
+			foreach (var device in _surface?.Devices!)
 			{
 				try
 				{
@@ -41,7 +36,7 @@ namespace HueScreenAmbience.RGB
 				}
 				catch (Exception ex)
 				{
-					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+					_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 				}
 			}
 
@@ -54,10 +49,10 @@ namespace HueScreenAmbience.RGB
 			GC.SuppressFinalize(this);
 		}
 
-		public void InstallServices(IServiceProvider _map)
+		public void InstallServices(IServiceProvider map)
 		{
-			_config = _map.GetService(typeof(Config)) as Config;
-			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
+			_config = map.GetService(typeof(Config)) as Config;
+			_logger = map.GetService(typeof(FileLogger)) as FileLogger;
 		}
 
 		public void Start()
@@ -76,7 +71,7 @@ namespace HueScreenAmbience.RGB
 			}
 			catch (Exception ex)
 			{
-				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 			}
 		}
 
@@ -99,7 +94,7 @@ namespace HueScreenAmbience.RGB
 						}
 						catch (Exception ex)
 						{
-							_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+							_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 						}
 					}
 				}
@@ -112,7 +107,7 @@ namespace HueScreenAmbience.RGB
 				}
 				catch (Exception ex)
 				{
-					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+					_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 				}
 
 				try
@@ -122,7 +117,7 @@ namespace HueScreenAmbience.RGB
 				}
 				catch (Exception ex)
 				{
-					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+					_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 				}
 
 				try
@@ -132,7 +127,7 @@ namespace HueScreenAmbience.RGB
 				}
 				catch (Exception ex)
 				{
-					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+					_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 				}
 
 				try
@@ -142,17 +137,17 @@ namespace HueScreenAmbience.RGB
 				}
 				catch (Exception ex)
 				{
-					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+					_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 				}
 
-				_surface.Exception -= Surface_Exception;
-				_surface.Dispose();
+				_surface?.Exception -= Surface_Exception;
+				_surface?.Dispose();
 				_surface = null;
 				_started = false;
 			}
 			catch (Exception ex)
 			{
-				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 			}
 		}
 
@@ -264,7 +259,7 @@ namespace HueScreenAmbience.RGB
 
 				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Keyboard))
 				{
-					//I am sampling the image by half the given dimensions because the rgb.net layouts width/height are not physical key dimensions and I dont need the extra accuracy here.
+					//I am sampling the image by half the given dimensions because the rgb.net layouts width/height are not physical key dimensions and I don't need the extra accuracy here.
 					// It is better to reduce the footprint created by doing this to try and help the gc.
 					var newWidth = (int)Math.Floor(device.Size.Width / red);
 					var newHeight = (int)Math.Floor(device.Size.Height / red);
@@ -304,9 +299,12 @@ namespace HueScreenAmbience.RGB
 							}
 						}
 
-						r = (int)Math.Floor(_colors[0] / count * _config.Model.RgbDeviceSettings.ColorMultiplier);
-						g = (int)Math.Floor(_colors[1] / count * _config.Model.RgbDeviceSettings.ColorMultiplier);
-						b = (int)Math.Floor(_colors[2] / count * _config.Model.RgbDeviceSettings.ColorMultiplier);
+						r = (int)Math.Floor(_colors[0] / (float)count *
+						                    _config.Model.RgbDeviceSettings.ColorMultiplier);
+						g = (int)Math.Floor(_colors[1] / (float)count *
+						                    _config.Model.RgbDeviceSettings.ColorMultiplier);
+						b = (int)Math.Floor(_colors[2] / (float)count *
+						                    _config.Model.RgbDeviceSettings.ColorMultiplier);
 						var lastColorR = key.Color.R * 255;
 						var lastColorG = key.Color.G * 255;
 						var lastColorB = key.Color.B * 255;
@@ -343,7 +341,7 @@ namespace HueScreenAmbience.RGB
 			}
 			catch (Exception ex)
 			{
-				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 			}
 		}
 
@@ -354,7 +352,7 @@ namespace HueScreenAmbience.RGB
 
 		private void Surface_Exception(ExceptionEventArgs args)
 		{
-			_ = Task.Run(() => _logger?.WriteLog(args.Exception?.ToString()));
+			_ = Task.Run(() => _logger?.WriteLog(args.Exception.ToString()));
 		}
 	}
 }

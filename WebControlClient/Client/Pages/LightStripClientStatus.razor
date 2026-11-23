@@ -1,5 +1,5 @@
 ﻿@page "/LightStripClient"
-@inject ILocalStorageService localStorage
+@inject ILocalStorageService LocalStorage
 @inject NavigationManager NavManager
 @using System.Timers
 @using Blazored.LocalStorage
@@ -40,7 +40,7 @@ else
         <fieldset>
             <legend>Stats</legend>
             <p>
-                <span>Bound IP:</span>&nbsp;<span>@(ServerStatus?.BoundIp != null ? ServerStatus?.BoundIp : string.Empty)</span>
+                <span>Bound IP:</span>&nbsp;<span>@(ServerStatus?.BoundIp ?? string.Empty)</span>
             </p>
             <p>
                 <span>Bound Port:</span>&nbsp;<span>@(ServerStatus?.BoundIp != null ? ServerStatus?.BoundPort : string.Empty)</span>
@@ -49,7 +49,7 @@ else
                 <span>Frame:</span>&nbsp;<span>@((ServerStatus?.Frame ?? 0).ToString())</span>
             </p>
         </fieldset>
-        @if (ServerStatus.NetworkInterfaces != null)
+        @if (ServerStatus?.NetworkInterfaces != null)
         {
             <fieldset>
                 <legend>IPs</legend>
@@ -94,10 +94,7 @@ else
         get => _ipValue;
         set
         {
-            if (string.IsNullOrWhiteSpace(value))
-                IpValid = false;
-            else
-                IpValid = true;
+            IpValid = !string.IsNullOrWhiteSpace(value);
 
             _ipValue = value;
         }
@@ -117,17 +114,17 @@ else
                 return;
 
             _portValue = value;
-            if (int.TryParse(_portValue, out var i) && i > -1 && i < 65536)
+            if (int.TryParse(_portValue, out var i) && i is > -1 and < 65536)
             {
                 _portValueNum = i;
-                PortValid = true;
+                _portValid = true;
             }
             else
-                PortValid = false;
+                _portValid = false;
         }
     }
 
-    private bool PortValid = true;
+    private bool _portValid = true;
 
     private bool AutoConnect { get; set; }
 
@@ -137,7 +134,7 @@ else
         _cancelSource = new CancellationTokenSource();
         IpValue = "127.0.0.1";
         PortValue = "0";
-        ModalButtons = new List<ModalButton>();
+        ModalButtons = [];
 
         _updateStatusTimer = new Timer();
         _updateStatusTimer.Elapsed += OnStatusUpdateTimer;
@@ -151,20 +148,20 @@ else
             await LoadSettings();
     }
 
-    public void ResetCancelToken()
+    private void ResetCancelToken()
     {
         _cancelSource.Dispose();
         _cancelSource = new CancellationTokenSource();
     }
 
-    public async Task LoadSettings()
+    private async Task LoadSettings()
     {
-        if (bool.TryParse(await localStorage.GetItemAsStringAsync("lscautoconnect", _cancelSource.Token), out var auto))
+        if (bool.TryParse(await LocalStorage.GetItemAsStringAsync("lscautoconnect", _cancelSource.Token), out var auto))
             AutoConnect = auto;
-        var ips = await localStorage.GetItemAsStringAsync("lscipadd", _cancelSource.Token);
+        var ips = await LocalStorage.GetItemAsStringAsync("lscipadd", _cancelSource.Token);
         if (!string.IsNullOrWhiteSpace(ips))
             IpValue = ips;
-        var ports = await localStorage.GetItemAsStringAsync("lscipport", _cancelSource.Token);
+        var ports = await LocalStorage.GetItemAsStringAsync("lscipport", _cancelSource.Token);
         if (!string.IsNullOrWhiteSpace(ports))
             PortValue = ports;
         await InvokeAsync(StateHasChanged);
@@ -174,7 +171,8 @@ else
 
     public async ValueTask DisposeAsync()
     {
-        _cancelSource?.Cancel();
+        if (_cancelSource != null)
+            await _cancelSource.CancelAsync();
         _updateStatusTimer?.Stop();
         _updateStatusTimer?.Dispose();
         if (_socketClient != null)
@@ -200,7 +198,7 @@ else
 
     private async Task OnConnectClick()
     {
-        if (IsConnecting || (_socketClient != null && !_socketClient.IsClosed))
+        if (IsConnecting || _socketClient is { IsClosed: false })
             return;
         if (!IpValid)
         {
@@ -211,7 +209,7 @@ else
             return;
         }
 
-        if (!PortValid)
+        if (!_portValid)
         {
             ModalType = ModalType.Warning;
             ModalTitle = "Invalid Input";
@@ -220,24 +218,25 @@ else
             return;
         }
 
-        await localStorage.SetItemAsStringAsync("lscautoconnect", AutoConnect.ToString(), _cancelSource.Token);
+        await LocalStorage.SetItemAsStringAsync("lscautoconnect", AutoConnect.ToString(), _cancelSource.Token);
         if (AutoConnect)
         {
-            await localStorage.SetItemAsStringAsync("lscipadd", IpValue, _cancelSource.Token);
-            await localStorage.SetItemAsStringAsync("lscipport", PortValue, _cancelSource.Token);
+            await LocalStorage.SetItemAsStringAsync("lscipadd", IpValue, _cancelSource.Token);
+            await LocalStorage.SetItemAsStringAsync("lscipport", PortValue, _cancelSource.Token);
         }
 
         IsConnecting = true;
-        _ = Task.Run(() => OnConnect());
+        _ = Task.Run(OnConnect);
     }
 
     private async Task OnDisconnectClick()
     {
         IsConnecting = true;
         await InvokeAsync(StateHasChanged);
-        _cancelSource?.Cancel();
+        if (_cancelSource != null)
+            await _cancelSource.CancelAsync();
         //Set this to false so it doesn't just try to reconnect.
-        await localStorage.SetItemAsync("lscautoconnect", false.ToString());
+        await LocalStorage.SetItemAsync("lscautoconnect", false.ToString());
         AutoConnect = false;
         try
         {
@@ -256,10 +255,7 @@ else
     {
         try
         {
-            if (NavManager.BaseUri.StartsWith("https:", StringComparison.InvariantCultureIgnoreCase))
-                _socketClient = new SocketClient(_ipValue, _portValueNum, true, _cancelSource.Token);
-            else
-                _socketClient = new SocketClient(_ipValue, _portValueNum, false, _cancelSource.Token);
+            _socketClient = NavManager.BaseUri.StartsWith("https:", StringComparison.InvariantCultureIgnoreCase) ? new SocketClient(_ipValue, _portValueNum, true, _cancelSource.Token) : new SocketClient(_ipValue, _portValueNum, false, _cancelSource.Token);
             _socketClient.OnClientResponse += OnSocketClientResponse;
             await _socketClient.Connect();
             var requestMessage = new ClientMessage

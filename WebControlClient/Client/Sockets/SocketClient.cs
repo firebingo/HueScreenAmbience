@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -13,7 +14,7 @@ namespace WebControlClient.Client.Sockets
 {
 	public class SocketClientResponseEventArgs : EventArgs
 	{
-		public ClientResponse Response { get; set; }
+		public ClientResponse Response { get; init; }
 	}
 
 	public class SocketClient : IAsyncDisposable
@@ -27,10 +28,7 @@ namespace WebControlClient.Client.Sockets
 
 		public SocketClient(string ip, int port, bool ssl, CancellationToken cancelToken)
 		{
-			if (!ssl)
-				_url = new Uri($"ws://{ip}:{port}");
-			else
-				_url = new Uri($"wss://{ip}:{port}");
+			_url = !ssl ? new Uri($"ws://{ip}:{port}") : new Uri($"wss://{ip}:{port}");
 			_cancelToken = cancelToken;
 			_socket = new ClientWebSocket();
 		}
@@ -44,7 +42,7 @@ namespace WebControlClient.Client.Sockets
 				await Task.Delay(500);
 			} while (_loopRunning);
 
-			if (_socket != null && _socket.State == WebSocketState.Open)
+			if (_socket is { State: WebSocketState.Open })
 				await Close();
 
 			_socket?.Dispose();
@@ -58,7 +56,7 @@ namespace WebControlClient.Client.Sockets
 		{
 			await _socket.ConnectAsync(_url, _cancelToken);
 			IsClosed = false;
-			_ = Task.Run(() => ReceiveLoop());
+			_ = Task.Run(ReceiveLoop, _cancelToken);
 		}
 
 		public async Task Send(ClientMessage message)
@@ -72,7 +70,6 @@ namespace WebControlClient.Client.Sockets
 			using var bufferStream = new MemoryStream(1024);
 			using var readStream = new StreamReader(bufferStream, Encoding.UTF8);
 			var buffer = new byte[1024];
-			var data = string.Empty;
 			_loopRunning = true;
 			try
 			{
@@ -115,19 +112,19 @@ namespace WebControlClient.Client.Sockets
 						{
 							receiveResult = await _socket.ReceiveAsync(buffer, _cancelToken);
 							totalRead += receiveResult.Count;
-							await bufferStream.WriteAsync(buffer, 0, receiveResult.Count);
+							await bufferStream.WriteAsync(buffer, 0, receiveResult.Count, _cancelToken);
 						} while (receiveResult.EndOfMessage);
 					}
 					else
 					{
 						totalRead += receiveResult.Count;
-						await bufferStream.WriteAsync(buffer, 0, receiveResult.Count);
+						await bufferStream.WriteAsync(buffer, 0, receiveResult.Count, _cancelToken);
 					}
 
 					bufferStream.Seek(0, SeekOrigin.Begin);
 					//Since the memory stream is reused trim it to the actual length of bytes read.
 					bufferStream.SetLength(totalRead);
-					data = await readStream.ReadToEndAsync();
+					var data = await readStream.ReadToEndAsync(_cancelToken);
 
 					if (!data.StartsWith('{'))
 					{
@@ -153,11 +150,8 @@ namespace WebControlClient.Client.Sockets
 								Response = JsonSerializer.Deserialize<ClientResponse<ScreenAmbienceStatus>>(data,
 									DefaultJsonOptions.JsonOptions)
 							};
-							foreach (var i in OnClientResponse.GetInvocationList())
-							{
-								invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
-							}
-
+							invokeList.AddRange(OnClientResponse?.GetInvocationList()
+								.Select(i => ((OnClientResponseEventHandler)i)(this, eventArgs)) ?? []);
 							break;
 						}
 						case ClientResponseType.LSCData:
@@ -167,10 +161,8 @@ namespace WebControlClient.Client.Sockets
 								Response = JsonSerializer.Deserialize<ClientResponse<LightStripStatus>>(data,
 									DefaultJsonOptions.JsonOptions)
 							};
-							foreach (var i in OnClientResponse.GetInvocationList())
-							{
-								invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
-							}
+							invokeList.AddRange(OnClientResponse?.GetInvocationList()
+								.Select(i => ((OnClientResponseEventHandler)i)(this, eventArgs)) ?? []);
 
 							break;
 						}
@@ -182,10 +174,8 @@ namespace WebControlClient.Client.Sockets
 							{
 								Response = model
 							};
-							foreach (var i in OnClientResponse.GetInvocationList())
-							{
-								invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
-							}
+							invokeList.AddRange(OnClientResponse?.GetInvocationList()
+								.Select(i => ((OnClientResponseEventHandler)i)(this, eventArgs)) ?? []);
 
 							break;
 						}
@@ -201,7 +191,7 @@ namespace WebControlClient.Client.Sockets
 
 		public async Task Close()
 		{
-			if (_socket != null && _socket.State == WebSocketState.Open)
+			if (_socket is { State: WebSocketState.Open })
 			{
 				await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, _cancelToken);
 				IsClosed = true;

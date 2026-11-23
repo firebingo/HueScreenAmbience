@@ -59,7 +59,7 @@ namespace HueScreenAmbience
 				input = await _stdinsr.ReadLineAsync();
 				if (string.IsNullOrWhiteSpace(input))
 					continue;
-				switch (input.ToLower())
+				switch (input.ToLowerInvariant())
 				{
 					//help
 					case "-h":
@@ -177,11 +177,17 @@ namespace HueScreenAmbience
 					if (_hueClient.UseEntertainment != null)
 						Console.WriteLine($"Using room: {_hueClient.UseEntertainment.Metadata.Name}");
 					if (_screen.Screen != null)
+					{
 						Console.WriteLine(
 							$"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
+					}
+
 					if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
+					{
 						Console.WriteLine(
 							$"Using ffmpeg input: {_config.Model.FfmpegCaptureSettings.Width}x{_config.Model.FfmpegCaptureSettings.Height}x{_config.Model.FfmpegCaptureSettings.FrameRate}");
+					}
+
 					Console.WriteLine("Use -h for help");
 					if (_screen.IsRunning)
 						Console.WriteLine("Lighting is running");
@@ -196,11 +202,17 @@ namespace HueScreenAmbience
 				if (_hueClient.UseEntertainment != null)
 					Console.WriteLine($"Using room: {_hueClient.UseEntertainment.Metadata.Name}");
 				if (_screen.Screen != null)
+				{
 					Console.WriteLine(
 						$"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
+				}
+
 				if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
+				{
 					Console.WriteLine(
 						$"Using ffmpeg input: {_config.Model.FfmpegCaptureSettings.Width}x{_config.Model.FfmpegCaptureSettings.Height}x{_config.Model.FfmpegCaptureSettings.FrameRate}");
+				}
+
 				if (_screen.IsRunning)
 					Console.WriteLine("Lighting is running");
 				_headlessHasWrittenInfo = true;

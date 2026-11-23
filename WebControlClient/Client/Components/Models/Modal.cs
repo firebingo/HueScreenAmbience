@@ -12,7 +12,7 @@ namespace WebControlClient.Client.Components
 
 	public class ModalButton
 	{
-		public string Text { get; set; }
-		public Action OnClick { get; set; }
+		public string Text { get; init; }
+		public Action OnClick { get; init; }
 	}
 }

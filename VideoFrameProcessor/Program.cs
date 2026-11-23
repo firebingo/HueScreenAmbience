@@ -33,7 +33,7 @@ namespace VideoFrameProcessor
 			var config = new Config();
 			config.LoadConfig();
 			var info = await FFProbeReader.ReadFFprobeInfo(filePath);
-			var streamInfo = info?.Streams?.First();
+			var streamInfo = info?.Streams.First();
 			if (streamInfo == null)
 			{
 				Console.WriteLine("Failed to read video info");

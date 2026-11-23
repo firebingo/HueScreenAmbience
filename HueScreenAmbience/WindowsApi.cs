@@ -1,5 +1,6 @@
 ﻿#if ANYCPU
 #else
+using System;
 using System.Runtime.InteropServices;
 
 namespace HueScreenAmbience
@@ -15,6 +16,7 @@ namespace HueScreenAmbience
 		[DllImport("SHCore.dll", SetLastError = true)]
 		internal static extern bool SetProcessDpiAwareness(PROCESS_DPI_AWARENESS awareness);
 
+		[Flags]
 		internal enum EXECUTION_STATE : uint
 		{
 			ES_AWAYMODE_REQUIRED = 0x00000040,

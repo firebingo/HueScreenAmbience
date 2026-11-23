@@ -16,6 +16,7 @@ namespace HueScreenAmbience
 		private readonly double[] _averageValues = new double[20];
 		private int _averageIter;
 		private Config _config;
+		private bool _disposed;
 		private DxCapture _dxCapture;
 		private FFMpegCapture.FFMpegCapture _ffmpegCapture;
 		private int _frameRate = 24;
@@ -28,7 +29,6 @@ namespace HueScreenAmbience
 
 		private PixelZonesTotals _zoneTotals;
 		private PixelZone[] _zones;
-		private bool disposed;
 		public bool Ready { get; private set; }
 		public DxEnumeratedDisplay Screen { get; private set; }
 		public ScreenDimensions ScreenInfo { get; private set; }
@@ -76,18 +76,18 @@ namespace HueScreenAmbience
 			SetupPixelZones();
 		}
 
-		public void InstallServices(IServiceProvider _map)
+		public void InstallServices(IServiceProvider map)
 		{
-			_config = _map.GetService(typeof(Config)) as Config;
-			_zoneProcesser = _map.GetService(typeof(ZoneProcessor)) as ZoneProcessor;
-			_logger = _map.GetService(typeof(FileLogger)) as FileLogger;
-			if (!_config.Model.FfmpegCaptureSettings.UseFFMpeg)
-				_rgbLighter = _map.GetService(typeof(RGBLighter)) as RGBLighter;
-			_stripLighter = _map.GetService(typeof(StripLighter)) as StripLighter;
-			_nanoLeafClient = _map.GetService(typeof(NanoLeafClient)) as NanoLeafClient;
+			_config = map.GetService(typeof(Config)) as Config;
+			_zoneProcesser = map.GetService(typeof(ZoneProcessor)) as ZoneProcessor;
+			_logger = map.GetService(typeof(FileLogger)) as FileLogger;
+			if (!_config!.Model.FfmpegCaptureSettings.UseFFMpeg)
+				_rgbLighter = map.GetService(typeof(RGBLighter)) as RGBLighter;
+			_stripLighter = map.GetService(typeof(StripLighter)) as StripLighter;
+			_nanoLeafClient = map.GetService(typeof(NanoLeafClient)) as NanoLeafClient;
 		}
 
-		public void GetScreenInfo()
+		private void GetScreenInfo()
 		{
 			try
 			{
@@ -119,7 +119,7 @@ namespace HueScreenAmbience
 			}
 		}
 
-		public void SetupPixelZones()
+		private void SetupPixelZones()
 		{
 			_zones = new PixelZone[_config.Model.ZoneColumns * _config.Model.ZoneRows];
 			_zoneTotals = new PixelZonesTotals(_zones.Length);
@@ -148,12 +148,12 @@ namespace HueScreenAmbience
 			{
 				var col = i % _config.Model.ZoneColumns;
 				var xMin = newWidth / (double)_config.Model.ZoneColumns * col;
-				//If we are in the last column just set the bottom right to screen width so we dont get weird rounding where edge is not included
+				//If we are in the last column just set the bottom right to screen width so we don't get weird rounding where edge is not included
 				var xMax = col == _config.Model.ZoneColumns - 1
 					? newWidth
 					: newWidth / (double)_config.Model.ZoneColumns * (col + 1);
 				var yMin = newHeight / (double)_config.Model.ZoneRows * row;
-				//If we are in the last row just set the bottom right to screen height so we dont get weird rounding where edge is not included
+				//If we are in the last row just set the bottom right to screen height so we don't get weird rounding where edge is not included
 				var yMax = row == _config.Model.ZoneRows - 1
 					? newHeight
 					: newHeight / (double)_config.Model.ZoneRows * (row + 1);
@@ -234,10 +234,9 @@ namespace HueScreenAmbience
 				{
 					var updatedFrame = false;
 					var t = start;
-					if (config.FfmpegCaptureSettings.UseFFMpeg)
-						updatedFrame = _ffmpegCapture.GetFrame(frameStream);
-					else
-						updatedFrame = _dxCapture.GetFrame(frameStream);
+					updatedFrame = config.FfmpegCaptureSettings.UseFFMpeg
+						? _ffmpegCapture.GetFrame(frameStream)
+						: _dxCapture.GetFrame(frameStream);
 					//Console.WriteLine($"Capture Time:        {(DateTime.UtcNow - start).TotalMilliseconds}");
 
 					//If we are on pi and have skip frames set wait until we are past the frame number before we start trying to read.
@@ -252,8 +251,8 @@ namespace HueScreenAmbience
 
 					if (!updatedFrame)
 					{
-						//If we havnt got a new frame in 2 seconds because the desktop hasnt updated send a update with the last zones anyways.
-						// If this isint done hue will eventually disconnect us because we didnt send any updates.
+						//If we haven't got a new frame in 2 seconds because the desktop hasn't updated send an update with the last zones anyways.
+						// If this is not done hue will eventually disconnect us because we didn't send any updates.
 						if ((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
 						{
 							_lastPostReadTime = DateTime.UtcNow;
@@ -310,8 +309,8 @@ namespace HueScreenAmbience
 				finally
 				{
 					var dt = DateTime.UtcNow - start;
-					if (dt.TotalMilliseconds < 1000 / _frameRate)
-						Thread.Sleep((int)(1000 / _frameRate - dt.TotalMilliseconds));
+					if (dt.TotalMilliseconds < (double)1000 / _frameRate)
+						Thread.Sleep((int)((double)1000 / _frameRate - dt.TotalMilliseconds));
 				}
 			} while (IsRunning);
 
@@ -370,7 +369,7 @@ namespace HueScreenAmbience
 
 		protected virtual void Dispose(bool disposing)
 		{
-			if (disposed)
+			if (_disposed)
 				return;
 
 			if (_zones != null)
@@ -382,13 +381,13 @@ namespace HueScreenAmbience
 			}
 
 			_zoneTotals?.Dispose();
-			disposed = true;
+			_disposed = true;
 		}
 
 		public class ScreenDimensions
 		{
 			public int BitDepth = 4;
-			public double Rate;
+			public decimal Rate;
 			public uint RealHeight;
 			public uint RealWidth;
 			public float SizeReduction;
