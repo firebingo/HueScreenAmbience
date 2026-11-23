@@ -4,7 +4,7 @@
 	{
 		public static int GetImageCoordinate(int stride, int x, int y, int bitDepth = 3)
 		{
-			return (y * stride) + x * bitDepth;
+			return y * stride + x * bitDepth;
 		}
 	}
 }

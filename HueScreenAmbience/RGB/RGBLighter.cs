@@ -1,4 +1,8 @@
-﻿using BitmapZoneProcessor;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using BitmapZoneProcessor;
 using LightsShared;
 using RGB.NET.Core;
 using RGB.NET.Devices.Asus;
@@ -6,28 +10,48 @@ using RGB.NET.Devices.Corsair;
 using RGB.NET.Devices.Logitech;
 using RGB.NET.Devices.OpenRGB;
 using RGB.NET.Devices.Razer;
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace HueScreenAmbience.RGB
 {
 	public class RGBLighter : IDisposable
 	{
-		private RGBSurface _surface;
-		private FileLogger _logger;
+		private readonly int[] _colors;
+		private byte _colorChangeThreshold = 5;
 		private Config _config;
+		private TimeSpan _frameTimeSpan;
 		private MemoryStream _imageByteStream;
 		private DateTime _lastChangeTime;
-		private TimeSpan _frameTimeSpan;
-		private bool _started = false;
-		private byte _colorChangeThreshold = 5;
-		private readonly int[] _colors;
+		private FileLogger _logger;
+		private bool _started;
+		private RGBSurface _surface;
 
 		public RGBLighter()
 		{
 			_colors = [0, 0, 0];
+		}
+
+		public void Dispose()
+		{
+			foreach (var device in _surface?.Devices)
+			{
+				try
+				{
+					device.Dispose();
+				}
+				catch (Exception ex)
+				{
+					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+				}
+			}
+
+			_imageByteStream?.Dispose();
+			_imageByteStream = null;
+			_surface.Exception -= Surface_Exception;
+			_surface?.Dispose();
+			_surface = null;
+			_started = false;
+			GC.SuppressFinalize(this);
 		}
 
 		public void InstallServices(IServiceProvider _map)
@@ -79,6 +103,7 @@ namespace HueScreenAmbience.RGB
 						}
 					}
 				}
+
 				try
 				{
 					//This just causes it to crash? no exception thrown?
@@ -89,6 +114,7 @@ namespace HueScreenAmbience.RGB
 				{
 					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
 				}
+
 				try
 				{
 					RazerDeviceProvider.Instance.Dispose();
@@ -98,6 +124,7 @@ namespace HueScreenAmbience.RGB
 				{
 					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
 				}
+
 				try
 				{
 					LogitechDeviceProvider.Instance.Dispose();
@@ -107,6 +134,7 @@ namespace HueScreenAmbience.RGB
 				{
 					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
 				}
+
 				try
 				{
 					AsusDeviceProvider.Instance.Dispose();
@@ -116,6 +144,7 @@ namespace HueScreenAmbience.RGB
 				{
 					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
 				}
+
 				_surface.Exception -= Surface_Exception;
 				_surface.Dispose();
 				_surface = null;
@@ -129,7 +158,7 @@ namespace HueScreenAmbience.RGB
 
 		private void LoadDevices()
 		{
-			RGBDeviceType deviceMask = RGBDeviceType.None;
+			var deviceMask = RGBDeviceType.None;
 			if (_config.Model.RgbDeviceSettings.UseKeyboards)
 				deviceMask |= RGBDeviceType.Keyboard;
 			if (_config.Model.RgbDeviceSettings.UseMice)
@@ -146,17 +175,18 @@ namespace HueScreenAmbience.RGB
 				{
 					if (!OpenRGBDeviceProvider.Instance.IsInitialized)
 					{
-						OpenRGBDeviceProvider.Instance.AddDeviceDefinition(new OpenRGBServerDefinition()
+						OpenRGBDeviceProvider.Instance.AddDeviceDefinition(new OpenRGBServerDefinition
 						{
 							Port = 6742,
 							Ip = _config.Model.RgbDeviceSettings.OpenRGBIp.ToString(),
 							ClientName = "HueScreenAmbience"
 						});
-						OpenRGBDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+						OpenRGBDeviceProvider.Instance.Initialize(deviceMask, true);
 					}
+
 					//OpenRGBDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
 					OpenRGBDeviceProvider.Instance.Exception += Instance_Exception;
-					_surface.Load(OpenRGBDeviceProvider.Instance, deviceMask, throwExceptions: true);
+					_surface.Load(OpenRGBDeviceProvider.Instance, deviceMask, true);
 				}
 				catch { }
 			}
@@ -165,9 +195,9 @@ namespace HueScreenAmbience.RGB
 				try
 				{
 					if (!CorsairDeviceProvider.Instance.IsInitialized)
-						CorsairDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+						CorsairDeviceProvider.Instance.Initialize(deviceMask, true);
 					CorsairDeviceProvider.Instance.Exception += Instance_Exception;
-					_surface.Load(CorsairDeviceProvider.Instance, deviceMask, throwExceptions: true);
+					_surface.Load(CorsairDeviceProvider.Instance, deviceMask, true);
 				}
 				catch { }
 
@@ -175,36 +205,36 @@ namespace HueScreenAmbience.RGB
 				try
 				{
 					if (!RazerDeviceProvider.Instance.IsInitialized)
-						RazerDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+						RazerDeviceProvider.Instance.Initialize(deviceMask, true);
 					RazerDeviceProvider.Instance.Exception += Instance_Exception;
-					_surface.Load(RazerDeviceProvider.Instance, deviceMask, throwExceptions: true);
+					_surface.Load(RazerDeviceProvider.Instance, deviceMask, true);
 				}
 				catch { }
 
 				try
 				{
 					if (!LogitechDeviceProvider.Instance.IsInitialized)
-						LogitechDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+						LogitechDeviceProvider.Instance.Initialize(deviceMask, true);
 					LogitechDeviceProvider.Instance.Exception += Instance_Exception;
-					_surface.Load(LogitechDeviceProvider.Instance, deviceMask, throwExceptions: true);
+					_surface.Load(LogitechDeviceProvider.Instance, deviceMask, true);
 				}
 				catch { }
 
 				try
 				{
 					if (!AsusDeviceProvider.Instance.IsInitialized)
-						AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+						AsusDeviceProvider.Instance.Initialize(deviceMask, true);
 					AsusDeviceProvider.Instance.Exception += Instance_Exception;
-					_surface.Load(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
+					_surface.Load(AsusDeviceProvider.Instance, deviceMask, true);
 				}
 				catch { }
 
 				try
 				{
 					if (!AsusDeviceProvider.Instance.IsInitialized)
-						AsusDeviceProvider.Instance.Initialize(deviceMask, throwExceptions: true);
+						AsusDeviceProvider.Instance.Initialize(deviceMask, true);
 					AsusDeviceProvider.Instance.Exception += Instance_Exception;
-					_surface.Load(AsusDeviceProvider.Instance, deviceMask, throwExceptions: true);
+					_surface.Load(AsusDeviceProvider.Instance, deviceMask, true);
 				}
 				catch { }
 			}
@@ -222,7 +252,7 @@ namespace HueScreenAmbience.RGB
 			}
 		}
 
-		public void UpdateFromImage(SixLabors.ImageSharp.PixelFormats.Rgb24 averageColor, MemoryStream image, int width, int height)
+		public void UpdateFromImage(Rgb24 averageColor, MemoryStream image, int width, int height)
 		{
 			try
 			{
@@ -241,9 +271,10 @@ namespace HueScreenAmbience.RGB
 					_imageByteStream ??= new MemoryStream(newWidth * newHeight * 3);
 
 					_imageByteStream.Seek(0, SeekOrigin.Begin);
-					var resizeImage = ImageHandler.ResizeImage(image, width, height, _imageByteStream, newWidth, newHeight, pixelFormat: PixelFormat.Rgb24);
+					var resizeImage = ImageHandler.ResizeImage(image, width, height, _imageByteStream, newWidth,
+						newHeight, pixelFormat: PixelFormat.Rgb24);
 
-					int count = 0;
+					var count = 0;
 					var sampleX = 0;
 					var sampleY = 0;
 					var pixIndex = 0;
@@ -264,7 +295,7 @@ namespace HueScreenAmbience.RGB
 							{
 								sampleX = (int)Math.Floor(key.Location.X / red + x);
 								sampleY = (int)Math.Floor(key.Location.Y / red + y);
-								pixIndex = (sampleY * stride) + sampleX * 3;
+								pixIndex = sampleY * stride + sampleX * 3;
 								_imageByteStream.Seek(pixIndex, SeekOrigin.Begin);
 								_colors[0] += _imageByteStream.ReadByte();
 								_colors[1] += _imageByteStream.ReadByte();
@@ -273,9 +304,9 @@ namespace HueScreenAmbience.RGB
 							}
 						}
 
-						r = (int)Math.Floor((_colors[0] / count) * _config.Model.RgbDeviceSettings.ColorMultiplier);
-						g = (int)Math.Floor((_colors[1] / count) * _config.Model.RgbDeviceSettings.ColorMultiplier);
-						b = (int)Math.Floor((_colors[2] / count) * _config.Model.RgbDeviceSettings.ColorMultiplier);
+						r = (int)Math.Floor(_colors[0] / count * _config.Model.RgbDeviceSettings.ColorMultiplier);
+						g = (int)Math.Floor(_colors[1] / count * _config.Model.RgbDeviceSettings.ColorMultiplier);
+						b = (int)Math.Floor(_colors[2] / count * _config.Model.RgbDeviceSettings.ColorMultiplier);
 						var lastColorR = key.Color.R * 255;
 						var lastColorG = key.Color.G * 255;
 						var lastColorB = key.Color.B * 255;
@@ -289,7 +320,11 @@ namespace HueScreenAmbience.RGB
 						//}
 					}
 				}
-				foreach (var device in _surface.Devices.Where(x => x.DeviceInfo.DeviceType == RGBDeviceType.Mouse || x.DeviceInfo.DeviceType == RGBDeviceType.Mainboard || x.DeviceInfo.DeviceType == RGBDeviceType.LedStripe))
+
+				foreach (var device in _surface.Devices.Where(x =>
+					         x.DeviceInfo.DeviceType == RGBDeviceType.Mouse ||
+					         x.DeviceInfo.DeviceType == RGBDeviceType.Mainboard ||
+					         x.DeviceInfo.DeviceType == RGBDeviceType.LedStripe))
 				{
 					var color = new Color(averageColor.R, averageColor.G, averageColor.B);
 					foreach (var led in device)
@@ -320,29 +355,6 @@ namespace HueScreenAmbience.RGB
 		private void Surface_Exception(ExceptionEventArgs args)
 		{
 			_ = Task.Run(() => _logger?.WriteLog(args.Exception?.ToString()));
-		}
-
-		public void Dispose()
-		{
-			foreach (var device in _surface?.Devices)
-			{
-				try
-				{
-					device.Dispose();
-				}
-				catch (Exception ex)
-				{
-					_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
-				}
-			}
-
-			_imageByteStream?.Dispose();
-			_imageByteStream = null;
-			_surface.Exception -= Surface_Exception;
-			_surface?.Dispose();
-			_surface = null;
-			_started = false;
-			GC.SuppressFinalize(this);
 		}
 	}
 }

@@ -1,1 +1,2 @@
-﻿This project is a minimal version of Iot.Device.Bindings aviliable at https://github.com/dotnet/iot. I made this because Iot.Device.Bindings for some reason makes asp.net core not work?
+﻿This project is a minimal version of Iot.Device.Bindings aviliable at https://github.com/dotnet/iot. I made this because
+Iot.Device.Bindings for some reason makes asp.net core not work?

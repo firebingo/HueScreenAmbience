@@ -1,13 +1,14 @@
-﻿using BitmapZoneProcessor;
-using System;
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using BitmapZoneProcessor;
 
 namespace VideoFrameProcessor
 {
 	public static class FrameProcessor
 	{
-		public static async Task ProcessFrame(Config config, MemoryStream stream, int frame, int width, int height, string outPath)
+		public static async Task ProcessFrame(Config config, MemoryStream stream, int frame, int width, int height,
+			string outPath)
 		{
 			MemoryStream? resizeMemStream = null;
 			try
@@ -16,8 +17,11 @@ namespace VideoFrameProcessor
 				var newWidth = (int)Math.Floor(width / config.Model.ReadResolutionReduce);
 				var newHeight = (int)Math.Floor(height / config.Model.ReadResolutionReduce);
 				resizeMemStream = new MemoryStream(newWidth * newHeight * 4);
-				var (zones, zoneTotals) = SetupPixelZones(newWidth, newHeight, config.Model.ZoneRows, config.Model.ZoneColumns);
-				BitmapProcessor.ReadBitmap(stream, width, height, newWidth, newHeight, config.Model.ReadResolutionReduce, config.Model.ZoneRows, config.Model.ZoneColumns, zones, zoneTotals, 4, resizeMemStream);
+				var (zones, zoneTotals) =
+					SetupPixelZones(newWidth, newHeight, config.Model.ZoneRows, config.Model.ZoneColumns);
+				BitmapProcessor.ReadBitmap(stream, width, height, newWidth, newHeight,
+					config.Model.ReadResolutionReduce, config.Model.ZoneRows, config.Model.ZoneColumns, zones,
+					zoneTotals, 4, resizeMemStream);
 
 				zoneTotals.CalculateAverages();
 
@@ -27,14 +31,19 @@ namespace VideoFrameProcessor
 				var image = new MemoryStream(config.Model.ZoneColumns * config.Model.ZoneRows * 3);
 				var blurImage = new MemoryStream(newWidth * newHeight * 3);
 
-				(image, blurImage) = BitmapProcessor.PreparePostBitmap(zones, config.Model.ZoneColumns, config.Model.ZoneRows, newWidth, newHeight, config.Model.ResizeFilter, config.Model.ResizeSigma, image, blurImage);
-				await ImageHandler.WriteImageToFile(blurImage, newWidth, newHeight, Path.Combine(outPath, $"out{frame.ToString().PadLeft(6, '0')}.png"), pixelFormat: PixelFormat.Rgb24);
+				(image, blurImage) = BitmapProcessor.PreparePostBitmap(zones, config.Model.ZoneColumns,
+					config.Model.ZoneRows, newWidth, newHeight, config.Model.ResizeFilter, config.Model.ResizeSigma,
+					image, blurImage);
+				await ImageHandler.WriteImageToFile(blurImage, newWidth, newHeight,
+					Path.Combine(outPath, $"out{frame.ToString().PadLeft(6, '0')}.png"),
+					pixelFormat: PixelFormat.Rgb24);
 				await blurImage.DisposeAsync();
 				await image.DisposeAsync();
 				foreach (var zone in zones)
 				{
 					zone.Dispose();
 				}
+
 				zoneTotals.Dispose();
 			}
 			catch (Exception ex)
@@ -49,7 +58,8 @@ namespace VideoFrameProcessor
 			}
 		}
 
-		private static (PixelZone[] zones, PixelZonesTotals zoneTotals) SetupPixelZones(int width, int height, int rows, int columns)
+		private static (PixelZone[] zones, PixelZonesTotals zoneTotals) SetupPixelZones(int width, int height, int rows,
+			int columns)
 		{
 			var zoneTotals = new PixelZonesTotals(columns * rows);
 			var zones = new PixelZone[columns * rows];
@@ -59,17 +69,18 @@ namespace VideoFrameProcessor
 			for (var i = 0; i < zones.Length; ++i)
 			{
 				var col = i % columns;
-				var xMin = (width / (double)columns) * col;
+				var xMin = width / (double)columns * col;
 				//If we are in the last column just set the bottom right to screen width so we dont get weird rounding where edge is not included
 				var xMax = col == columns - 1
 					? width
-					: (width / (double)columns) * (col + 1);
-				var yMin = (height / (double)rows) * row;
+					: width / (double)columns * (col + 1);
+				var yMin = height / (double)rows * row;
 				//If we are in the last row just set the bottom right to screen height so we dont get weird rounding where edge is not included
 				var yMax = row == rows - 1
 					? height
-					: (height / (double)rows) * (row + 1);
-				zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), width * 4, 4, zoneTotals, i);
+					: height / (double)rows * (row + 1);
+				zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax),
+					(int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), width * 4, 4, zoneTotals, i);
 				if (col == columns - 1)
 					row += 1;
 			}

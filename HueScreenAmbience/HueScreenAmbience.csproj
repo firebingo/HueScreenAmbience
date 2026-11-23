@@ -1,76 +1,76 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<OutputType>Exe</OutputType>
-		<TargetFramework>net11.0</TargetFramework>
-		<Platforms>x64;AnyCPU</Platforms>
-		<LangVersion>15</LangVersion>
-	</PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net11.0</TargetFramework>
+        <Platforms>x64;AnyCPU</Platforms>
+        <LangVersion>15</LangVersion>
+    </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<PlatformTarget>x64</PlatformTarget>
-	</PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PlatformTarget>x64</PlatformTarget>
+    </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Prefer32Bit>true</Prefer32Bit>
-		<DefineConstants>TRACE;ANYCPU</DefineConstants>
-	</PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Prefer32Bit>true</Prefer32Bit>
+        <DefineConstants>TRACE;ANYCPU</DefineConstants>
+    </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Optimize>true</Optimize>
-	</PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Optimize>true</Optimize>
+    </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Optimize>true</Optimize>
-		<Prefer32Bit>true</Prefer32Bit>
-		<DefineConstants>TRACE;ANYCPU</DefineConstants>
-	</PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Optimize>true</Optimize>
+        <Prefer32Bit>true</Prefer32Bit>
+        <DefineConstants>TRACE;ANYCPU</DefineConstants>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<None Include="..\.editorconfig" Link=".editorconfig" />
-	</ItemGroup>
+    <ItemGroup>
+        <None Include="..\.editorconfig" Link=".editorconfig"/>
+    </ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="HidSharp" Version="2.6.4" />
-		<PackageReference Include="HueApi" Version="3.11.0" />
-		<PackageReference Include="HueApi.ColorConverters" Version="3.11.0" />
-		<PackageReference Include="HueApi.Entertainment" Version="3.11.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
-		<PackageReference Include="RGB.NET.Core" Version="3.2.0" />
-		<PackageReference Include="RGB.NET.Devices.Corsair" Version="3.2.0" />
-		<PackageReference Include="RGB.NET.Devices.Logitech" Version="3.2.0" />
-		<PackageReference Include="RGB.NET.Devices.OpenRGB" Version="3.2.0" />
-		<PackageReference Include="RGB.NET.Devices.Razer" Version="3.2.0" />
-		<PackageReference Include="RGB.NET.Layout" Version="3.2.0" />
-		<PackageReference Include="System.Management" Version="11.0.0" />
-		<PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
-	</ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="HidSharp" Version="2.6.4"/>
+        <PackageReference Include="HueApi" Version="3.11.0"/>
+        <PackageReference Include="HueApi.ColorConverters" Version="3.11.0"/>
+        <PackageReference Include="HueApi.Entertainment" Version="3.11.0"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0"/>
+        <PackageReference Include="RGB.NET.Core" Version="3.2.0"/>
+        <PackageReference Include="RGB.NET.Devices.Corsair" Version="3.2.0"/>
+        <PackageReference Include="RGB.NET.Devices.Logitech" Version="3.2.0"/>
+        <PackageReference Include="RGB.NET.Devices.OpenRGB" Version="3.2.0"/>
+        <PackageReference Include="RGB.NET.Devices.Razer" Version="3.2.0"/>
+        <PackageReference Include="RGB.NET.Layout" Version="3.2.0"/>
+        <PackageReference Include="System.Management" Version="11.0.0"/>
+        <PackageReference Include="Vortice.Direct3D11" Version="3.8.3"/>
+    </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\BitmapZoneProcessor\BitmapZoneProcessor.csproj" />
-		<ProjectReference Include="..\Iot.Device.Bindings\Iot.Device.Bindings.csproj" />
-		<ProjectReference Include="..\LightsShared\LightsShared.csproj" />
-		<ProjectReference Include="..\NanoLeafAPI\NanoLeafAPI\NanoLeafAPI.csproj" />
-		<ProjectReference Include="..\WebControlClient\Shared\WebControlClient.Shared.csproj" />
-	</ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\BitmapZoneProcessor\BitmapZoneProcessor.csproj"/>
+        <ProjectReference Include="..\Iot.Device.Bindings\Iot.Device.Bindings.csproj"/>
+        <ProjectReference Include="..\LightsShared\LightsShared.csproj"/>
+        <ProjectReference Include="..\NanoLeafAPI\NanoLeafAPI\NanoLeafAPI.csproj"/>
+        <ProjectReference Include="..\WebControlClient\Shared\WebControlClient.Shared.csproj"/>
+    </ItemGroup>
 
-	<ItemGroup>
-		<Reference Include="RGB.NET.Devices.Asus">
-			<HintPath>..\..\..\Corsair\RGB.NET\bin\net8.0\RGB.NET.Devices.Asus.dll</HintPath>
-		</Reference>
-	</ItemGroup>
+    <ItemGroup>
+        <Reference Include="RGB.NET.Devices.Asus">
+            <HintPath>..\..\..\Corsair\RGB.NET\bin\net8.0\RGB.NET.Devices.Asus.dll</HintPath>
+        </Reference>
+    </ItemGroup>
 
-	<ItemGroup>
-	  <None Update="x64\CUESDK.dll">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	  <None Update="x64\LogitechLedEnginesWrapper.dll">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	</ItemGroup>
+    <ItemGroup>
+        <None Update="x64\CUESDK.dll">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="x64\LogitechLedEnginesWrapper.dll">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
 </Project>

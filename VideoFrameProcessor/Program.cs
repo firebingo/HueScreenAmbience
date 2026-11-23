@@ -1,14 +1,14 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using VideoFrameProcessor.ffmpeg;
 
 namespace VideoFrameProcessor
 {
-	class Program
+	internal class Program
 	{
-		static async Task Main(string[] args)
+		private static async Task Main(string[] args)
 		{
 			var builder = new ConfigurationBuilder();
 			builder.AddCommandLine(args);
@@ -40,6 +40,7 @@ namespace VideoFrameProcessor
 				Console.ReadLine();
 				return;
 			}
+
 			FFMpegReader.ReadVideo(config, streamInfo, filePath, outPath);
 		}
 	}

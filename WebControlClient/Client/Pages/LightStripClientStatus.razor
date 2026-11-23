@@ -1,314 +1,324 @@
 ﻿@page "/LightStripClient"
-@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject ILocalStorageService localStorage
 @inject NavigationManager NavManager
+@using System.Timers
+@using Blazored.LocalStorage
 @using WebControlClient.Client.Components
 @using WebControlClient.Client.Sockets
+@using WebControlClient.Shared
+@using Timer = System.Timers.Timer
 @implements IAsyncDisposable
 
 @if (_socketClient == null || _socketClient.IsClosed)
 {
-	<div>
-		<section class="field-row">
-			<div class="field-row-stacked" style="width: 200px">
-				<label for="lsc-address">Address</label>
-				<input id="lsc-address" type="text" @bind="IpValue" @bind:event="onchange" />
-			</div>
-		</section>
-		<section class="field-row">
-			<div class="field-row-stacked" style="width: 50px">
-				<label for="lsc-port">Port</label>
-				<input id="lsc-port" type="text" @bind="PortValue" @bind:event="oninput" />
-			</div>
-		</section>
-		<section class="field-row">
-			<button @onclick="OnConnectClick" disabled="@IsConnecting">@(IsConnecting ? "Connecting..." : "Connect")</button>
-			<div>
-				<input @bind="AutoConnect" type="checkbox" id="auto-connect">
-				<label for="auto-connect">auto-connect</label>
-			</div>
-		</section>
-	</div>
+    <div>
+        <section class="field-row">
+            <div class="field-row-stacked" style="width: 200px">
+                <label for="lsc-address">Address</label>
+                <input id="lsc-address" type="text" @bind="IpValue" @bind:event="onchange"/>
+            </div>
+        </section>
+        <section class="field-row">
+            <div class="field-row-stacked" style="width: 50px">
+                <label for="lsc-port">Port</label>
+                <input id="lsc-port" type="text" @bind="PortValue" @bind:event="oninput"/>
+            </div>
+        </section>
+        <section class="field-row">
+            <button @onclick="OnConnectClick"
+                    disabled="@IsConnecting">@(IsConnecting ? "Connecting..." : "Connect")</button>
+            <div>
+                <input @bind="AutoConnect" type="checkbox" id="auto-connect">
+                <label for="auto-connect">auto-connect</label>
+            </div>
+        </section>
+    </div>
 }
 else
 {
-	<div>
-		<fieldset>
-			<legend>Stats</legend>
-			<p>
-				<span>Bound IP:</span>&nbsp;<span>@(ServerStatus?.BoundIp != null ? ServerStatus?.BoundIp : string.Empty)</span>
-			</p>
-			<p>
-				<span>Bound Port:</span>&nbsp;<span>@(ServerStatus?.BoundIp != null ? ServerStatus?.BoundPort : string.Empty)</span>
-			</p>
-			<p>
-				<span>Frame:</span>&nbsp;<span>@((ServerStatus?.Frame ?? 0).ToString())</span>
-			</p>
-		</fieldset>
-		@if (ServerStatus.NetworkInterfaces != null)
-		{
-			<fieldset>
-				<legend>IPs</legend>
-				@foreach (var n in ServerStatus.NetworkInterfaces)
-				{
-					<p>
-						<span>@(n.Name)</span>&nbsp;<span>@(n.Ip?.ToString() ?? string.Empty)</span>
-					</p>
-				}
-			</fieldset>
-		}
-		<section class="field-row">
-			<button @onclick="OnDisconnectClick" disabled="@IsConnecting">Disconnect</button>
-		</section>
-	</div>
+    <div>
+        <fieldset>
+            <legend>Stats</legend>
+            <p>
+                <span>Bound IP:</span>&nbsp;<span>@(ServerStatus?.BoundIp != null ? ServerStatus?.BoundIp : string.Empty)</span>
+            </p>
+            <p>
+                <span>Bound Port:</span>&nbsp;<span>@(ServerStatus?.BoundIp != null ? ServerStatus?.BoundPort : string.Empty)</span>
+            </p>
+            <p>
+                <span>Frame:</span>&nbsp;<span>@((ServerStatus?.Frame ?? 0).ToString())</span>
+            </p>
+        </fieldset>
+        @if (ServerStatus.NetworkInterfaces != null)
+        {
+            <fieldset>
+                <legend>IPs</legend>
+                @foreach (var n in ServerStatus.NetworkInterfaces)
+                {
+                    <p>
+                        <span>@(n.Name)</span>&nbsp;<span>@(n.Ip?.ToString() ?? string.Empty)</span>
+                    </p>
+                }
+            </fieldset>
+        }
+        <section class="field-row">
+            <button @onclick="OnDisconnectClick" disabled="@IsConnecting">Disconnect</button>
+        </section>
+    </div>
 }
-<Modal Open="@ShowModal" Title="@ModalTitle" Body="@ModalBody" Buttons="@ModalButtons" Type="@ModalType" OnClose="@ModalOnClose" />
+<Modal Open="@ShowModal" Title="@ModalTitle" Body="@ModalBody" Buttons="@ModalButtons" Type="@ModalType"
+       OnClose="@ModalOnClose"/>
 
 @code {
-	private CancellationTokenSource _cancelSource;
-	private bool IsConnecting { get; set; }
+    private CancellationTokenSource _cancelSource;
+    private bool IsConnecting { get; set; }
 
-	private bool ShowModal { get; set; }
-	private string ModalTitle { get; set; }
-	private string ModalBody { get; set; }
-	private ModalType ModalType { get; set; }
-	private List<ModalButton> ModalButtons { get; set; }
+    private bool ShowModal { get; set; }
+    private string ModalTitle { get; set; }
+    private string ModalBody { get; set; }
+    private ModalType ModalType { get; set; }
+    private List<ModalButton> ModalButtons { get; set; }
 
-	private SocketClient _socketClient;
-	private System.Timers.Timer _updateStatusTimer;
+    private SocketClient _socketClient;
+    private Timer _updateStatusTimer;
 
-	private WebControlClient.Shared.LightStripStatus ServerStatus { get; set; }
-	//Used to disable the start/stop button until we get another server status back.
-	private bool BlockStart { get; set; }
+    private LightStripStatus ServerStatus { get; set; }
 
-	private string _ipValue;
-	private string IpValue
-	{
-		get
-		{
-			return _ipValue;
-		}
-		set
-		{
-			if (string.IsNullOrWhiteSpace(value))
-				IpValid = false;
-			else
-				IpValid = true;
+    //Used to disable the start/stop button until we get another server status back.
+    private bool BlockStart { get; set; }
 
-			_ipValue = value;
-		}
-	}
-	private bool IpValid { get; set; }
+    private string _ipValue;
 
-	private int _portValueNum;
-	private string _portValue;
-	private string PortValue
-	{
-		get
-		{
-			return _portValue;
-		}
-		set
-		{
-			if (value == null || value.Length > 5)
-				return;
+    private string IpValue
+    {
+        get => _ipValue;
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                IpValid = false;
+            else
+                IpValid = true;
 
-			_portValue = value;
-			if (int.TryParse(_portValue, out var i) && i > -1 && i < 65536)
-			{
-				_portValueNum = i;
-				PortValid = true;
-			}
-			else
-				PortValid = false;
-		}
-	}
-	private bool PortValid = true;
+            _ipValue = value;
+        }
+    }
 
-	private bool AutoConnect { get; set; }
+    private bool IpValid { get; set; }
 
-	protected override void OnInitialized()
-	{
-		ServerStatus = new WebControlClient.Shared.LightStripStatus();
-		_cancelSource = new CancellationTokenSource();
-		IpValue = "127.0.0.1";
-		PortValue = "0";
-		ModalButtons = new List<ModalButton>();
+    private int _portValueNum;
+    private string _portValue;
 
-		_updateStatusTimer = new System.Timers.Timer();
-		_updateStatusTimer.Elapsed += OnStatusUpdateTimer;
-		_updateStatusTimer.Interval = 5 * 1000;
-		_updateStatusTimer.Start();
-	}
+    private string PortValue
+    {
+        get => _portValue;
+        set
+        {
+            if (value == null || value.Length > 5)
+                return;
 
-	protected override async Task OnAfterRenderAsync(bool firstRender)
-	{
-		if (firstRender)
-			await LoadSettings();
-	}
+            _portValue = value;
+            if (int.TryParse(_portValue, out var i) && i > -1 && i < 65536)
+            {
+                _portValueNum = i;
+                PortValid = true;
+            }
+            else
+                PortValid = false;
+        }
+    }
 
-	public void ResetCancelToken()
-	{
-		_cancelSource.Dispose();
-		_cancelSource = new CancellationTokenSource();
-	}
+    private bool PortValid = true;
 
-	public async Task LoadSettings()
-	{
-		if (bool.TryParse((await localStorage.GetItemAsStringAsync("lscautoconnect", _cancelSource.Token)), out var auto))
-			AutoConnect = auto;
-		var ips = await localStorage.GetItemAsStringAsync("lscipadd", _cancelSource.Token);
-		if (!string.IsNullOrWhiteSpace(ips))
-			IpValue = ips;
-		var ports = await localStorage.GetItemAsStringAsync("lscipport", _cancelSource.Token);
-		if (!string.IsNullOrWhiteSpace(ports))
-			PortValue = ports;
-		await InvokeAsync(StateHasChanged);
-		if (AutoConnect)
-			await OnConnectClick();
-	}
+    private bool AutoConnect { get; set; }
 
-	public async ValueTask DisposeAsync()
-	{
-		_cancelSource?.Cancel();
-		_updateStatusTimer?.Stop();
-		_updateStatusTimer?.Dispose();
-		if (_socketClient != null)
-			await _socketClient.DisposeAsync();
-	}
+    protected override void OnInitialized()
+    {
+        ServerStatus = new LightStripStatus();
+        _cancelSource = new CancellationTokenSource();
+        IpValue = "127.0.0.1";
+        PortValue = "0";
+        ModalButtons = new List<ModalButton>();
 
-	private async void OnStatusUpdateTimer(object sender, System.Timers.ElapsedEventArgs e)
-	{
-		try
-		{
-			if (_socketClient == null || _socketClient.IsClosed)
-				return;
-			await _socketClient.Send(new ClientMessage() { ActionType = ClientMessageType.GetLSCState });
-		}
-		catch (Exception ex)
-		{
-			ModalType = ModalType.Error;
-			ModalTitle = "Exception";
-			ModalBody = ex.Message;
-			ShowModal = true;
-		}
-	}
+        _updateStatusTimer = new Timer();
+        _updateStatusTimer.Elapsed += OnStatusUpdateTimer;
+        _updateStatusTimer.Interval = 5 * 1000;
+        _updateStatusTimer.Start();
+    }
 
-	private async Task OnConnectClick()
-	{
-		if (IsConnecting || (_socketClient != null && !_socketClient.IsClosed))
-			return;
-		if (!IpValid)
-		{
-			ModalType = ModalType.Warning;
-			ModalTitle = "Invalid Input";
-			ModalBody = "Address can not be empty.";
-			ShowModal = true;
-			return;
-		}
-		if (!PortValid)
-		{
-			ModalType = ModalType.Warning;
-			ModalTitle = "Invalid Input";
-			ModalBody = "Port is invalid. Must be in a number between 0 and 65535.";
-			ShowModal = true;
-			return;
-		}
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await LoadSettings();
+    }
 
-		await localStorage.SetItemAsStringAsync("lscautoconnect", AutoConnect.ToString(), _cancelSource.Token);
-		if (AutoConnect)
-		{
-			await localStorage.SetItemAsStringAsync("lscipadd", IpValue.ToString(), _cancelSource.Token);
-			await localStorage.SetItemAsStringAsync("lscipport", PortValue.ToString(), _cancelSource.Token);
-		}
+    public void ResetCancelToken()
+    {
+        _cancelSource.Dispose();
+        _cancelSource = new CancellationTokenSource();
+    }
 
-		IsConnecting = true;
-		_ = Task.Run(() => OnConnect());
-	}
+    public async Task LoadSettings()
+    {
+        if (bool.TryParse(await localStorage.GetItemAsStringAsync("lscautoconnect", _cancelSource.Token), out var auto))
+            AutoConnect = auto;
+        var ips = await localStorage.GetItemAsStringAsync("lscipadd", _cancelSource.Token);
+        if (!string.IsNullOrWhiteSpace(ips))
+            IpValue = ips;
+        var ports = await localStorage.GetItemAsStringAsync("lscipport", _cancelSource.Token);
+        if (!string.IsNullOrWhiteSpace(ports))
+            PortValue = ports;
+        await InvokeAsync(StateHasChanged);
+        if (AutoConnect)
+            await OnConnectClick();
+    }
 
-	private async Task OnDisconnectClick()
-	{
-		IsConnecting = true;
-		await InvokeAsync(StateHasChanged);
-		_cancelSource?.Cancel();
-		//Set this to false so it doesn't just try to reconnect.
-		await localStorage.SetItemAsync<string>("lscautoconnect", false.ToString());
-		AutoConnect = false;
-		try
-		{
-			if (_socketClient != null)
-				await _socketClient.DisposeAsync();
-		}
-		catch { }
-		_socketClient = null;
-		IsConnecting = false;
-		ResetCancelToken();
-		await LoadSettings();
-	}
+    public async ValueTask DisposeAsync()
+    {
+        _cancelSource?.Cancel();
+        _updateStatusTimer?.Stop();
+        _updateStatusTimer?.Dispose();
+        if (_socketClient != null)
+            await _socketClient.DisposeAsync();
+    }
 
-	private async Task OnConnect()
-	{
-		try
-		{
-			if (NavManager.BaseUri.StartsWith("https:", StringComparison.InvariantCultureIgnoreCase))
-				_socketClient = new SocketClient(_ipValue, _portValueNum, true, _cancelSource.Token);
-			else
-				_socketClient = new SocketClient(_ipValue, _portValueNum, false, _cancelSource.Token);
-			_socketClient.OnClientResponse += OnSocketClientResponse;
-			await _socketClient.Connect();
-			var requestMessage = new ClientMessage()
-			{
-				ActionType = ClientMessageType.GetSAState
-			};
-			await _socketClient.Send(requestMessage);
-		}
-		catch (Exception ex)
-		{
-			ModalType = ModalType.Error;
-			ModalTitle = "Exception";
-			ModalBody = ex.Message;
-			ShowModal = true;
-		}
-		finally
-		{
-			IsConnecting = false;
-			await InvokeAsync(StateHasChanged);
-		}
-	}
+    private async void OnStatusUpdateTimer(object sender, ElapsedEventArgs e)
+    {
+        try
+        {
+            if (_socketClient == null || _socketClient.IsClosed)
+                return;
+            await _socketClient.Send(new ClientMessage { ActionType = ClientMessageType.GetLSCState });
+        }
+        catch (Exception ex)
+        {
+            ModalType = ModalType.Error;
+            ModalTitle = "Exception";
+            ModalBody = ex.Message;
+            ShowModal = true;
+        }
+    }
 
-	private async Task OnSocketClientResponse(object sender, SocketClientResponseEventArgs e)
-	{
-		try
-		{
-			switch (e.Response.Type)
-			{
-				case ClientResponseType.LSCData:
-					{
-						if (e.Response is ClientResponse<WebControlClient.Shared.LightStripStatus> res)
-						{
-							ServerStatus.CopyFrom(res.Data);
-							BlockStart = false;
-						}
-						break;
-					}
-			}
-		}
-		catch (Exception ex)
-		{
-			ModalType = ModalType.Error;
-			ModalTitle = "Exception";
-			ModalBody = ex.Message;
-			ShowModal = true;
-		}
-		await InvokeAsync(StateHasChanged);
-	}
+    private async Task OnConnectClick()
+    {
+        if (IsConnecting || (_socketClient != null && !_socketClient.IsClosed))
+            return;
+        if (!IpValid)
+        {
+            ModalType = ModalType.Warning;
+            ModalTitle = "Invalid Input";
+            ModalBody = "Address can not be empty.";
+            ShowModal = true;
+            return;
+        }
 
-	private void ModalOnClose()
-	{
-		ShowModal = false;
-		ModalButtons.Clear();
-		ModalBody = string.Empty;
-		ModalTitle = string.Empty;
-		ModalType = ModalType.None;
-		StateHasChanged();
-	}
+        if (!PortValid)
+        {
+            ModalType = ModalType.Warning;
+            ModalTitle = "Invalid Input";
+            ModalBody = "Port is invalid. Must be in a number between 0 and 65535.";
+            ShowModal = true;
+            return;
+        }
+
+        await localStorage.SetItemAsStringAsync("lscautoconnect", AutoConnect.ToString(), _cancelSource.Token);
+        if (AutoConnect)
+        {
+            await localStorage.SetItemAsStringAsync("lscipadd", IpValue, _cancelSource.Token);
+            await localStorage.SetItemAsStringAsync("lscipport", PortValue, _cancelSource.Token);
+        }
+
+        IsConnecting = true;
+        _ = Task.Run(() => OnConnect());
+    }
+
+    private async Task OnDisconnectClick()
+    {
+        IsConnecting = true;
+        await InvokeAsync(StateHasChanged);
+        _cancelSource?.Cancel();
+        //Set this to false so it doesn't just try to reconnect.
+        await localStorage.SetItemAsync("lscautoconnect", false.ToString());
+        AutoConnect = false;
+        try
+        {
+            if (_socketClient != null)
+                await _socketClient.DisposeAsync();
+        }
+        catch { }
+
+        _socketClient = null;
+        IsConnecting = false;
+        ResetCancelToken();
+        await LoadSettings();
+    }
+
+    private async Task OnConnect()
+    {
+        try
+        {
+            if (NavManager.BaseUri.StartsWith("https:", StringComparison.InvariantCultureIgnoreCase))
+                _socketClient = new SocketClient(_ipValue, _portValueNum, true, _cancelSource.Token);
+            else
+                _socketClient = new SocketClient(_ipValue, _portValueNum, false, _cancelSource.Token);
+            _socketClient.OnClientResponse += OnSocketClientResponse;
+            await _socketClient.Connect();
+            var requestMessage = new ClientMessage
+            {
+                ActionType = ClientMessageType.GetSAState
+            };
+            await _socketClient.Send(requestMessage);
+        }
+        catch (Exception ex)
+        {
+            ModalType = ModalType.Error;
+            ModalTitle = "Exception";
+            ModalBody = ex.Message;
+            ShowModal = true;
+        }
+        finally
+        {
+            IsConnecting = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnSocketClientResponse(object sender, SocketClientResponseEventArgs e)
+    {
+        try
+        {
+            switch (e.Response.Type)
+            {
+                case ClientResponseType.LSCData:
+                {
+                    if (e.Response is ClientResponse<LightStripStatus> res)
+                    {
+                        ServerStatus.CopyFrom(res.Data);
+                        BlockStart = false;
+                    }
+
+                    break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ModalType = ModalType.Error;
+            ModalTitle = "Exception";
+            ModalBody = ex.Message;
+            ShowModal = true;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ModalOnClose()
+    {
+        ShowModal = false;
+        ModalButtons.Clear();
+        ModalBody = string.Empty;
+        ModalTitle = string.Empty;
+        ModalType = ModalType.None;
+        StateHasChanged();
+    }
+
 }

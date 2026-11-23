@@ -6,9 +6,14 @@ namespace HueScreenAmbience
 {
 	public static class WindowsApi
 	{
-
 		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 		internal static extern EXECUTION_STATE SetThreadExecutionState(EXECUTION_STATE esFlags);
+
+		[DllImport("user32.dll", SetLastError = true)]
+		internal static extern bool SetProcessDpiAwarenessContext(int dpiFlag);
+
+		[DllImport("SHCore.dll", SetLastError = true)]
+		internal static extern bool SetProcessDpiAwareness(PROCESS_DPI_AWARENESS awareness);
 
 		internal enum EXECUTION_STATE : uint
 		{
@@ -18,11 +23,6 @@ namespace HueScreenAmbience
 			ES_SYSTEM_REQUIRED = 0x00000001,
 			ES_USER_PRESENT = 0x00000004
 		}
-
-		[DllImport("user32.dll", SetLastError = true)]
-		internal static extern bool SetProcessDpiAwarenessContext(int dpiFlag);
-		[DllImport("SHCore.dll", SetLastError = true)]
-		internal static extern bool SetProcessDpiAwareness(PROCESS_DPI_AWARENESS awareness);
 
 		internal enum PROCESS_DPI_AWARENESS
 		{

@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net11.0</TargetFramework>
-    <Platforms>AnyCPU;x64</Platforms>
-    <LangVersion>15</LangVersion>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net11.0</TargetFramework>
+        <Platforms>AnyCPU;x64</Platforms>
+        <LangVersion>15</LangVersion>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageReference Include="System.Device.Gpio" Version="4.2.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12"/>
+        <PackageReference Include="System.Device.Gpio" Version="4.2.0"/>
+    </ItemGroup>
 
 </Project>

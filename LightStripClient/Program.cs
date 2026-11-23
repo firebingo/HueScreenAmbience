@@ -1,16 +1,16 @@
-﻿using LightsShared;
-using LightStripClient.Sockets;
-using System;
+﻿using System;
 using System.Threading.Tasks;
+using LightsShared;
+using LightStripClient.Sockets;
 
 namespace LightStripClient
 {
-	class Program
+	internal class Program
 	{
 		private static LightStripLighter? _lighter;
 		private static SocketHandler? _socketHandler;
 
-		static async Task Main()
+		private static async Task Main()
 		{
 			var config = new Config();
 			config.LoadConfig();

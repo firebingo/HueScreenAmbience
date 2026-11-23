@@ -1,32 +1,32 @@
-﻿using HueScreenAmbience.Hue;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.NanoLeaf;
 using HueScreenAmbience.RGB;
 using HueScreenAmbience.Sockets;
 using LightsShared;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace HueScreenAmbience
 {
-	class HueScreenAmbience
+	internal class HueScreenAmbience
 	{
-		private InputHandler _input = null;
-		private Core _core = null;
-		private Config _config = null;
-		private ScreenReader _screen = null;
-		private ZoneProcessor _zoneProcesser = null;
-		private HueCore _hueClient = null;
-		private RGBLighter _rgbLighter = null;
-		private StripLighter _stripLighter = null;
-		private NanoLeafClient _nanoLeafClient = null;
-		private SocketHandler _socketServer = null;
-		private IServiceProvider _map = null;
+		private Config _config;
+		private Core _core;
+		private HueCore _hueClient;
+		private InputHandler _input;
+		private IServiceProvider _map;
+		private NanoLeafClient _nanoLeafClient;
+		private RGBLighter _rgbLighter;
+		private ScreenReader _screen;
+		private SocketHandler _socketServer;
+		private StripLighter _stripLighter;
+		private ZoneProcessor _zoneProcesser;
 
-		static async Task Main(string[] args)
+		private static async Task Main(string[] args)
 		{
 			await new HueScreenAmbience().Run(args);
 		}
@@ -41,16 +41,18 @@ namespace HueScreenAmbience
 			{
 				if (Environment.OSVersion.Version >= new Version(6, 3, 0)) // win 8.1 added support for per monitor dpi
 				{
-					if (Environment.OSVersion.Version >= new Version(10, 0, 15063)) // win 10 creators update added support for per monitor v2
-					{
-						WindowsApi.SetProcessDpiAwarenessContext((int)WindowsApi.DPI_AWARENESS_CONTEXT.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-					}
+					if (Environment.OSVersion.Version >=
+					    new Version(10, 0, 15063)) // win 10 creators update added support for per monitor v2
+						WindowsApi.SetProcessDpiAwarenessContext((int)WindowsApi.DPI_AWARENESS_CONTEXT
+							.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 					else
-						WindowsApi.SetProcessDpiAwareness(WindowsApi.PROCESS_DPI_AWARENESS.Process_Per_Monitor_DPI_Aware);
+						WindowsApi.SetProcessDpiAwareness(
+							WindowsApi.PROCESS_DPI_AWARENESS.Process_Per_Monitor_DPI_Aware);
 				}
 				else
 				{
-					Console.WriteLine($"{Environment.OSVersion.Version} is not supported. min req: {new Version(6, 3, 0)} (win 8.1)");
+					Console.WriteLine(
+						$"{Environment.OSVersion.Version} is not supported. min req: {new Version(6, 3, 0)} (win 8.1)");
 					return;
 				}
 			}
@@ -65,7 +67,8 @@ namespace HueScreenAmbience
 				var isHeadless = false;
 				foreach (var value in args)
 				{
-					if (!string.IsNullOrWhiteSpace(value) && value.Equals("--headless", StringComparison.OrdinalIgnoreCase))
+					if (!string.IsNullOrWhiteSpace(value) &&
+					    value.Equals("--headless", StringComparison.OrdinalIgnoreCase))
 					{
 						isHeadless = true;
 						break;
@@ -81,7 +84,7 @@ namespace HueScreenAmbience
 				Thread inputThread = null;
 				if (!isHeadless)
 				{
-					inputThread = new Thread(new ThreadStart(_input.HandleInput));
+					inputThread = new Thread(_input.HandleInput);
 					inputThread.Name = "Input Thread";
 				}
 
@@ -157,32 +160,33 @@ namespace HueScreenAmbience
 			if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
 			{
 				services
-				.AddScoped<FileLogger>()
-				.AddSingleton(_config)
-				.AddSingleton(_input)
-				.AddSingleton(_core)
-				.AddSingleton(_hueClient)
-				.AddSingleton(_screen)
-				.AddSingleton(_zoneProcesser)
-				.AddSingleton(_stripLighter)
-				.AddSingleton(_socketServer)
-				.AddSingleton(_nanoLeafClient);
+					.AddScoped<FileLogger>()
+					.AddSingleton(_config)
+					.AddSingleton(_input)
+					.AddSingleton(_core)
+					.AddSingleton(_hueClient)
+					.AddSingleton(_screen)
+					.AddSingleton(_zoneProcesser)
+					.AddSingleton(_stripLighter)
+					.AddSingleton(_socketServer)
+					.AddSingleton(_nanoLeafClient);
 			}
 			else
 			{
 				services
-				.AddScoped<FileLogger>()
-				.AddSingleton(_config)
-				.AddSingleton(_input)
-				.AddSingleton(_core)
-				.AddSingleton(_hueClient)
-				.AddSingleton(_screen)
-				.AddSingleton(_zoneProcesser)
-				.AddSingleton(_rgbLighter)
-				.AddSingleton(_stripLighter)
-				.AddSingleton(_socketServer)
-				.AddSingleton(_nanoLeafClient);
+					.AddScoped<FileLogger>()
+					.AddSingleton(_config)
+					.AddSingleton(_input)
+					.AddSingleton(_core)
+					.AddSingleton(_hueClient)
+					.AddSingleton(_screen)
+					.AddSingleton(_zoneProcesser)
+					.AddSingleton(_rgbLighter)
+					.AddSingleton(_stripLighter)
+					.AddSingleton(_socketServer)
+					.AddSingleton(_nanoLeafClient);
 			}
+
 			var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
 			return provider;
 		}

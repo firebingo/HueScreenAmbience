@@ -1,19 +1,18 @@
-﻿using HueScreenAmbience.DXGICaptureScreen;
-using HueScreenAmbience.Hue;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using HueScreenAmbience.DXGICaptureScreen;
+using HueScreenAmbience.Hue;
 
 namespace HueScreenAmbience
 {
 	public class Core
 	{
-		private bool _isScreenStarted = false;
-
 		private Config _config;
-		private InputHandler _input;
-		private ScreenReader _screen;
 		private HueCore _hueClient;
+		private InputHandler _input;
+		private bool _isScreenStarted;
+		private ScreenReader _screen;
 
 		public async Task Start(bool waitHueStart)
 		{
@@ -41,7 +40,7 @@ namespace HueScreenAmbience
 
 				var bridges = bridgeIPs.ToList();
 
-				bool validInput = false;
+				var validInput = false;
 				do
 				{
 					Console.Clear();
@@ -62,15 +61,17 @@ namespace HueScreenAmbience
 							continue;
 						validInput = true;
 						_hueClient.SetBridge(bridges[readInt - 1]);
-						bool nameValid = false;
+						var nameValid = false;
 						do
 						{
 							try
 							{
 								Console.Clear();
-								Console.WriteLine("Input Device Name and press Link Button on HUE Bridge before hitting enter: ");
+								Console.WriteLine(
+									"Input Device Name and press Link Button on HUE Bridge before hitting enter: ");
 								var deviceName = Console.ReadLine().Trim();
-								if (string.IsNullOrWhiteSpace(deviceName) || deviceName.Length > 19 || deviceName.Contains(' '))
+								if (string.IsNullOrWhiteSpace(deviceName) || deviceName.Length > 19 ||
+								    deviceName.Contains(' '))
 									continue;
 								nameValid = true;
 								if (_config.Model.HueSettings.HueType == HueType.Basic)
@@ -83,11 +84,9 @@ namespace HueScreenAmbience
 								Console.WriteLine(ex.Message);
 								Console.ReadLine();
 							}
-						}
-						while (!nameValid);
+						} while (!nameValid);
 					}
-				}
-				while (!validInput);
+				} while (!validInput);
 
 				return true;
 			}
@@ -100,13 +99,13 @@ namespace HueScreenAmbience
 		public async Task<bool> SelectHue()
 		{
 			var oldSetting = _config.Model.HueSettings.HueType;
-			bool validInput = false;
+			var validInput = false;
 			do
 			{
 				Console.Clear();
-				Console.WriteLine($"Options:");
-				Console.WriteLine($"0 - Basic");
-				Console.WriteLine($"1 - Entertainment");
+				Console.WriteLine("Options:");
+				Console.WriteLine("0 - Basic");
+				Console.WriteLine("1 - Entertainment");
 				var read = Console.ReadLine();
 				if (int.TryParse(read, out var readInt))
 				{
@@ -138,19 +137,20 @@ namespace HueScreenAmbience
 				return false;
 			}
 
-			bool validInput = false;
+			var validInput = false;
 			do
 			{
 				Console.Clear();
-				Console.WriteLine($"Found Rooms:");
+				Console.WriteLine("Found Rooms:");
 				var i = 1;
 				foreach (var r in groups)
 				{
 					Console.WriteLine($"{i++}: Name: {r.Metadata.Name}");
 				}
+
 				Console.WriteLine("Input a room(#) to connect to: ");
 				var read = Console.ReadLine();
-				if (Int32.TryParse(read, out var readInt))
+				if (int.TryParse(read, out var readInt))
 				{
 					if (readInt > groups.Count() || readInt < 1)
 						continue;
@@ -171,21 +171,23 @@ namespace HueScreenAmbience
 
 			if (!groups?.Any() ?? true)
 			{
-				Console.WriteLine("No entertainment groups defined on bridge. Please use another HUE app to define a group.");
+				Console.WriteLine(
+					"No entertainment groups defined on bridge. Please use another HUE app to define a group.");
 				Console.ReadLine();
 				return false;
 			}
 
-			bool validInput = false;
+			var validInput = false;
 			do
 			{
 				Console.Clear();
-				Console.WriteLine($"Found Entertainment Groups:");
+				Console.WriteLine("Found Entertainment Groups:");
 				var i = 1;
 				foreach (var r in groups)
 				{
 					Console.WriteLine($"{i++}: Name: {r.Metadata.Name}");
 				}
+
 				Console.WriteLine("Input a group(#) to connect to: ");
 				var read = Console.ReadLine();
 				if (int.TryParse(read, out var readInt))
@@ -196,6 +198,7 @@ namespace HueScreenAmbience
 					_hueClient.SetEntertainmentRoom(groups.ElementAt(readInt - 1));
 				}
 			} while (!validInput);
+
 			return true;
 		}
 
@@ -213,11 +216,12 @@ namespace HueScreenAmbience
 			do
 			{
 				Console.Clear();
-				Console.WriteLine($"Found adapters:");
+				Console.WriteLine("Found adapters:");
 				foreach (var adapter in adapters)
 				{
 					Console.WriteLine($"{adapter.AdapterId}: Name: {adapter.Name}");
 				}
+
 				Console.WriteLine("Input a adapter(#) to connect to: ");
 				var read = Console.ReadLine();
 				if (int.TryParse(read, out var readInt))
@@ -233,8 +237,7 @@ namespace HueScreenAmbience
 					_config.SaveConfig();
 					_screen.Start();
 				}
-			}
-			while (!validInput);
+			} while (!validInput);
 		}
 
 		public void SelectMonitor()
@@ -252,11 +255,13 @@ namespace HueScreenAmbience
 			do
 			{
 				Console.Clear();
-				Console.WriteLine($"Found monitors:");
+				Console.WriteLine("Found monitors:");
 				foreach (var display in displays)
 				{
-					Console.WriteLine($"{display.OutputId}: Name: {display.Name}, Info: {display.Width}x{display.Height}x{display.RefreshRate:0.##} Format: {display.Format}");
+					Console.WriteLine(
+						$"{display.OutputId}: Name: {display.Name}, Info: {display.Width}x{display.Height}x{display.RefreshRate:0.##} Format: {display.Format}");
 				}
+
 				Console.WriteLine("Input a display(#) to connect to: ");
 				var read = Console.ReadLine();
 				if (int.TryParse(read, out var readInt))
@@ -272,8 +277,7 @@ namespace HueScreenAmbience
 					_config.SaveConfig();
 					_screen.Start();
 				}
-			}
-			while (!validInput);
+			} while (!validInput);
 		}
 
 		public async Task StartScreenReading()
@@ -283,7 +287,8 @@ namespace HueScreenAmbience
 
 			if (_config.Model.HueSettings.UseHue)
 			{
-				if (!_hueClient.IsConnectedToBridge || (_hueClient.UseRoom == null && _hueClient.UseEntertainment == null))
+				if (!_hueClient.IsConnectedToBridge ||
+				    (_hueClient.UseRoom == null && _hueClient.UseEntertainment == null))
 				{
 					Console.Clear();
 					Console.WriteLine("Either not connected to a bridge or room has not been selected");
@@ -295,14 +300,15 @@ namespace HueScreenAmbience
 
 			//Zones use int for total as it is faster and reasonable since we cut the screen resolution by a lot anyways.
 			// Check that a full white screen will not go over the int max at our resolution.
-			long maxValue = (long)_screen.ScreenInfo.Width * _screen.ScreenInfo.Height * byte.MaxValue;
+			var maxValue = (long)_screen.ScreenInfo.Width * _screen.ScreenInfo.Height * byte.MaxValue;
 			if (maxValue >= int.MaxValue)
 				throw new Exception("Process screen size is too large, increase readResolutionReduce value");
 
 #if ANYCPU
 #else
 			//This should prevent windows from going to sleep as entering idle or sleep state seems to break several things.
-			var res = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS | WindowsApi.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
+			var res = WindowsApi.SetThreadExecutionState(WindowsApi.EXECUTION_STATE.ES_CONTINUOUS |
+			                                             WindowsApi.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
 #endif
 
 			await _screen.InitScreenLoop();

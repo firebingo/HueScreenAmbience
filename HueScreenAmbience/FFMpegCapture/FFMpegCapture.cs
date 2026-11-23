@@ -1,45 +1,47 @@
-﻿using LightsShared;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using LightsShared;
 
 namespace HueScreenAmbience.FFMpegCapture
 {
-	unsafe public class FFMpegCapture : IDisposable
+	public unsafe class FFMpegCapture : IDisposable
 	{
-		private readonly int _width = 0;
-		private readonly int _height = 0;
-		private readonly int _frameRate = 0;
-		private readonly int _inputWidth = 0;
-		private readonly int _inputHeight = 0;
-		private readonly string _inputSource = "";
-		private readonly string _inputFormat = "";
-		private readonly string _inputPixelFormatType = "";
-		private readonly string _inputPixelFormat = "";
-		private readonly int _inputFrameRate = 0;
 		private readonly int _bufferMultiplier = 4;
-		private readonly int _threadQueueSize = 128;
-		private readonly bool _ffmpegOutput = false;
-		private readonly bool _useGpu = false;
-		private Process _ffmpegProcess;
-		private Stream _ffmpegStream;
-		private Stream _ffmpegStdErrorStream;
-		private bool _isRunning = false;
-		private readonly int _frameLength = 0;
-		private byte[] _presentBuffer;
-		private byte[] _readyBuffer;
-		private byte[] _progressBuffer;
-		private int _readLock;
-
-		private Thread _ffmpegThread;
-		private Thread _ffmpegStdErrorThread;
+		private readonly bool _ffmpegOutput;
+		private readonly int _frameLength;
+		private readonly int _frameRate;
+		private readonly int _height;
+		private readonly string _inputFormat = "";
+		private readonly int _inputFrameRate;
+		private readonly int _inputHeight;
+		private readonly string _inputPixelFormat = "";
+		private readonly string _inputPixelFormatType = "";
+		private readonly string _inputSource = "";
+		private readonly int _inputWidth;
 
 		private readonly FileLogger _logger;
+		private readonly byte[] _presentBuffer;
+		private readonly int _threadQueueSize = 128;
+		private readonly bool _useGpu;
+		private readonly int _width;
+		private Process _ffmpegProcess;
+		private Stream _ffmpegStdErrorStream;
+		private Thread _ffmpegStdErrorThread;
+		private Stream _ffmpegStream;
 
-		public FFMpegCapture(int width, int height, int inputWidth, int inputHeight, int frameRate, string inputSource, string inputFormat, string inputPixelFormat, string inputPixelFormatType,
-			int inputFrameRate, int bufferMultiplier, int threadQueueSize, FileLogger logger, bool ffmpegOutput = false, bool useGpu = false)
+		private Thread _ffmpegThread;
+		private bool _isRunning;
+		private byte[] _progressBuffer;
+		private int _readLock;
+		private byte[] _readyBuffer;
+
+		public FFMpegCapture(int width, int height, int inputWidth, int inputHeight, int frameRate, string inputSource,
+			string inputFormat, string inputPixelFormat, string inputPixelFormatType,
+			int inputFrameRate, int bufferMultiplier, int threadQueueSize, FileLogger logger, bool ffmpegOutput = false,
+			bool useGpu = false)
 		{
 			_logger = logger;
 			_width = width;
@@ -61,6 +63,18 @@ namespace HueScreenAmbience.FFMpegCapture
 			_readyBuffer = new byte[_frameLength];
 			_progressBuffer = new byte[_frameLength];
 			_readLock = 1;
+		}
+
+		public void Dispose()
+		{
+			if (_ffmpegProcess != null)
+			{
+				_ffmpegStream?.Dispose();
+				_ffmpegStdErrorStream?.Dispose();
+			}
+
+			Interlocked.Exchange(ref _readLock, 0);
+			GC.SuppressFinalize(this);
 		}
 
 		//gpu_mem=256 /boot/config.txt
@@ -86,12 +100,14 @@ namespace HueScreenAmbience.FFMpegCapture
 				_ffmpegProcess.StartInfo.FileName = "ffmpeg";
 				//rgb32 and bgr32 are flipped for some reason??
 				if (_useGpu)
-					_ffmpegProcess.StartInfo.Arguments = $"-hwaccel cuda -hwaccel_output_format cuda -f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -vf \"format=nv12,hwupload,scale_cuda=w={_width}:h={_height},hwdownload,format=nv12\" -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -thread_queue_size {_threadQueueSize} -f rawvideo pipe:1";
+					_ffmpegProcess.StartInfo.Arguments =
+						$"-hwaccel cuda -hwaccel_output_format cuda -f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -vf \"format=nv12,hwupload,scale_cuda=w={_width}:h={_height},hwdownload,format=nv12\" -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -thread_queue_size {_threadQueueSize} -f rawvideo pipe:1";
 				else
-					_ffmpegProcess.StartInfo.Arguments = $"-f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -s {_width}x{_height} -thread_queue_size {_threadQueueSize} -f rawvideo pipe:1";
+					_ffmpegProcess.StartInfo.Arguments =
+						$"-f {_inputFormat} -{_inputPixelFormatType} {_inputPixelFormat} -rtbufsize {_width * _height * _bufferMultiplier} -framerate {_inputFrameRate} -video_size {_inputWidth}x{_inputHeight} -i {_inputSource} -c:v rawvideo -pix_fmt rgb32 -r {_frameRate} -s {_width}x{_height} -thread_queue_size {_threadQueueSize} -f rawvideo pipe:1";
 
 				_isRunning = true;
-				_ffmpegThread = new Thread(new ThreadStart(ReadLoop));
+				_ffmpegThread = new Thread(ReadLoop);
 				_ffmpegThread.Name = "FFMPEG Read Thread";
 
 				_ffmpegProcess.Start();
@@ -100,10 +116,11 @@ namespace HueScreenAmbience.FFMpegCapture
 				if (!_ffmpegOutput)
 				{
 					_ffmpegStdErrorStream = _ffmpegProcess.StandardError.BaseStream;
-					_ffmpegStdErrorThread = new Thread(new ThreadStart(ReadStdErrorLoop));
+					_ffmpegStdErrorThread = new Thread(ReadStdErrorLoop);
 					_ffmpegStdErrorThread.Name = "FFMPEG StdError Thread";
 					_ffmpegStdErrorThread.Start();
 				}
+
 				_ffmpegThread.Start();
 			}
 			catch (Exception ex)
@@ -155,6 +172,7 @@ namespace HueScreenAmbience.FFMpegCapture
 									framePtr[j++] = bufferPtr[i];
 								}
 							}
+
 							frameBytesRead += bytesRead;
 						}
 					}
@@ -179,10 +197,7 @@ namespace HueScreenAmbience.FFMpegCapture
 				var frameData = frameStream.GetBuffer();
 				var t = DateTime.UtcNow;
 				Buffer.BlockCopy(_presentBuffer, 0, frameData, 0, _frameLength);
-				if (Interlocked.Exchange(ref _readLock, 1) == 1)
-				{
-					return false;
-				}
+				if (Interlocked.Exchange(ref _readLock, 1) == 1) return false;
 				Interlocked.Exchange(ref _readyBuffer, _presentBuffer);
 				//Console.WriteLine($"Buffer.BlockCopy: {(DateTime.UtcNow - t).TotalMilliseconds}");
 				//Console.WriteLine($"GetFrame: {(DateTime.UtcNow - start).TotalMilliseconds}");
@@ -205,18 +220,6 @@ namespace HueScreenAmbience.FFMpegCapture
 				if (!_ffmpegOutput)
 					_ffmpegProcess.StandardError.Close();
 			}
-		}
-
-		public void Dispose()
-		{
-			if (_ffmpegProcess != null)
-			{
-				_ffmpegStream?.Dispose();
-				_ffmpegStdErrorStream?.Dispose();
-			}
-
-			Interlocked.Exchange(ref _readLock, 0);
-			GC.SuppressFinalize(this);
 		}
 	}
 }

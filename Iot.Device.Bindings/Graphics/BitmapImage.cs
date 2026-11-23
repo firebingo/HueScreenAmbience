@@ -1,16 +1,19 @@
-﻿using SixLabors.ImageSharp;
+﻿using System;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using System;
 
 namespace Iot.Device.Graphics
 {
 	/// <summary>
-	/// Represents bitmap image
+	///     Represents bitmap image
 	/// </summary>
 	public abstract class BitmapImage
 	{
+		private readonly byte[] _data;
+
 		/// <summary>
-		/// Initializes a <see cref="T:Iot.Device.Graphics.BitmapImage" /> instance with the specified data, width, height and stride.
+		///     Initializes a <see cref="T:Iot.Device.Graphics.BitmapImage" /> instance with the specified data, width, height and
+		///     stride.
 		/// </summary>
 		/// <param name="data">Data representing the image (derived class defines a specific format)</param>
 		/// <param name="width">Width of the image</param>
@@ -24,30 +27,28 @@ namespace Iot.Device.Graphics
 			Stride = stride;
 		}
 
-		private readonly byte[] _data;
-
 		/// <summary>
-		/// Data related to the image (derived class defines a specific format)
+		///     Data related to the image (derived class defines a specific format)
 		/// </summary>
 		public Span<byte> Data => _data;
 
 		/// <summary>
-		/// Width of the image
+		///     Width of the image
 		/// </summary>
 		public int Width { get; }
 
 		/// <summary>
-		/// Height of the image
+		///     Height of the image
 		/// </summary>
 		public int Height { get; }
 
 		/// <summary>
-		/// Number of bytes per row
+		///     Number of bytes per row
 		/// </summary>
 		public int Stride { get; }
 
 		/// <summary>
-		/// Sets pixel at specific position
+		///     Sets pixel at specific position
 		/// </summary>
 		/// <param name="x">X coordinate of the pixel</param>
 		/// <param name="y">Y coordinate of the pixel</param>
@@ -55,16 +56,16 @@ namespace Iot.Device.Graphics
 		public abstract void SetPixel(int x, int y, Rgb24 color);
 
 		/// <summary>
-		/// Clears the image to specific color
+		///     Clears the image to specific color
 		/// </summary>
 		/// <param name="color">Color to clear the image. Defaults to black.</param>
 		public virtual void Clear(Rgb24? color = null)
 		{
 			if (color == null)
 				color = Color.Black.ToPixel<Rgb24>();
-			for (int y = 0; y < Height; y++)
+			for (var y = 0; y < Height; y++)
 			{
-				for (int x = 0; x < Width; x++)
+				for (var x = 0; x < Width; x++)
 				{
 					SetPixel(x, y, color.Value);
 				}

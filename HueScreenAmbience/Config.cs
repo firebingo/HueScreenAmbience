@@ -1,33 +1,33 @@
-﻿using BitmapZoneProcessor;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Security.Authentication;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BitmapZoneProcessor;
+using SixLabors.ImageSharp;
 
 namespace HueScreenAmbience
 {
 	public class Config
 	{
-		private ConfigModel _config;
-		public ConfigModel Model { get => _config; private set => _config = value; }
-
-		private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions()
+		private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
 		{
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			WriteIndented = true
 		};
 
+		public ConfigModel Model { get; private set; }
+
 		public void LoadConfig()
 		{
 			try
 			{
-				_config = null;
+				Model = null;
 				if (File.Exists("Data/Config.json"))
 				{
-					_config = JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText("Data/Config.json"), _jsonOptions);
+					Model = JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText("Data/Config.json"), _jsonOptions);
 					ValidateConfig();
 					SaveConfig();
 				}
@@ -36,7 +36,8 @@ namespace HueScreenAmbience
 					if (!Directory.Exists("Data"))
 						Directory.CreateDirectory("Data");
 					using (File.Create("Data/Config.json")) { }
-					_config = new ConfigModel();
+
+					Model = new ConfigModel();
 					SaveConfig();
 				}
 			}
@@ -50,7 +51,7 @@ namespace HueScreenAmbience
 		{
 			try
 			{
-				File.WriteAllText("Data/Config.json", JsonSerializer.Serialize(_config, _jsonOptions));
+				File.WriteAllText("Data/Config.json", JsonSerializer.Serialize(Model, _jsonOptions));
 			}
 			catch (Exception e)
 			{
@@ -60,49 +61,48 @@ namespace HueScreenAmbience
 
 		private void ValidateConfig()
 		{
-			_config.HueSettings.ColorMultiplier = Math.Clamp(_config.HueSettings.ColorMultiplier, 0.0f, 2.0f);
-			_config.HueSettings.BlendLastColorAmount = Math.Clamp(_config.HueSettings.BlendLastColorAmount, 0.0f, 1.0f);
-			_config.HueSettings.UpdateFrameRate = Math.Clamp(_config.HueSettings.UpdateFrameRate, 1, 24);
-			_config.RgbDeviceSettings.ColorMultiplier = Math.Clamp(_config.RgbDeviceSettings.ColorMultiplier, 0.0f, 2.0f);
-			_config.LightStripSettings.RemotePort = Math.Clamp(_config.LightStripSettings.RemotePort, 1, 65535);
-			_config.LightStripSettings.BlendLastColorAmount = Math.Clamp(_config.LightStripSettings.BlendLastColorAmount, 0.0f, 1.0f);
-			_config.LightStripSettings.SaturateColors = Math.Clamp(_config.LightStripSettings.SaturateColors, 0.0f, 5.0f);
-			_config.NanoLeafSettings.ColorMultiplier = Math.Clamp(_config.NanoLeafSettings.ColorMultiplier, 0.0f, 2.0f);
-			_config.NanoLeafSettings.BlendLastColorAmount = Math.Clamp(_config.NanoLeafSettings.BlendLastColorAmount, 0.0f, 1.0f);
-			_config.ZoneColumns = Math.Max(1, _config.ZoneColumns);
-			_config.ZoneRows = Math.Max(1, _config.ZoneRows);
-			_config.ReadResolutionReduce = Math.Clamp(_config.ReadResolutionReduce, 1.0f, 10.0f);
-			_config.ScreenReadFrameRate = Math.Max(1, _config.ScreenReadFrameRate);
-			_config.SocketSettings.ListenPort = Math.Clamp(_config.SocketSettings.ListenPort, 1, 65535);
-			_config.FfmpegCaptureSettings.BufferMultiplier = Math.Clamp(_config.FfmpegCaptureSettings.BufferMultiplier, 4, 32);
-			_config.FfmpegCaptureSettings.ThreadQueueSize = Math.Clamp(_config.FfmpegCaptureSettings.ThreadQueueSize, 1, 4096);
+			Model.HueSettings.ColorMultiplier = Math.Clamp(Model.HueSettings.ColorMultiplier, 0.0f, 2.0f);
+			Model.HueSettings.BlendLastColorAmount = Math.Clamp(Model.HueSettings.BlendLastColorAmount, 0.0f, 1.0f);
+			Model.HueSettings.UpdateFrameRate = Math.Clamp(Model.HueSettings.UpdateFrameRate, 1, 24);
+			Model.RgbDeviceSettings.ColorMultiplier = Math.Clamp(Model.RgbDeviceSettings.ColorMultiplier, 0.0f, 2.0f);
+			Model.LightStripSettings.RemotePort = Math.Clamp(Model.LightStripSettings.RemotePort, 1, 65535);
+			Model.LightStripSettings.BlendLastColorAmount =
+				Math.Clamp(Model.LightStripSettings.BlendLastColorAmount, 0.0f, 1.0f);
+			Model.LightStripSettings.SaturateColors = Math.Clamp(Model.LightStripSettings.SaturateColors, 0.0f, 5.0f);
+			Model.NanoLeafSettings.ColorMultiplier = Math.Clamp(Model.NanoLeafSettings.ColorMultiplier, 0.0f, 2.0f);
+			Model.NanoLeafSettings.BlendLastColorAmount =
+				Math.Clamp(Model.NanoLeafSettings.BlendLastColorAmount, 0.0f, 1.0f);
+			Model.ZoneColumns = Math.Max(1, Model.ZoneColumns);
+			Model.ZoneRows = Math.Max(1, Model.ZoneRows);
+			Model.ReadResolutionReduce = Math.Clamp(Model.ReadResolutionReduce, 1.0f, 10.0f);
+			Model.ScreenReadFrameRate = Math.Max(1, Model.ScreenReadFrameRate);
+			Model.SocketSettings.ListenPort = Math.Clamp(Model.SocketSettings.ListenPort, 1, 65535);
+			Model.FfmpegCaptureSettings.BufferMultiplier =
+				Math.Clamp(Model.FfmpegCaptureSettings.BufferMultiplier, 4, 32);
+			Model.FfmpegCaptureSettings.ThreadQueueSize =
+				Math.Clamp(Model.FfmpegCaptureSettings.ThreadQueueSize, 1, 4096);
 
-			if (_config.BitmapRect.HasValue)
-				_config.ImageRect = new SixLabors.ImageSharp.Rectangle(_config.BitmapRect.Value.top, _config.BitmapRect.Value.left, _config.BitmapRect.Value.width, _config.BitmapRect.Value.height);
+			if (Model.BitmapRect.HasValue)
+				Model.ImageRect = new Rectangle(Model.BitmapRect.Value.top, Model.BitmapRect.Value.left,
+					Model.BitmapRect.Value.width, Model.BitmapRect.Value.height);
 
-			if (!IPAddress.TryParse(_config.LightStripSettings.RemoteAddress, out _))
+			if (!IPAddress.TryParse(Model.LightStripSettings.RemoteAddress, out _))
+				Model.LightStripSettings.RemoteAddress = "127.0.0.1";
+			_ = Model.LightStripSettings.RemoteAddressIp;
+
+			if (!IPAddress.TryParse(Model.SocketSettings.ListenAddress, out _))
+				Model.SocketSettings.ListenAddress = IPAddress.Any.ToString();
+			_ = Model.SocketSettings.ListenIp;
+
+			if (!IPAddress.TryParse(Model.RgbDeviceSettings.OpenRGBAddress, out _))
+				Model.RgbDeviceSettings.OpenRGBAddress = "127.0.0.1";
+			_ = Model.RgbDeviceSettings.OpenRGBIp;
+
+			for (var i = 0; i < Model.LightStripSettings.Lights.Count; ++i)
 			{
-				_config.LightStripSettings.RemoteAddress = "127.0.0.1";
-			}
-			_ = _config.LightStripSettings.RemoteAddressIp;
-
-			if (!IPAddress.TryParse(_config.SocketSettings.ListenAddress, out _))
-			{
-				_config.SocketSettings.ListenAddress = IPAddress.Any.ToString();
-			}
-			_ = _config.SocketSettings.ListenIp;
-
-			if (!IPAddress.TryParse(_config.RgbDeviceSettings.OpenRGBAddress, out _))
-			{
-				_config.RgbDeviceSettings.OpenRGBAddress = "127.0.0.1";
-			}
-			_ = _config.RgbDeviceSettings.OpenRGBIp;
-
-			for (var i = 0; i < _config.LightStripSettings.Lights.Count; ++i)
-			{
-				var x = Math.Clamp(_config.LightStripSettings.Lights[i].X, 0.0f, 1.0f);
-				var y = Math.Clamp(_config.LightStripSettings.Lights[i].Y, 0.0f, 1.0f);
-				_config.LightStripSettings.Lights[i] = new SimplePointF(x, y);
+				var x = Math.Clamp(Model.LightStripSettings.Lights[i].X, 0.0f, 1.0f);
+				var y = Math.Clamp(Model.LightStripSettings.Lights[i].Y, 0.0f, 1.0f);
+				Model.LightStripSettings.Lights[i] = new SimplePointF(x, y);
 			}
 		}
 	}
@@ -124,24 +124,25 @@ namespace HueScreenAmbience
 	[Serializable]
 	public class ConfigModel
 	{
+		[JsonIgnore]
+		public Rectangle? ImageRect;
+
 		public HueSettings HueSettings { get; set; } = new HueSettings();
 		public ZoneProcessSettings ZoneProcessSettings { get; set; } = new ZoneProcessSettings();
 		public RGBDeviceSettings RgbDeviceSettings { get; set; } = new RGBDeviceSettings();
 		public FFMpegCaptureSettings FfmpegCaptureSettings { get; set; } = new FFMpegCaptureSettings();
 		public SocketSettings SocketSettings { get; set; } = new SocketSettings();
-		public uint AdapterId { get; set; } = 0;
-		public uint MonitorId { get; set; } = 0;
+		public uint AdapterId { get; set; }
+		public uint MonitorId { get; set; }
 		public int ZoneColumns { get; set; } = 1;
 		public int ZoneRows { get; set; } = 1;
 		public int ScreenReadFrameRate { get; set; } = 24;
-		public bool DumpPngs { get; set; } = false;
+		public bool DumpPngs { get; set; }
 		public string ImageDumpLocation { get; set; } = "Images";
-		public bool IntrinsicsEnabled { get; set; } = false;
+		public bool IntrinsicsEnabled { get; set; }
 		public float ReadResolutionReduce { get; set; } = 2.0f;
-		public bool DebugTimings { get; set; } = false;
-		public JsonRect? BitmapRect { get; set; } = null;
-		[JsonIgnore]
-		public SixLabors.ImageSharp.Rectangle? ImageRect = null;
+		public bool DebugTimings { get; set; }
+		public JsonRect? BitmapRect { get; set; }
 		public NanoLeafSettings NanoLeafSettings { get; set; } = new NanoLeafSettings();
 		public LightStripSettings LightStripSettings { get; set; } = new LightStripSettings();
 	}
@@ -174,11 +175,11 @@ namespace HueScreenAmbience
 
 	public class RGBDeviceSettings
 	{
+		private IPAddress _openRGBIp;
+
 		[JsonIgnore]
-		public bool UseDevices
-		{
-			get => UseKeyboards || UseMice || UseMotherboard || UseLightstrip;
-		}
+		public bool UseDevices => UseKeyboards || UseMice || UseMotherboard || UseLightstrip;
+
 		public bool UseKeyboards { get; set; } = false;
 		public bool UseMice { get; set; } = false;
 		public bool UseMotherboard { get; set; } = false;
@@ -190,7 +191,7 @@ namespace HueScreenAmbience
 		public bool UseOpenRGB { get; set; } = false;
 		public short OpenRGBPort { get; set; } = 6742;
 		public string OpenRGBAddress { get; set; } = "127.0.0.1";
-		private IPAddress _openRGBIp;
+
 		[JsonIgnore]
 		public IPAddress OpenRGBIp
 		{
@@ -216,9 +217,10 @@ namespace HueScreenAmbience
 
 	public class LightStripSettings
 	{
+		private IPAddress _remoteAddressIp;
 		public bool UseLightStrip { get; set; } = false;
 		public string RemoteAddress { get; set; } = "127.0.0.1";
-		private IPAddress _remoteAddressIp;
+
 		[JsonIgnore]
 		public IPAddress RemoteAddressIp
 		{
@@ -228,6 +230,7 @@ namespace HueScreenAmbience
 				return _remoteAddressIp;
 			}
 		}
+
 		public int RemotePort { get; set; } = 9250;
 		public float ColorMultiplier { get; set; } = 1.0f;
 		public float BlendLastColorAmount { get; set; } = 0.4f;
@@ -259,11 +262,12 @@ namespace HueScreenAmbience
 
 	public class SocketSettings
 	{
+		private IPAddress _listenIp;
 		public bool EnableHubSocket { get; set; } = false;
 		public bool AspnetConsoleLog { get; set; } = false;
 		public int ListenPort { get; set; } = 34780;
 		public string ListenAddress { get; set; } = IPAddress.Any.ToString();
-		private IPAddress _listenIp;
+
 		[JsonIgnore]
 		public IPAddress ListenIp
 		{
@@ -273,6 +277,7 @@ namespace HueScreenAmbience
 				return _listenIp;
 			}
 		}
+
 		public string PfxCertLocation { get; set; } = string.Empty;
 		public string PfxCertPassword { get; set; } = string.Empty;
 		public string PemCertLocation { get; set; } = string.Empty;
@@ -284,9 +289,10 @@ namespace HueScreenAmbience
 
 	public class NanoLeafSettings
 	{
+		private IPAddress _remoteAddressIp;
 		public bool UseNanoLeaf { get; set; } = false;
 		public string RemoteAddress { get; set; } = "127.0.0.1";
-		private IPAddress _remoteAddressIp;
+
 		[JsonIgnore]
 		public IPAddress RemoteAddressIp
 		{
@@ -296,6 +302,7 @@ namespace HueScreenAmbience
 				return _remoteAddressIp;
 			}
 		}
+
 		public ushort Port { get; set; } = 16021;
 		public string AuthToken { get; set; }
 		public int UpdateFrameRate { get; set; } = 60;

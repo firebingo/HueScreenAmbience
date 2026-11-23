@@ -14,16 +14,16 @@ namespace WebControlClient.Shared
 		{
 			if (_cache != null)
 				return _cache;
-			else
-				_cache = new List<NetworkAddress>();
+			_cache = new List<NetworkAddress>();
 
-			foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
+			foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
 			{
 				var add = new NetworkAddress();
-				if (ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 || ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
+				if (ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ||
+				    ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
 				{
 					add.Name = ni.Name;
-					foreach (UnicastIPAddressInformation ip in ni.GetIPProperties().UnicastAddresses)
+					foreach (var ip in ni.GetIPProperties().UnicastAddresses)
 					{
 						add.Ip = ip.Address;
 					}

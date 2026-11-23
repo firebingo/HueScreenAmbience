@@ -1,27 +1,26 @@
-﻿using SixLabors.ImageSharp;
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
+using SixLabors.ImageSharp;
 
 namespace BitmapZoneProcessor
 {
-	unsafe public class PixelZonesTotals : IDisposable
+	public unsafe class PixelZonesTotals : IDisposable
 	{
-		private bool disposed = false;
+		private readonly int _length;
+		public int* AvgB;
+		public int* AvgG;
+		public int* AvgR;
+		public int* Count;
+		public int* TotalB;
+		public int* TotalG;
 
 		public int* TotalR;
-		public int* TotalG;
-		public int* TotalB;
-		public int* Count;
-		public int* AvgR;
-		public int* AvgG;
-		public int* AvgB;
-		private readonly int _length;
+		private bool disposed;
 
 		public PixelZonesTotals(int length)
 		{
-
 			_length = length;
-			nuint bytesLength = (nuint)(sizeof(int) * length);
+			var bytesLength = (nuint)(sizeof(int) * length);
 			TotalR = (int*)NativeMemory.Alloc(bytesLength);
 			TotalG = (int*)NativeMemory.Alloc(bytesLength);
 			TotalB = (int*)NativeMemory.Alloc(bytesLength);
@@ -31,9 +30,15 @@ namespace BitmapZoneProcessor
 			AvgB = (int*)NativeMemory.Alloc(bytesLength);
 		}
 
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
 		public void ResetAverages()
 		{
-			for (int i = 0; i < _length; ++i)
+			for (var i = 0; i < _length; ++i)
 			{
 				TotalR[i] = 0;
 				TotalG[i] = 0;
@@ -44,20 +49,14 @@ namespace BitmapZoneProcessor
 			}
 		}
 
-		unsafe public void CalculateAverages()
+		public void CalculateAverages()
 		{
-			for (int i = 0; i < _length; ++i)
+			for (var i = 0; i < _length; ++i)
 			{
 				AvgR[i] = TotalR[i] / Count[i];
 				AvgG[i] = TotalG[i] / Count[i];
 				AvgB[i] = TotalB[i] / Count[i];
 			}
-		}
-
-		public void Dispose()
-		{
-			Dispose(disposing: true);
-			GC.SuppressFinalize(this);
 		}
 
 		protected virtual void Dispose(bool disposing)
@@ -76,7 +75,7 @@ namespace BitmapZoneProcessor
 		}
 	}
 
-	unsafe public struct PixelZone : IDisposable
+	public unsafe struct PixelZone : IDisposable
 	{
 		public readonly Point TopLeft;
 		public readonly Point BottomRight;
@@ -93,7 +92,8 @@ namespace BitmapZoneProcessor
 		public int* AvgB;
 		public ZonePixelRange* PixelRanges;
 
-		public PixelZone(int row, int column, int xMin, int xMax, int yMin, int yMax, int stride, int bitDepth, PixelZonesTotals totals, int totalsIndex)
+		public PixelZone(int row, int column, int xMin, int xMax, int yMin, int yMax, int stride, int bitDepth,
+			PixelZonesTotals totals, int totalsIndex)
 		{
 			Row = row;
 			Column = column;
@@ -112,7 +112,7 @@ namespace BitmapZoneProcessor
 
 			//The zones cover a rectangular area of the image, but the images are stored in a sequential array, so we need to have a range
 			// for each y coordinate that the rectangle covers.
-			nuint bytesLength = (nuint)(sizeof(ZonePixelRange) * Height);
+			var bytesLength = (nuint)(sizeof(ZonePixelRange) * Height);
 			PixelRanges = (ZonePixelRange*)NativeMemory.Alloc(bytesLength);
 			for (int y = TopLeft.Y, i = 0; y < BottomRight.Y; ++y, ++i)
 			{
@@ -124,7 +124,7 @@ namespace BitmapZoneProcessor
 
 		private static long GetImageCoordinate(int stride, int x, int y, int bitDepth = 3)
 		{
-			return (y * stride) + x * bitDepth;
+			return y * stride + x * bitDepth;
 		}
 
 		public bool IsCoordInZone(int x, int y)

@@ -1,7 +1,4 @@
-﻿using Iot.Device.Ws28xx;
-using LightsShared;
-using SixLabors.ImageSharp.PixelFormats;
-using System;
+﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Device.Spi;
@@ -11,16 +8,19 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Iot.Device.Ws28xx;
+using LightsShared;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace LightStripClient
 {
 	public class LightPacketHeader
 	{
-		public int LightServerVersion;
+		public int ColorByteCount;
 		public long FrameCount;
+		public int LightServerVersion;
 		public byte SequenceCount;
 		public byte SequenceNumber;
-		public int ColorByteCount;
 	}
 
 	public class LightStripLighter : IDisposable
@@ -31,21 +31,28 @@ namespace LightStripClient
 
 		private readonly Config? _config;
 		private readonly FileLogger? _logger;
+		private readonly MemoryStream _readStream;
+		private byte[] _buffer = [];
+		private SpiDevice? _device;
+		private byte _frameReceivedPackets;
 		private Socket? _lightClientSocket;
 		private IPEndPoint? _lightServerEndpoint;
 		private EndPoint? _lightServerEndpointRemote;
-		private Thread? _processThread;
-		private SpiDevice? _device;
 		private Ws2812b? _lightStrip;
-		private bool _running;
-		private byte[] _buffer = [];
-		private readonly MemoryStream _readStream;
-		private long _currentFrame = -1;
 		private byte _packetCount;
-		private byte _frameReceivedPackets;
 		private Dictionary<byte, List<Rgb24>>? _packets;
+		private Thread? _processThread;
+		private bool _running;
 
-		public long Frame { get => _currentFrame; }
+		public LightStripLighter(Config config, FileLogger logger)
+		{
+			_config = config;
+			_logger = logger;
+			_readStream = new MemoryStream(_packetMaxSize);
+		}
+
+		public long Frame { get; private set; } = -1;
+
 		public string BoundIp
 		{
 			get
@@ -55,6 +62,7 @@ namespace LightStripClient
 				return string.Empty;
 			}
 		}
+
 		public string BoundPort
 		{
 			get
@@ -65,11 +73,23 @@ namespace LightStripClient
 			}
 		}
 
-		public LightStripLighter(Config config, FileLogger logger)
+		public void Dispose()
 		{
-			_config = config;
-			_logger = logger;
-			_readStream = new MemoryStream(_packetMaxSize);
+			_running = false;
+			_lightClientSocket?.Dispose();
+			_readStream?.Dispose();
+			if (_packets != null)
+			{
+				foreach (var packet in _packets)
+				{
+					packet.Value?.Clear();
+				}
+
+				_packets.Clear();
+			}
+
+			_packets = null;
+			GC.SuppressFinalize(this);
 		}
 
 		public void Start()
@@ -98,7 +118,8 @@ namespace LightStripClient
 			{
 				_lightServerEndpoint = new IPEndPoint(_config.Model.RemoteAddressIp, _config.Model.ReceivePort);
 				_lightServerEndpointRemote = _lightServerEndpoint;
-				_lightClientSocket = new Socket(_config.Model.RemoteAddressIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+				_lightClientSocket = new Socket(_config.Model.RemoteAddressIp.AddressFamily, SocketType.Dgram,
+					ProtocolType.Udp);
 			}
 
 			_lightClientSocket.ReceiveTimeout = _config.Model.ReceiveTimeout;
@@ -143,9 +164,10 @@ namespace LightStripClient
 					if (!_running)
 						break;
 
-					if (_lightClientSocket == null || _lightServerEndpoint == null || _lightServerEndpointRemote == null || _packets == null)
+					if (_lightClientSocket == null || _lightServerEndpoint == null ||
+					    _lightServerEndpointRemote == null || _packets == null)
 					{
-						_ = Task.Run(() => _logger?.WriteLog($"Socket or endpoints are null"));
+						_ = Task.Run(() => _logger?.WriteLog("Socket or endpoints are null"));
 						Stop();
 						break;
 					}
@@ -169,9 +191,9 @@ namespace LightStripClient
 					}
 
 					//If we get a packet for a later frame abandon the old one and reset our packet list.
-					if (header.FrameCount > _currentFrame)
+					if (header.FrameCount > Frame)
 					{
-						_currentFrame = header.FrameCount;
+						Frame = header.FrameCount;
 						_frameReceivedPackets = 1;
 						_packets.Clear();
 						for (byte i = 0; i < _packetCount; ++i)
@@ -180,10 +202,7 @@ namespace LightStripClient
 						}
 					}
 					//If we get a previous frame just ignore it
-					else if (header.FrameCount < _currentFrame)
-					{
-						continue;
-					}
+					else if (header.FrameCount < Frame) continue;
 
 					ReadPacketColors(header.SequenceNumber, header.ColorByteCount);
 
@@ -196,11 +215,13 @@ namespace LightStripClient
 					{
 						if (_config?.Model.LightCount != _packets.Sum(x => x.Value.Count))
 						{
-							Console.WriteLine($"Light count received does not match configured count ({_config?.Model.LightCount}), received ({_packets.Sum(x => x.Value.Count)})");
+							Console.WriteLine(
+								$"Light count received does not match configured count ({_config?.Model.LightCount}), received ({_packets.Sum(x => x.Value.Count)})");
 							continue;
 						}
 
-						Console.WriteLine($"All packets received for frame {header.FrameCount} with {_packets.Sum(x => x.Value.Count)} colors");
+						Console.WriteLine(
+							$"All packets received for frame {header.FrameCount} with {_packets.Sum(x => x.Value.Count)} colors");
 						var lightIter = 0;
 						for (byte i = 0; i < _packets.Count; ++i)
 						{
@@ -210,6 +231,7 @@ namespace LightStripClient
 								_lightStrip?.Image.SetPixel(lightIter++, 0, _packets[i][j]);
 							}
 						}
+
 						_lightStrip?.Update();
 					}
 				}
@@ -223,7 +245,6 @@ namespace LightStripClient
 					}
 					else
 						_ = Task.Run(() => _logger?.WriteLog($"SocketException: {tex}"));
-					continue;
 				}
 				catch (IOException ex)
 				{
@@ -234,14 +255,13 @@ namespace LightStripClient
 				{
 					Console.WriteLine(ex.ToString());
 					_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
-					continue;
 				}
 			} while (_running);
 		}
 
 		public void ResetLights()
 		{
-			_currentFrame = -1;
+			Frame = -1;
 			_lightStrip?.Image?.Clear();
 			_lightStrip?.Update();
 		}
@@ -265,27 +285,24 @@ namespace LightStripClient
 			var header = new LightPacketHeader();
 			_readStream.Seek(0, SeekOrigin.Begin);
 
-			unsafe
-			{
-				byte[] readBuffer = ArrayPool<byte>.Shared.Rent(sizeof(int));
-				_readStream.Read(readBuffer, 0, sizeof(int));
-				header.LightServerVersion = BitConverter.ToInt32(readBuffer);
-				ArrayPool<byte>.Shared.Return(readBuffer);
+			var readBuffer = ArrayPool<byte>.Shared.Rent(sizeof(int));
+			_readStream.Read(readBuffer, 0, sizeof(int));
+			header.LightServerVersion = BitConverter.ToInt32(readBuffer);
+			ArrayPool<byte>.Shared.Return(readBuffer);
 
-				readBuffer = ArrayPool<byte>.Shared.Rent(sizeof(long));
-				_readStream.Read(readBuffer, 0, sizeof(long));
-				header.FrameCount = BitConverter.ToInt64(readBuffer);
-				ArrayPool<byte>.Shared.Return(readBuffer);
+			readBuffer = ArrayPool<byte>.Shared.Rent(sizeof(long));
+			_readStream.Read(readBuffer, 0, sizeof(long));
+			header.FrameCount = BitConverter.ToInt64(readBuffer);
+			ArrayPool<byte>.Shared.Return(readBuffer);
 
-				header.SequenceCount = (byte)_readStream.ReadByte();
+			header.SequenceCount = (byte)_readStream.ReadByte();
 
-				header.SequenceNumber = (byte)_readStream.ReadByte();
+			header.SequenceNumber = (byte)_readStream.ReadByte();
 
-				readBuffer = ArrayPool<byte>.Shared.Rent(sizeof(int));
-				_readStream.Read(readBuffer, 0, sizeof(int));
-				header.ColorByteCount = BitConverter.ToInt32(readBuffer);
-				ArrayPool<byte>.Shared.Return(readBuffer);
-			}
+			readBuffer = ArrayPool<byte>.Shared.Rent(sizeof(int));
+			_readStream.Read(readBuffer, 0, sizeof(int));
+			header.ColorByteCount = BitConverter.ToInt32(readBuffer);
+			ArrayPool<byte>.Shared.Return(readBuffer);
 
 			return header;
 		}
@@ -302,23 +319,6 @@ namespace LightStripClient
 				var b = (byte)_readStream.ReadByte();
 				_packets[sequence].Add(new Rgb24(r, g, b));
 			}
-		}
-
-		public void Dispose()
-		{
-			_running = false;
-			_lightClientSocket?.Dispose();
-			_readStream?.Dispose();
-			if (_packets != null)
-			{
-				foreach (var packet in _packets)
-				{
-					packet.Value?.Clear();
-				}
-				_packets.Clear();
-			}
-			_packets = null;
-			GC.SuppressFinalize(this);
 		}
 	}
 }

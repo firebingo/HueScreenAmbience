@@ -1,13 +1,16 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.Intrinsics;
+using SixLabors.ImageSharp;
 
 namespace BitmapZoneProcessor
 {
 	public static class BitmapProcessor
 	{
-		public static void ReadBitmap(MemoryStream image, int width, int height, int newWidth, int newHeight, float resReduce, int zoneRows, int zoneColumns, PixelZone[] zones,
-			PixelZonesTotals zoneTotals, int bitDepth = 4, MemoryStream resizeStream = null, MemoryStream cropStream = null, SixLabors.ImageSharp.Rectangle? bitmapRect = null,
+		public static void ReadBitmap(MemoryStream image, int width, int height, int newWidth, int newHeight,
+			float resReduce, int zoneRows, int zoneColumns, PixelZone[] zones,
+			PixelZonesTotals zoneTotals, int bitDepth = 4, MemoryStream resizeStream = null,
+			MemoryStream cropStream = null, Rectangle? bitmapRect = null,
 			bool useIntrinsics = false)
 		{
 			var start = DateTime.UtcNow;
@@ -20,7 +23,8 @@ namespace BitmapZoneProcessor
 			// out what zone to add values to.
 			if (bitmapRect.HasValue)
 			{
-				useImage = ImageHandler.CropImageRect(useImage, width, height, cropStream, bitmapRect.Value, PixelFormat.Bgr32);
+				useImage = ImageHandler.CropImageRect(useImage, width, height, cropStream, bitmapRect.Value,
+					PixelFormat.Bgr32);
 				width = bitmapRect.Value.Width;
 				height = bitmapRect.Value.Height;
 			}
@@ -33,7 +37,8 @@ namespace BitmapZoneProcessor
 			// effectivly produce the same result as point sampling to a lower resolution first. This could save memory pressure from
 			// rescaling the image. But it may make determining what zone to add values to more complicated.
 			if (width != newWidth || height != newHeight)
-				useImage = ImageHandler.ResizeImage(useImage, width, height, resizeStream, newWidth, newHeight, pixelFormat: PixelFormat.Bgr32);
+				useImage = ImageHandler.ResizeImage(useImage, width, height, resizeStream, newWidth, newHeight,
+					pixelFormat: PixelFormat.Bgr32);
 			//Console.WriteLine($"Resize Time:        {(DateTime.UtcNow - t).TotalMilliseconds}");
 
 			//System.Threading.Tasks.Task.Run(() => ImageHandler.WriteImageToFile(useImage, newWidth, newHeight, $"Images/{DateTime.Now.Ticks.ToString().PadLeft(5, '0')}.png", pixelFormat: PixelFormat.Bgr32));
@@ -83,7 +88,7 @@ namespace BitmapZoneProcessor
 									var (high32_0, high32_1) = Vector128.Widen(high16);
 
 									//Sum all 4 pixels into the SIMD channel accumulator.
-									vTotals += (low32_0 + low32_1) + (high32_0 + high32_1);
+									vTotals += low32_0 + low32_1 + (high32_0 + high32_1);
 									rowPtr += 16;
 								}
 
@@ -118,7 +123,7 @@ namespace BitmapZoneProcessor
 								}
 							}
 						}
-						
+
 						*zone.TotalB += (int)totB;
 						*zone.TotalG += (int)totG;
 						*zone.TotalR += (int)totR;
@@ -129,28 +134,23 @@ namespace BitmapZoneProcessor
 			}
 		}
 
-		public static (MemoryStream image, MemoryStream blurImage) PreparePostBitmap(PixelZone[] zones, int columns, int rows, int newWidth, int newHeight, ImageFilter resizeFilter, float resizeSigma, MemoryStream smallImageMemStream, MemoryStream blurImageMemStream)
+		public static (MemoryStream image, MemoryStream blurImage) PreparePostBitmap(PixelZone[] zones, int columns,
+			int rows, int newWidth, int newHeight, ImageFilter resizeFilter, float resizeSigma,
+			MemoryStream smallImageMemStream, MemoryStream blurImageMemStream)
 		{
-			try
-			{
-				var image = ImageHandler.CreateSmallImageFromZones(zones, smallImageMemStream);
+			var image = ImageHandler.CreateSmallImageFromZones(zones, smallImageMemStream);
 
-				var blurImage = ImageHandler.ResizeImage(image,
-					columns,
-					rows,
-					blurImageMemStream,
-					newWidth,
-					newHeight,
-					resizeFilter,
-					resizeSigma,
-					PixelFormat.Rgb24);
+			var blurImage = ImageHandler.ResizeImage(image,
+				columns,
+				rows,
+				blurImageMemStream,
+				newWidth,
+				newHeight,
+				resizeFilter,
+				resizeSigma,
+				PixelFormat.Rgb24);
 
-				return (image, blurImage);
-			}
-			catch
-			{
-				throw;
-			}
+			return (image, blurImage);
 		}
 	}
 }

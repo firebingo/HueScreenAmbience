@@ -1,20 +1,20 @@
-﻿using HueScreenAmbience.Hue;
-using System;
+﻿using System;
 using System.IO;
 using System.Threading;
+using HueScreenAmbience.Hue;
 
 namespace HueScreenAmbience
 {
-	class InputHandler
+	internal class InputHandler
 	{
-		private bool _isRunning = false;
-		private readonly bool _isHeadless = false;
-		private bool _isReady = false;
-		private Core _core;
+		private readonly bool _isHeadless;
 		private Config _config;
-		private HueCore _hueClient;
-		private ScreenReader _screen;
+		private Core _core;
 		private bool _headlessHasWrittenInfo;
+		private HueCore _hueClient;
+		private bool _isReady;
+		private bool _isRunning;
+		private ScreenReader _screen;
 		private StreamReader _stdinsr;
 
 		public InputHandler(bool isHeadless)
@@ -31,7 +31,7 @@ namespace HueScreenAmbience
 		}
 
 		/// <summary>
-		/// Handles input to the console.
+		///     Handles input to the console.
 		/// </summary>
 		public async void HandleInput()
 		{
@@ -144,8 +144,7 @@ namespace HueScreenAmbience
 						Console.WriteLine("Invalid Input Given");
 						break;
 				}
-			}
-			while (_isRunning);
+			} while (_isRunning);
 		}
 
 		private bool CheckRunning()
@@ -157,6 +156,7 @@ namespace HueScreenAmbience
 				ResetConsole();
 				return true;
 			}
+
 			return false;
 		}
 
@@ -177,12 +177,14 @@ namespace HueScreenAmbience
 					if (_hueClient.UseEntertainment != null)
 						Console.WriteLine($"Using room: {_hueClient.UseEntertainment.Metadata.Name}");
 					if (_screen.Screen != null)
-						Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
+						Console.WriteLine(
+							$"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
 					if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
-						Console.WriteLine($"Using ffmpeg input: {_config.Model.FfmpegCaptureSettings.Width}x{_config.Model.FfmpegCaptureSettings.Height}x{_config.Model.FfmpegCaptureSettings.FrameRate}");
+						Console.WriteLine(
+							$"Using ffmpeg input: {_config.Model.FfmpegCaptureSettings.Width}x{_config.Model.FfmpegCaptureSettings.Height}x{_config.Model.FfmpegCaptureSettings.FrameRate}");
 					Console.WriteLine("Use -h for help");
 					if (_screen.IsRunning)
-						Console.WriteLine($"Lighting is running");
+						Console.WriteLine("Lighting is running");
 				}
 			}
 			else if (!_headlessHasWrittenInfo)
@@ -194,11 +196,13 @@ namespace HueScreenAmbience
 				if (_hueClient.UseEntertainment != null)
 					Console.WriteLine($"Using room: {_hueClient.UseEntertainment.Metadata.Name}");
 				if (_screen.Screen != null)
-					Console.WriteLine($"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
+					Console.WriteLine(
+						$"Using monitor: {_screen.Screen.OutputId}: {_screen.Screen.Name} {_screen.Screen.Width}x{_screen.Screen.Height}x{_screen.Screen.RefreshRate:0.##}");
 				if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
-					Console.WriteLine($"Using ffmpeg input: {_config.Model.FfmpegCaptureSettings.Width}x{_config.Model.FfmpegCaptureSettings.Height}x{_config.Model.FfmpegCaptureSettings.FrameRate}");
+					Console.WriteLine(
+						$"Using ffmpeg input: {_config.Model.FfmpegCaptureSettings.Width}x{_config.Model.FfmpegCaptureSettings.Height}x{_config.Model.FfmpegCaptureSettings.FrameRate}");
 				if (_screen.IsRunning)
-					Console.WriteLine($"Lighting is running");
+					Console.WriteLine("Lighting is running");
 				_headlessHasWrittenInfo = true;
 			}
 		}

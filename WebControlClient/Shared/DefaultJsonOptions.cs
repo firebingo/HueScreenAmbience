@@ -4,13 +4,14 @@ namespace WebControlClient.Shared
 {
 	public static class DefaultJsonOptions
 	{
-		public static JsonSerializerOptions JsonOptions { get; }
 		static DefaultJsonOptions()
 		{
-			JsonOptions = new JsonSerializerOptions()
+			JsonOptions = new JsonSerializerOptions
 			{
 				PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 			};
 		}
+
+		public static JsonSerializerOptions JsonOptions { get; }
 	}
 }

@@ -1,32 +1,51 @@
-﻿using BitmapZoneProcessor;
-using LightsShared;
-using NanoLeafAPI;
-using NanoLeafAPI.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using BitmapZoneProcessor;
+using LightsShared;
+using NanoLeafAPI;
+using NanoLeafAPI.Models;
 
 namespace HueScreenAmbience.NanoLeaf
 {
 	public class NanoLeafClient : IAsyncDisposable
 	{
-		private NanoLeafController _controller;
-		private FileLogger _logger;
-		private Config _config;
-
-		private bool _started = false;
-		private DateTime _lastChangeTime;
-		private TimeSpan _frameTimeSpan;
 		private byte _colorChangeThreshold = 5;
+		private Config _config;
+		private NanoLeafController _controller;
 		private ExtControlFrame _frame;
-		private PanelLayout _layout;
+		private TimeSpan _frameTimeSpan;
 		private MemoryStream _imageByteStream;
-		private int _redWidth;
+		private DateTime _lastChangeTime;
+		private PanelLayout _layout;
+		private FileLogger _logger;
 		private int _redHeight;
+		private int _redWidth;
+
+		private bool _started;
 		private List<PanelPosition> _usePanels;
-		private int frame = 0;
+		private int frame;
+
+		public async ValueTask DisposeAsync()
+		{
+			try
+			{
+				if (_started)
+				{
+					await _controller.StopExternalControl();
+					_started = false;
+				}
+			}
+			catch (Exception ex)
+			{
+				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
+			}
+
+			_controller?.Dispose();
+			GC.SuppressFinalize(this);
+		}
 
 		public void InstallServices(IServiceProvider _map)
 		{
@@ -45,23 +64,25 @@ namespace HueScreenAmbience.NanoLeaf
 				_colorChangeThreshold = _config.Model.NanoLeafSettings.ColorChangeThreshold;
 
 				_controller = new NanoLeafController(_config.Model.NanoLeafSettings.RemoteAddressIp.ToString(),
-				_config.Model.NanoLeafSettings.Port, _config.Model.NanoLeafSettings.AuthToken);
+					_config.Model.NanoLeafSettings.Port, _config.Model.NanoLeafSettings.AuthToken);
 
 				var state = await _controller.GetCurrentState();
 				_layout = state.PanelLayout;
 
-				_frame = new ExtControlFrame()
+				_frame = new ExtControlFrame
 				{
 					Panels = []
 				};
 				float bigX = 0;
 				float bigY = 0;
-				int minX = 0;
-				int minY = 0;
-				_usePanels = _layout.Layout.Positions.Where(x => x.PanelShape != PanelShape.ShapeController && x.PanelShape != PanelShape.PowerConnector).ToList();
+				var minX = 0;
+				var minY = 0;
+				_usePanels = _layout.Layout.Positions.Where(x =>
+					x.PanelShape != PanelShape.ShapeController && x.PanelShape != PanelShape.PowerConnector).ToList();
 				//Rotate points by global orientation.
 				// Im pretty sure this is still wrong and the adjustment angle values make no sense?? Im bad at math.
-				var orient = _layout.GlobalOrientation.Value + _config.Model.NanoLeafSettings.ExtraOrientationAdjustAngle;
+				var orient = _layout.GlobalOrientation.Value +
+				             _config.Model.NanoLeafSettings.ExtraOrientationAdjustAngle;
 				foreach (var panel in _usePanels)
 				{
 					var x = panel.X * Math.Cos(orient) - panel.Y * Math.Sin(orient);
@@ -105,7 +126,7 @@ namespace HueScreenAmbience.NanoLeaf
 						bigX = panel.X;
 					if (panel.Y > bigY)
 						bigY = panel.Y;
-					_frame.Panels.Add(new ExtControlPanel()
+					_frame.Panels.Add(new ExtControlPanel
 					{
 						PanelID = panel.PanelID
 					});
@@ -121,6 +142,7 @@ namespace HueScreenAmbience.NanoLeaf
 					_redWidth = (int)Math.Ceiling(bigX);
 					_redHeight = (int)Math.Ceiling(bigY);
 				}
+
 				_imageByteStream = new MemoryStream(_redWidth * _redHeight * 3);
 
 				await _controller.StartExternalControl();
@@ -167,7 +189,8 @@ namespace HueScreenAmbience.NanoLeaf
 				var red = _config.Model.RgbDeviceSettings.KeyboardResReduce;
 
 				_imageByteStream.Seek(0, SeekOrigin.Begin);
-				var resizeImage = ImageHandler.ResizeImage(image, width, height, _imageByteStream, _redWidth, _redHeight, pixelFormat: PixelFormat.Rgb24);
+				var resizeImage = ImageHandler.ResizeImage(image, width, height, _imageByteStream, _redWidth,
+					_redHeight, pixelFormat: PixelFormat.Rgb24);
 				//await ImageHandler.WriteImageToFile(resizeImage, _redWidth, _redHeight, Path.Combine(_config.Model.ImageDumpLocation, $"{frame}.png"), pixelFormat: PixelFormat.Rgb24);
 				var sampleX = 0;
 				var sampleY = 0;
@@ -182,7 +205,7 @@ namespace HueScreenAmbience.NanoLeaf
 					// get an average of all the pixels the panel covers instead of just the center.
 					sampleX = (int)Math.Floor((float)_usePanels[i].X / red);
 					sampleY = (int)Math.Floor((float)_usePanels[i].Y / red);
-					pixIndex = (sampleY * stride) + sampleX * 3;
+					pixIndex = sampleY * stride + sampleX * 3;
 					_imageByteStream.Seek(pixIndex, SeekOrigin.Begin);
 					r = (byte)_imageByteStream.ReadByte();
 					g = (byte)_imageByteStream.ReadByte();
@@ -197,10 +220,17 @@ namespace HueScreenAmbience.NanoLeaf
 					var blendAmount = 1.0f - _config.Model.NanoLeafSettings.BlendLastColorAmount;
 					if (blendAmount != 0.0f)
 					{
-						r = (byte)Math.Clamp(Math.Sqrt((1 - blendAmount) * Math.Pow(lastColorR, 2) + blendAmount * Math.Pow(r, 2)), 0, 255);
-						g = (byte)Math.Clamp(Math.Sqrt((1 - blendAmount) * Math.Pow(lastColorG, 2) + blendAmount * Math.Pow(g, 2)), 0, 255);
-						b = (byte)Math.Clamp(Math.Sqrt((1 - blendAmount) * Math.Pow(lastColorB, 2) + blendAmount * Math.Pow(b, 2)), 0, 255);
+						r = (byte)Math.Clamp(
+							Math.Sqrt((1 - blendAmount) * Math.Pow(lastColorR, 2) + blendAmount * Math.Pow(r, 2)), 0,
+							255);
+						g = (byte)Math.Clamp(
+							Math.Sqrt((1 - blendAmount) * Math.Pow(lastColorG, 2) + blendAmount * Math.Pow(g, 2)), 0,
+							255);
+						b = (byte)Math.Clamp(
+							Math.Sqrt((1 - blendAmount) * Math.Pow(lastColorB, 2) + blendAmount * Math.Pow(b, 2)), 0,
+							255);
 					}
+
 					if (lastColorR >= r - _colorChangeThreshold && lastColorR <= r + _colorChangeThreshold)
 						r = lastColorR;
 					if (lastColorG >= g - _colorChangeThreshold && lastColorG <= g + _colorChangeThreshold)
@@ -222,25 +252,6 @@ namespace HueScreenAmbience.NanoLeaf
 			{
 				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
 			}
-		}
-
-		public async ValueTask DisposeAsync()
-		{
-			try
-			{
-				if (_started)
-				{
-					await _controller.StopExternalControl();
-					_started = false;
-				}
-			}
-			catch (Exception ex)
-			{
-				_ = Task.Run(() => _logger?.WriteLog(ex?.ToString()));
-			}
-
-			_controller?.Dispose();
-			GC.SuppressFinalize(this);
 		}
 	}
 }

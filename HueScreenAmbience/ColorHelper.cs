@@ -1,8 +1,8 @@
-﻿using SixLabors.ImageSharp;
+﻿using System;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.ColorSpaces;
 using SixLabors.ImageSharp.ColorSpaces.Conversion;
 using SixLabors.ImageSharp.PixelFormats;
-using System;
 
 namespace HueScreenAmbience
 {
@@ -27,7 +27,7 @@ namespace HueScreenAmbience
 
 		public static string ColorToHex(Color c)
 		{
-			return c.ToHex()[0..6];
+			return c.ToHex()[..6];
 		}
 	}
 }

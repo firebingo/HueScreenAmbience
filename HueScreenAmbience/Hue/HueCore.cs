@@ -1,4 +1,10 @@
-﻿using HueApi;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using HueApi;
 using HueApi.BridgeLocator;
 using HueApi.ColorConverters;
 using HueApi.ColorConverters.Original.Extensions;
@@ -9,39 +15,33 @@ using HueApi.Models;
 using HueApi.Models.Requests;
 using LightsShared;
 using SixLabors.ImageSharp.PixelFormats;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace HueScreenAmbience.Hue
 {
 	public class HueCore
 	{
-		private bool _isRunning = false;
-		private LocalHueApi _client = null;
-		private StreamingHueClient _streamClient = null;
-		private LocatedBridge _useBridge = null;
-		public Room UseRoom { get; private set; } = null;
-		private Guid _useRoomGroupLight;
-		public EntertainmentConfiguration UseEntertainment { get; private set; } = null;
 		private const string _appName = "HUEScreenAmbience";
-		public bool IsConnectedToBridge { get; private set; } = false;
-		private DateTime _lastHueChangeTime;
-		private bool _sendingCommand;
-		private Rgb24 _lastColor;
-		private byte _colorChangeThreshold = 15;
-		private TimeSpan _frameTimeSpan;
-		private StreamingGroup _streamGroup;
-		private EntertainmentLayer _streamBaseLayer;
 		private CancellationTokenSource _cancelSource;
 		private CancellationToken _cancelToken;
-		private Dictionary<Byte, Rgb24> _lastLightColors;
+		private LocalHueApi _client;
+		private byte _colorChangeThreshold = 15;
 
 		private Config _config;
+		private TimeSpan _frameTimeSpan;
+		private bool _isRunning;
+		private Rgb24 _lastColor;
+		private DateTime _lastHueChangeTime;
+		private Dictionary<byte, Rgb24> _lastLightColors;
 		private FileLogger _logger;
+		private bool _sendingCommand;
+		private EntertainmentLayer _streamBaseLayer;
+		private StreamingHueClient _streamClient;
+		private StreamingGroup _streamGroup;
+		private LocatedBridge _useBridge;
+		private Guid _useRoomGroupLight;
+		public Room UseRoom { get; private set; }
+		public EntertainmentConfiguration UseEntertainment { get; private set; }
+		public bool IsConnectedToBridge { get; private set; }
 
 		public void InstallServices(IServiceProvider map)
 		{
@@ -63,7 +63,8 @@ namespace HueScreenAmbience.Hue
 
 		public async Task<bool> AutoConnectAttempt()
 		{
-			if (string.IsNullOrWhiteSpace(_config.Model.HueSettings.AppKey) || string.IsNullOrWhiteSpace(_config.Model.HueSettings.Ip))
+			if (string.IsNullOrWhiteSpace(_config.Model.HueSettings.AppKey) ||
+			    string.IsNullOrWhiteSpace(_config.Model.HueSettings.Ip))
 				return false;
 
 			Console.WriteLine("Attempting auto-connect");
@@ -89,7 +90,8 @@ namespace HueScreenAmbience.Hue
 			}
 			else if (_config.Model.HueSettings.HueType == HueType.Entertainment)
 			{
-				_streamClient = new StreamingHueClient(_config.Model.HueSettings.Ip, _config.Model.HueSettings.AppKey, _config.Model.HueSettings.EntertainmentKey);
+				_streamClient = new StreamingHueClient(_config.Model.HueSettings.Ip, _config.Model.HueSettings.AppKey,
+					_config.Model.HueSettings.EntertainmentKey);
 				IsConnectedToBridge = true;
 				if (_config.Model.HueSettings.RoomId != Guid.Empty)
 				{
@@ -136,16 +138,14 @@ namespace HueScreenAmbience.Hue
 		{
 			if (_config.Model.HueSettings.HueType == HueType.Basic)
 				return (await _client.Room.GetAllAsync()).Data;
-			else
-				return (await _streamClient.LocalHueApi.Room.GetAllAsync()).Data;
+			return (await _streamClient.LocalHueApi.Room.GetAllAsync()).Data;
 		}
 
 		public async Task<IEnumerable<EntertainmentConfiguration>> GetEntertainmentGroups()
 		{
 			if (_config.Model.HueSettings.HueType == HueType.Basic)
 				return (await _client.GetEntertainmentGroups()).Data;
-			else
-				return (await _streamClient.LocalHueApi.GetEntertainmentGroups()).Data;
+			return (await _streamClient.LocalHueApi.GetEntertainmentGroups()).Data;
 		}
 
 		public void SetRoom(Room room)
@@ -194,6 +194,7 @@ namespace HueScreenAmbience.Hue
 
 					_streamClient.ManualUpdate(_streamGroup);
 				}
+
 				_isRunning = true;
 			}
 			catch (Exception ex)
@@ -239,6 +240,7 @@ namespace HueScreenAmbience.Hue
 				_streamClient = null;
 				await AutoConnectAttempt();
 			}
+
 			_isRunning = false;
 		}
 
@@ -283,6 +285,7 @@ namespace HueScreenAmbience.Hue
 			{
 				_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 			}
+
 			_lastHueChangeTime = DateTime.UtcNow;
 			_sendingCommand = false;
 		}
@@ -319,6 +322,7 @@ namespace HueScreenAmbience.Hue
 							g = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.G, 2) + blendAmount * Math.Pow(g, 2));
 							b = Math.Sqrt((1 - blendAmount) * Math.Pow(lastColor.B, 2) + blendAmount * Math.Pow(b, 2));
 						}
+
 						if (lastColor.R >= r - _colorChangeThreshold && lastColor.R <= r + _colorChangeThreshold)
 							r = lastColor.R;
 						if (lastColor.G >= g - _colorChangeThreshold && lastColor.G <= g + _colorChangeThreshold)
@@ -327,12 +331,14 @@ namespace HueScreenAmbience.Hue
 							b = lastColor.B;
 						if (r + g + b <= roundMin)
 							r = g = b = 0.0;
-						c = new Rgb24((byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
+						c = new Rgb24((byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max),
+							(byte)Math.Clamp(b, min, max));
 						_lastLightColors[light.Id] = c;
 					}
 					else
 					{
-						c = new Rgb24((byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max), (byte)Math.Clamp(b, min, max));
+						c = new Rgb24((byte)Math.Clamp(r, min, max), (byte)Math.Clamp(g, min, max),
+							(byte)Math.Clamp(b, min, max));
 						_lastLightColors.Add(light.Id, c);
 					}
 
@@ -347,6 +353,7 @@ namespace HueScreenAmbience.Hue
 			{
 				_ = Task.Run(() => _logger?.WriteLog(ex.ToString()));
 			}
+
 			_lastHueChangeTime = DateTime.UtcNow;
 			_sendingCommand = false;
 		}
@@ -356,8 +363,8 @@ namespace HueScreenAmbience.Hue
 			//Hue gives coordinates relative to center of room where -1 is far left and 1 is far right etc.
 			// So we need to remap it to 0-1 range then get value relative to image.
 			// Y also needs to be flipped as front of room is 1 which should correspond to 0 in the image
-			var x = (int)Math.Floor((location.X - -1.0) / 2 * (width));
-			var y = (int)Math.Floor((1.0 - (location.Y - -1.0) / 2) * (height));
+			var x = (int)Math.Floor((location.X - -1.0) / 2 * width);
+			var y = (int)Math.Floor((1.0 - (location.Y - -1.0) / 2) * height);
 			return (x, y);
 		}
 	}

@@ -1,57 +1,67 @@
-﻿using BitmapZoneProcessor;
+﻿using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using BitmapZoneProcessor;
 using HueScreenAmbience.DXGICaptureScreen;
 using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.NanoLeaf;
 using HueScreenAmbience.RGB;
 using LightsShared;
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace HueScreenAmbience
 {
 	public class ScreenReader : IDisposable
 	{
-		private bool disposed = false;
+		private readonly double[] _averageValues = new double[20];
+		private int _averageIter;
+		private Config _config;
+		private DxCapture _dxCapture;
+		private FFMpegCapture.FFMpegCapture _ffmpegCapture;
+		private int _frameRate = 24;
+		private DateTime _lastPostReadTime;
+		private FileLogger _logger;
+		private NanoLeafClient _nanoLeafClient;
+		private RGBLighter _rgbLighter;
+		private StripLighter _stripLighter;
+		private ZoneProcessor _zoneProcesser;
 
 		private PixelZonesTotals _zoneTotals;
-		private PixelZone[] _zones = null;
+		private PixelZone[] _zones;
+		private bool disposed;
 		public bool Ready { get; private set; }
 		public DxEnumeratedDisplay Screen { get; private set; }
 		public ScreenDimensions ScreenInfo { get; private set; }
-		private Config _config;
-		private ZoneProcessor _zoneProcesser;
-		private RGBLighter _rgbLighter;
-		private StripLighter _stripLighter;
-		private NanoLeafClient _nanoLeafClient;
-		private FileLogger _logger;
-		private DxCapture _dxCapture;
-		private FFMpegCapture.FFMpegCapture _ffmpegCapture;
-		private DateTime _lastPostReadTime;
-		private long _frame;
-		public long Frame { get => _frame; }
-		public bool IsRunning { get; private set; } = false;
+		public long Frame { get; private set; }
+
+		public bool IsRunning { get; private set; }
+
 		public double AverageDt
 		{
 			get
 			{
-				double val = 0.0;
+				var val = 0.0;
 				for (var i = 0; i < _averageValues.Length; ++i)
+				{
 					val += _averageValues[i];
+				}
+
 				return val / _averageValues.Length;
 			}
 		}
-		private readonly double[] _averageValues = new double[20];
-		private int _averageIter = 0;
-		private int _frameRate = 24;
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
 
 		public void Start()
 		{
 			_frameRate = _config.Model.ScreenReadFrameRate;
 			if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
 			{
-				ScreenInfo = new ScreenDimensions()
+				ScreenInfo = new ScreenDimensions
 				{
 					Source = "Capture",
 					Rate = _config.Model.FfmpegCaptureSettings.InputFrameRate,
@@ -62,6 +72,7 @@ namespace HueScreenAmbience
 			}
 			else
 				GetScreenInfo();
+
 			SetupPixelZones();
 		}
 
@@ -83,7 +94,8 @@ namespace HueScreenAmbience
 				var monitor = DxEnumerate.GetMonitor(_config.Model.AdapterId, _config.Model.MonitorId);
 				if (monitor == null)
 				{
-					Console.WriteLine($"Monitor {_config.Model.MonitorId} not found, press enter to fallback to primary");
+					Console.WriteLine(
+						$"Monitor {_config.Model.MonitorId} not found, press enter to fallback to primary");
 					Console.ReadLine();
 					_config.Model.MonitorId = 0;
 					_config.SaveConfig();
@@ -107,7 +119,7 @@ namespace HueScreenAmbience
 			}
 		}
 
-		unsafe public void SetupPixelZones()
+		public void SetupPixelZones()
 		{
 			_zones = new PixelZone[_config.Model.ZoneColumns * _config.Model.ZoneRows];
 			_zoneTotals = new PixelZonesTotals(_zones.Length);
@@ -119,8 +131,10 @@ namespace HueScreenAmbience
 			{
 				if (_config.Model.ReadResolutionReduce > 1.0f)
 				{
-					newWidth = (uint)Math.Floor(_config.Model.ImageRect.Value.Width / _config.Model.ReadResolutionReduce);
-					newHeight = (uint)Math.Floor(_config.Model.ImageRect.Value.Height / _config.Model.ReadResolutionReduce);
+					newWidth = (uint)Math.Floor(
+						_config.Model.ImageRect.Value.Width / _config.Model.ReadResolutionReduce);
+					newHeight = (uint)Math.Floor(_config.Model.ImageRect.Value.Height /
+					                             _config.Model.ReadResolutionReduce);
 				}
 				else
 				{
@@ -128,24 +142,28 @@ namespace HueScreenAmbience
 					newHeight = (uint)_config.Model.ImageRect.Value.Height;
 				}
 			}
+
 			var row = 0;
 			for (var i = 0; i < _zones.Length; ++i)
 			{
 				var col = i % _config.Model.ZoneColumns;
-				var xMin = (newWidth / (double)_config.Model.ZoneColumns) * col;
+				var xMin = newWidth / (double)_config.Model.ZoneColumns * col;
 				//If we are in the last column just set the bottom right to screen width so we dont get weird rounding where edge is not included
 				var xMax = col == _config.Model.ZoneColumns - 1
 					? newWidth
-					: (newWidth / (double)_config.Model.ZoneColumns) * (col + 1);
-				var yMin = (newHeight / (double)_config.Model.ZoneRows) * row;
+					: newWidth / (double)_config.Model.ZoneColumns * (col + 1);
+				var yMin = newHeight / (double)_config.Model.ZoneRows * row;
 				//If we are in the last row just set the bottom right to screen height so we dont get weird rounding where edge is not included
 				var yMax = row == _config.Model.ZoneRows - 1
 					? newHeight
-					: (newHeight / (double)_config.Model.ZoneRows) * (row + 1);
-				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax), (int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), (int)newWidth * ScreenInfo.BitDepth, ScreenInfo.BitDepth, _zoneTotals, i);
+					: newHeight / (double)_config.Model.ZoneRows * (row + 1);
+				_zones[i] = new PixelZone(row, col, (int)Math.Ceiling(xMin), (int)Math.Ceiling(xMax),
+					(int)Math.Ceiling(yMin), (int)Math.Ceiling(yMax), (int)newWidth * ScreenInfo.BitDepth,
+					ScreenInfo.BitDepth, _zoneTotals, i);
 				if (col == _config.Model.ZoneColumns - 1)
 					row += 1;
 			}
+
 			Ready = true;
 		}
 
@@ -153,16 +171,24 @@ namespace HueScreenAmbience
 		{
 			if (_config.Model.FfmpegCaptureSettings.UseFFMpeg)
 			{
-				_ffmpegCapture = new FFMpegCapture.FFMpegCapture((int)ScreenInfo.RealWidth, (int)ScreenInfo.RealHeight, _config.Model.FfmpegCaptureSettings.InputWidth, _config.Model.FfmpegCaptureSettings.InputHeight,
-					_config.Model.FfmpegCaptureSettings.FrameRate, _config.Model.FfmpegCaptureSettings.InputSource, _config.Model.FfmpegCaptureSettings.InputFormat, _config.Model.FfmpegCaptureSettings.InputPixelFormat,
-					_config.Model.FfmpegCaptureSettings.InputPixelFormatType, _config.Model.FfmpegCaptureSettings.InputFrameRate, _config.Model.FfmpegCaptureSettings.BufferMultiplier,
-					_config.Model.FfmpegCaptureSettings.ThreadQueueSize, _logger, _config.Model.FfmpegCaptureSettings.FfmpegStdError, _config.Model.FfmpegCaptureSettings.UseGpu);
+				_ffmpegCapture = new FFMpegCapture.FFMpegCapture((int)ScreenInfo.RealWidth, (int)ScreenInfo.RealHeight,
+					_config.Model.FfmpegCaptureSettings.InputWidth, _config.Model.FfmpegCaptureSettings.InputHeight,
+					_config.Model.FfmpegCaptureSettings.FrameRate, _config.Model.FfmpegCaptureSettings.InputSource,
+					_config.Model.FfmpegCaptureSettings.InputFormat,
+					_config.Model.FfmpegCaptureSettings.InputPixelFormat,
+					_config.Model.FfmpegCaptureSettings.InputPixelFormatType,
+					_config.Model.FfmpegCaptureSettings.InputFrameRate,
+					_config.Model.FfmpegCaptureSettings.BufferMultiplier,
+					_config.Model.FfmpegCaptureSettings.ThreadQueueSize, _logger,
+					_config.Model.FfmpegCaptureSettings.FfmpegStdError, _config.Model.FfmpegCaptureSettings.UseGpu);
 				_ffmpegCapture.Start();
 			}
 			else
 			{
-				_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.AdapterId, Screen.OutputId, _logger);
-				if (_config.Model.RgbDeviceSettings.UseMotherboard || _config.Model.RgbDeviceSettings.UseKeyboards || _config.Model.RgbDeviceSettings.UseMice)
+				_dxCapture = new DxCapture(ScreenInfo.RealWidth, ScreenInfo.RealHeight, _config.Model.AdapterId,
+					Screen.OutputId, _logger);
+				if (_config.Model.RgbDeviceSettings.UseMotherboard || _config.Model.RgbDeviceSettings.UseKeyboards ||
+				    _config.Model.RgbDeviceSettings.UseMice)
 					_rgbLighter.Start();
 			}
 
@@ -178,11 +204,13 @@ namespace HueScreenAmbience
 			IsRunning = true;
 			var newWidth = ScreenInfo.Width;
 			var newHeight = ScreenInfo.Height;
-			var frameStream = new MemoryStream((int)ScreenInfo.RealWidth * (int)ScreenInfo.RealHeight * ScreenInfo.BitDepth);
+			var frameStream =
+				new MemoryStream((int)ScreenInfo.RealWidth * (int)ScreenInfo.RealHeight * ScreenInfo.BitDepth);
 			MemoryStream cropFrameStream = null;
 			if (config.ImageRect.HasValue)
 			{
-				cropFrameStream = new MemoryStream(config.ImageRect.Value.Width * config.ImageRect.Value.Height * ScreenInfo.BitDepth);
+				cropFrameStream = new MemoryStream(config.ImageRect.Value.Width * config.ImageRect.Value.Height *
+				                                   ScreenInfo.BitDepth);
 				if (config.ReadResolutionReduce > 1.0f)
 				{
 					newWidth = (uint)Math.Floor(config.ImageRect.Value.Width / config.ReadResolutionReduce);
@@ -194,6 +222,7 @@ namespace HueScreenAmbience
 					newHeight = (uint)config.ImageRect.Value.Height;
 				}
 			}
+
 			MemoryStream sizeFrameStream = null;
 			if (config.ReadResolutionReduce > 1.0f)
 				sizeFrameStream = new MemoryStream((int)newWidth * (int)newHeight * ScreenInfo.BitDepth);
@@ -213,11 +242,11 @@ namespace HueScreenAmbience
 
 					//If we are on pi and have skip frames set wait until we are past the frame number before we start trying to read.
 					// This is done because initialization for the hdmi connection can take a bit before we get real frames back.
-					if (config.FfmpegCaptureSettings.UseFFMpeg && _frame < config.FfmpegCaptureSettings.SkipFrames)
+					if (config.FfmpegCaptureSettings.UseFFMpeg && Frame < config.FfmpegCaptureSettings.SkipFrames)
 					{
 						_lastPostReadTime = DateTime.UtcNow;
-						await _zoneProcesser.PostRead(_zones, _zoneTotals, _frame);
-						_frame++;
+						await _zoneProcesser.PostRead(_zones, _zoneTotals, Frame);
+						Frame++;
 						continue;
 					}
 
@@ -228,23 +257,26 @@ namespace HueScreenAmbience
 						if ((DateTime.UtcNow - _lastPostReadTime).TotalMilliseconds > 2000)
 						{
 							_lastPostReadTime = DateTime.UtcNow;
-							await _zoneProcesser.PostRead(_zones, _zoneTotals, _frame);
-							_frame++;
+							await _zoneProcesser.PostRead(_zones, _zoneTotals, Frame);
+							Frame++;
 						}
+
 						continue;
 					}
 
 					var captureTime = (DateTime.UtcNow - t).TotalMilliseconds;
 					t = DateTime.UtcNow;
 
-					BitmapProcessor.ReadBitmap(frameStream, (int)ScreenInfo.RealWidth, (int)ScreenInfo.RealHeight, (int)newWidth, (int)newHeight, config.ReadResolutionReduce,
-						config.ZoneRows, config.ZoneColumns, _zones, _zoneTotals, ScreenInfo.BitDepth, sizeFrameStream, cropFrameStream, config.ImageRect, config.IntrinsicsEnabled);
+					BitmapProcessor.ReadBitmap(frameStream, (int)ScreenInfo.RealWidth, (int)ScreenInfo.RealHeight,
+						(int)newWidth, (int)newHeight, config.ReadResolutionReduce,
+						config.ZoneRows, config.ZoneColumns, _zones, _zoneTotals, ScreenInfo.BitDepth, sizeFrameStream,
+						cropFrameStream, config.ImageRect, config.IntrinsicsEnabled);
 
 					var readTime = (DateTime.UtcNow - t).TotalMilliseconds;
 
 					t = DateTime.UtcNow;
 
-					long f = _frame;
+					var f = Frame;
 					_lastPostReadTime = DateTime.UtcNow;
 					await _zoneProcesser.PostRead(_zones, _zoneTotals, f);
 
@@ -265,8 +297,9 @@ namespace HueScreenAmbience
 						Console.WriteLine($"AverageDt:        {AverageDt}");
 						Console.WriteLine("---------------------------------------");
 					}
+
 					//}
-					_frame++;
+					Frame++;
 				}
 				catch (Exception ex)
 				{
@@ -278,9 +311,10 @@ namespace HueScreenAmbience
 				{
 					var dt = DateTime.UtcNow - start;
 					if (dt.TotalMilliseconds < 1000 / _frameRate)
-						Thread.Sleep((int)((1000 / _frameRate) - dt.TotalMilliseconds));
+						Thread.Sleep((int)(1000 / _frameRate - dt.TotalMilliseconds));
 				}
 			} while (IsRunning);
+
 			await frameStream.DisposeAsync();
 			if (cropFrameStream != null)
 				await cropFrameStream.DisposeAsync();
@@ -310,12 +344,14 @@ namespace HueScreenAmbience
 					_dxCapture.Dispose();
 				}
 				catch { }
+
 				try
 				{
 					_rgbLighter?.Stop();
 				}
 				catch { }
 			}
+
 			if (_config.Model.NanoLeafSettings.UseNanoLeaf)
 			{
 				try
@@ -324,35 +360,12 @@ namespace HueScreenAmbience
 				}
 				catch { }
 			}
+
 			try
 			{
 				_stripLighter?.Stop();
 			}
 			catch { }
-		}
-
-		public class ScreenDimensions
-		{
-			public string Source;
-			public double Rate;
-			public uint RealWidth;
-			public uint RealHeight;
-			public float SizeReduction;
-			public int BitDepth = 4;
-			public uint Width
-			{
-				get => SizeReduction == 0 ? RealWidth : (uint)Math.Floor(RealWidth / SizeReduction);
-			}
-			public uint Height
-			{
-				get => SizeReduction == 0 ? RealHeight : (uint)Math.Floor(RealHeight / SizeReduction);
-			}
-		}
-
-		public void Dispose()
-		{
-			Dispose(disposing: true);
-			GC.SuppressFinalize(this);
 		}
 
 		protected virtual void Dispose(bool disposing)
@@ -367,8 +380,22 @@ namespace HueScreenAmbience
 					zone.Dispose();
 				}
 			}
+
 			_zoneTotals?.Dispose();
 			disposed = true;
+		}
+
+		public class ScreenDimensions
+		{
+			public int BitDepth = 4;
+			public double Rate;
+			public uint RealHeight;
+			public uint RealWidth;
+			public float SizeReduction;
+			public string Source;
+			public uint Width => SizeReduction == 0 ? RealWidth : (uint)Math.Floor(RealWidth / SizeReduction);
+
+			public uint Height => SizeReduction == 0 ? RealHeight : (uint)Math.Floor(RealHeight / SizeReduction);
 		}
 	}
 }

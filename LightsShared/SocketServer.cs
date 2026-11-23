@@ -1,10 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -16,6 +10,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using WebControlClient.Client.Shared;
 using WebControlClient.Shared;
 
@@ -29,22 +28,24 @@ namespace LightsShared.Sockets
 
 	public class SocketServer
 	{
-		private IHost _webHost;
-		private Thread _cleanThread;
-		private ConcurrentDictionary<Guid, WebSocket> _connectedClients;
+		public delegate Task OnClientMessageEventHandler(object sender, SocketMessageEventArgs e);
+
+		private readonly FileLogger _logger;
 		private CancellationTokenSource _cancelSource;
 		private CancellationToken _cancelToken;
-		private readonly FileLogger _logger;
-
-		public delegate Task OnClientMessageEventHandler(object sender, SocketMessageEventArgs e);
-		public event OnClientMessageEventHandler OnClientMessage;
+		private Thread _cleanThread;
+		private ConcurrentDictionary<Guid, WebSocket> _connectedClients;
+		private IHost _webHost;
 
 		public SocketServer(FileLogger logger)
 		{
 			_logger = logger;
 		}
 
-		public async Task Start(string listenIp, int listenPort, bool log = false, X509Certificate2 cert = null, SslProtocols sslProtocol = SslProtocols.Tls13 | SslProtocols.Tls12)
+		public event OnClientMessageEventHandler OnClientMessage;
+
+		public async Task Start(string listenIp, int listenPort, bool log = false, X509Certificate2 cert = null,
+			SslProtocols sslProtocol = SslProtocols.Tls13 | SslProtocols.Tls12)
 		{
 			if (_cancelSource != null)
 			{
@@ -54,6 +55,7 @@ namespace LightsShared.Sockets
 				}
 				catch { }
 			}
+
 			_cancelSource = new CancellationTokenSource();
 			_cancelToken = _cancelSource.Token;
 			_connectedClients = new ConcurrentDictionary<Guid, WebSocket>();
@@ -62,34 +64,28 @@ namespace LightsShared.Sockets
 				.ConfigureWebHostDefaults(builder =>
 				{
 					builder
-					.UseKestrel((hostingContext, options) =>
-					{
-						var localendpoint = IPEndPoint.Parse($"127.0.0.1:{listenPort}");
-						var endpoint = IPEndPoint.Parse($"{listenIp}:{listenPort}");
-						options.Listen(localendpoint);
-						if (cert != null)
+						.UseKestrel((hostingContext, options) =>
 						{
-							options.ConfigureHttpsDefaults(o =>
+							var localendpoint = IPEndPoint.Parse($"127.0.0.1:{listenPort}");
+							var endpoint = IPEndPoint.Parse($"{listenIp}:{listenPort}");
+							options.Listen(localendpoint);
+							if (cert != null)
 							{
-								o.SslProtocols = sslProtocol;
-							});
-							options.Listen(endpoint, listenOptions =>
-							{
-								listenOptions.UseHttps(cert);
-							});
-						}
-						else
-							options.Listen(endpoint);
-					})
-					.UseEnvironment("Development")
-					.Configure((app) =>
-					{
-						app.UseWebSockets(new WebSocketOptions()
+								options.ConfigureHttpsDefaults(o => { o.SslProtocols = sslProtocol; });
+								options.Listen(endpoint, listenOptions => { listenOptions.UseHttps(cert); });
+							}
+							else
+								options.Listen(endpoint);
+						})
+						.UseEnvironment("Development")
+						.Configure(app =>
 						{
-							KeepAliveInterval = TimeSpan.FromSeconds(30)
+							app.UseWebSockets(new WebSocketOptions
+							{
+								KeepAliveInterval = TimeSpan.FromSeconds(30)
+							});
+							app.Use(OnHttpRequest);
 						});
-						app.Use(OnHttpRequest);
-					});
 				})
 				.ConfigureLogging((context, logging) =>
 				{
@@ -121,7 +117,8 @@ namespace LightsShared.Sockets
 					var guid = Guid.NewGuid();
 					if (!_connectedClients.TryAdd(guid, webSocket))
 					{
-						await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, string.Empty, _cancelToken);
+						await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, string.Empty,
+							_cancelToken);
 						return;
 					}
 
@@ -134,9 +131,7 @@ namespace LightsShared.Sockets
 				}
 			}
 			else
-			{
 				await next?.Invoke();
-			}
 		}
 
 		public void SocketCleanLoop()
@@ -147,10 +142,9 @@ namespace LightsShared.Sockets
 				foreach (var client in _connectedClients)
 				{
 					if (client.Value.State == WebSocketState.Closed || client.Value.State == WebSocketState.Aborted)
-					{
 						removeClients.Add(client.Key);
-					}
 				}
+
 				foreach (var r in removeClients)
 				{
 					_connectedClients.TryRemove(r, out _);
@@ -180,7 +174,7 @@ namespace LightsShared.Sockets
 						break;
 					}
 
-					WebSocketReceiveResult receiveResult = await socket.ReceiveAsync(buffer, _cancelToken);
+					var receiveResult = await socket.ReceiveAsync(buffer, _cancelToken);
 
 					if (receiveResult.MessageType == WebSocketMessageType.Close)
 					{
@@ -198,8 +192,7 @@ namespace LightsShared.Sockets
 							receiveResult = await socket.ReceiveAsync(buffer, _cancelToken);
 							totalRead += receiveResult.Count;
 							await bufferStream.WriteAsync(buffer, 0, receiveResult.Count);
-						}
-						while (receiveResult.EndOfMessage);
+						} while (receiveResult.EndOfMessage);
 					}
 					else
 					{
@@ -220,13 +213,14 @@ namespace LightsShared.Sockets
 							socket.Dispose();
 						}
 						catch { }
+
 						_connectedClients.TryRemove(clientId, out _);
 						break;
 					}
 
 					var model = JsonSerializer.Deserialize<ClientMessage>(data, DefaultJsonOptions.JsonOptions);
 					var invokeList = new List<Task>();
-					var eventArgs = new SocketMessageEventArgs()
+					var eventArgs = new SocketMessageEventArgs
 					{
 						ClientId = clientId,
 						Message = model
@@ -235,6 +229,7 @@ namespace LightsShared.Sockets
 					{
 						invokeList.Add(((OnClientMessageEventHandler)i)(this, eventArgs));
 					}
+
 					await Task.WhenAll(invokeList);
 				}
 				catch (Exception ex)
@@ -258,8 +253,10 @@ namespace LightsShared.Sockets
 		{
 			foreach (var client in _connectedClients)
 			{
-				await client.Value.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "Server Stopping", _cancelToken);
+				await client.Value.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "Server Stopping",
+					_cancelToken);
 			}
+
 			_connectedClients.Clear();
 		}
 

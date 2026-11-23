@@ -1,32 +1,32 @@
-﻿using BitmapZoneProcessor;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using BitmapZoneProcessor;
 using HueScreenAmbience.Hue;
 using HueScreenAmbience.LightStrip;
 using HueScreenAmbience.NanoLeaf;
 using HueScreenAmbience.RGB;
 using LightsShared;
 using SixLabors.ImageSharp.PixelFormats;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace HueScreenAmbience
 {
 	public class ZoneProcessor
 	{
-		private MemoryStream _smallImageMemStream;
 		private MemoryStream _blurImageMemStream;
-		private MemoryStream _hueImageMemStream;
-		private MemoryStream _lstripImageMemStream;
-		private MemoryStream _rgbImageMemStream;
-		private MemoryStream _nanoLeafImageMemStream;
 		private Config _config;
 		private HueCore _hueClient;
+		private MemoryStream _hueImageMemStream;
 		private FileLogger _logger;
-		private RGBLighter _rgbLighter;
-		private StripLighter _stripLighter;
+		private MemoryStream _lstripImageMemStream;
 		private NanoLeafClient _nanoLeafClient;
+		private MemoryStream _nanoLeafImageMemStream;
+		private MemoryStream _rgbImageMemStream;
+		private RGBLighter _rgbLighter;
+		private MemoryStream _smallImageMemStream;
+		private StripLighter _stripLighter;
 
 		public void InstallServices(IServiceProvider _map)
 		{
@@ -70,7 +70,9 @@ namespace HueScreenAmbience
 
 				time = DateTime.UtcNow;
 
-				images = BitmapProcessor.PreparePostBitmap(zones, columns, rows, newWidth, newHeight, _config.Model.ZoneProcessSettings.ResizeFilter, _config.Model.ZoneProcessSettings.ResizeSigma, _smallImageMemStream, _blurImageMemStream);
+				images = BitmapProcessor.PreparePostBitmap(zones, columns, rows, newWidth, newHeight,
+					_config.Model.ZoneProcessSettings.ResizeFilter, _config.Model.ZoneProcessSettings.ResizeSigma,
+					_smallImageMemStream, _blurImageMemStream);
 
 				//Console.WriteLine($"PreparePostBitmap Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 
@@ -83,16 +85,19 @@ namespace HueScreenAmbience
 				Rgb24 avgColor;
 				unsafe
 				{
-					int totalR = 0;
-					int totalG = 0;
-					int totalB = 0;
+					var totalR = 0;
+					var totalG = 0;
+					var totalB = 0;
 					for (var i = 0; i < zones.Length; ++i)
 					{
 						totalR += zoneTotals.AvgR[i];
 						totalG += zoneTotals.AvgG[i];
 						totalB += zoneTotals.AvgB[i];
 					}
-					avgColor = new Rgb24((byte)Math.Clamp(totalR / zones.Length, 0, 255), (byte)Math.Clamp(totalG / zones.Length, 0, 255), (byte)Math.Clamp(totalB / zones.Length, 0, 255));
+
+					avgColor = new Rgb24((byte)Math.Clamp(totalR / zones.Length, 0, 255),
+						(byte)Math.Clamp(totalG / zones.Length, 0, 255),
+						(byte)Math.Clamp(totalB / zones.Length, 0, 255));
 				}
 
 				time = DateTime.UtcNow;
@@ -102,9 +107,7 @@ namespace HueScreenAmbience
 				if (_config.Model.HueSettings.UseHue)
 				{
 					if (_config.Model.HueSettings.HueType == HueType.Basic)
-					{
 						processingTasks.Add(Task.Run(() => _hueClient.ChangeLightColorBasic(avgColor)));
-					}
 					else if (_config.Model.HueSettings.HueType == HueType.Entertainment)
 					{
 						_hueImageMemStream ??= new MemoryStream(newWidth * newHeight * 3);
@@ -117,6 +120,7 @@ namespace HueScreenAmbience
 						}));
 					}
 				}
+
 				if (_config.Model.LightStripSettings.UseLightStrip)
 				{
 					_lstripImageMemStream ??= new MemoryStream(newWidth * newHeight * 3);
@@ -128,6 +132,7 @@ namespace HueScreenAmbience
 						_stripLighter.UpdateFromImage(_lstripImageMemStream, newWidth, newHeight, frame);
 					}));
 				}
+
 				if (_config.Model.NanoLeafSettings.UseNanoLeaf)
 				{
 					_nanoLeafImageMemStream ??= new MemoryStream(newWidth * newHeight * 3);
@@ -159,9 +164,11 @@ namespace HueScreenAmbience
 					try
 					{
 						time = DateTime.UtcNow;
-						var path = Path.Combine(_config.Model.ImageDumpLocation, $"{frame.ToString().PadLeft(6, '0')}.png");
+						var path = Path.Combine(_config.Model.ImageDumpLocation,
+							$"{frame.ToString().PadLeft(6, '0')}.png");
 						//_ = ImageHandler.WriteImageToFile(images.image, columns, rows, path, width, height);
-						_ = ImageHandler.WriteImageToFile(images.blurImage, newWidth, newHeight, path, pixelFormat: PixelFormat.Rgb24);
+						_ = ImageHandler.WriteImageToFile(images.blurImage, newWidth, newHeight, path,
+							pixelFormat: PixelFormat.Rgb24);
 						//Console.WriteLine($"PostRead writeStream Time: {(DateTime.UtcNow - time).TotalMilliseconds}");
 					}
 					catch (Exception ex)

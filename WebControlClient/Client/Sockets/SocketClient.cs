@@ -18,14 +18,12 @@ namespace WebControlClient.Client.Sockets
 
 	public class SocketClient : IAsyncDisposable
 	{
-		private readonly Uri _url;
-		private readonly ClientWebSocket _socket;
-		private readonly CancellationToken _cancelToken;
-		public bool IsClosed { get; private set; } = true;
-		private bool _loopRunning = false;
-
 		public delegate Task OnClientResponseEventHandler(object sender, SocketClientResponseEventArgs e);
-		public event OnClientResponseEventHandler OnClientResponse;
+
+		private readonly CancellationToken _cancelToken;
+		private readonly ClientWebSocket _socket;
+		private readonly Uri _url;
+		private bool _loopRunning;
 
 		public SocketClient(string ip, int port, bool ssl, CancellationToken cancelToken)
 		{
@@ -36,6 +34,25 @@ namespace WebControlClient.Client.Sockets
 			_cancelToken = cancelToken;
 			_socket = new ClientWebSocket();
 		}
+
+		public bool IsClosed { get; private set; } = true;
+
+		public async ValueTask DisposeAsync()
+		{
+			do
+			{
+				await Task.Delay(500);
+			} while (_loopRunning);
+
+			if (_socket != null && _socket.State == WebSocketState.Open)
+				await Close();
+
+			_socket?.Dispose();
+
+			GC.SuppressFinalize(this);
+		}
+
+		public event OnClientResponseEventHandler OnClientResponse;
 
 		public async Task Connect()
 		{
@@ -68,11 +85,12 @@ namespace WebControlClient.Client.Sockets
 							_socket.Dispose();
 						}
 						catch { }
+
 						IsClosed = true;
 						break;
 					}
 
-					WebSocketReceiveResult receiveResult = await _socket.ReceiveAsync(buffer, _cancelToken);
+					var receiveResult = await _socket.ReceiveAsync(buffer, _cancelToken);
 					if (_cancelToken.IsCancellationRequested)
 						break;
 
@@ -84,6 +102,7 @@ namespace WebControlClient.Client.Sockets
 							_socket.Dispose();
 						}
 						catch { }
+
 						IsClosed = true;
 						break;
 					}
@@ -97,8 +116,7 @@ namespace WebControlClient.Client.Sockets
 							receiveResult = await _socket.ReceiveAsync(buffer, _cancelToken);
 							totalRead += receiveResult.Count;
 							await bufferStream.WriteAsync(buffer, 0, receiveResult.Count);
-						}
-						while (receiveResult.EndOfMessage);
+						} while (receiveResult.EndOfMessage);
 					}
 					else
 					{
@@ -119,6 +137,7 @@ namespace WebControlClient.Client.Sockets
 							_socket.Dispose();
 						}
 						catch { }
+
 						IsClosed = true;
 						break;
 					}
@@ -128,48 +147,55 @@ namespace WebControlClient.Client.Sockets
 					switch (model.Type)
 					{
 						case ClientResponseType.SAData:
+						{
+							var eventArgs = new SocketClientResponseEventArgs
 							{
-								var eventArgs = new SocketClientResponseEventArgs()
-								{
-									Response = JsonSerializer.Deserialize<ClientResponse<ScreenAmbienceStatus>>(data, DefaultJsonOptions.JsonOptions)
-								};
-								foreach (var i in OnClientResponse.GetInvocationList())
-								{
-									invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
-								}
-								break;
+								Response = JsonSerializer.Deserialize<ClientResponse<ScreenAmbienceStatus>>(data,
+									DefaultJsonOptions.JsonOptions)
+							};
+							foreach (var i in OnClientResponse.GetInvocationList())
+							{
+								invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
 							}
+
+							break;
+						}
 						case ClientResponseType.LSCData:
+						{
+							var eventArgs = new SocketClientResponseEventArgs
 							{
-								var eventArgs = new SocketClientResponseEventArgs()
-								{
-									Response = JsonSerializer.Deserialize<ClientResponse<LightStripStatus>>(data, DefaultJsonOptions.JsonOptions)
-								};
-								foreach (var i in OnClientResponse.GetInvocationList())
-								{
-									invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
-								}
-								break;
+								Response = JsonSerializer.Deserialize<ClientResponse<LightStripStatus>>(data,
+									DefaultJsonOptions.JsonOptions)
+							};
+							foreach (var i in OnClientResponse.GetInvocationList())
+							{
+								invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
 							}
+
+							break;
+						}
 						case ClientResponseType.Pong:
 							break;
 						default:
+						{
+							var eventArgs = new SocketClientResponseEventArgs
 							{
-								var eventArgs = new SocketClientResponseEventArgs()
-								{
-									Response = model
-								};
-								foreach (var i in OnClientResponse.GetInvocationList())
-								{
-									invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
-								}
-								break;
+								Response = model
+							};
+							foreach (var i in OnClientResponse.GetInvocationList())
+							{
+								invokeList.Add(((OnClientResponseEventHandler)i)(this, eventArgs));
 							}
+
+							break;
+						}
 					}
+
 					await Task.WhenAll(invokeList);
 				} while (!_cancelToken.IsCancellationRequested);
 			}
 			catch { }
+
 			_loopRunning = false;
 		}
 
@@ -180,21 +206,6 @@ namespace WebControlClient.Client.Sockets
 				await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, _cancelToken);
 				IsClosed = true;
 			}
-		}
-
-		public async ValueTask DisposeAsync()
-		{
-			do
-			{
-				await Task.Delay(500);
-			} while (_loopRunning);
-
-			if (_socket != null && _socket.State == WebSocketState.Open)
-				await Close();
-
-			_socket?.Dispose();
-
-			GC.SuppressFinalize(this);
 		}
 	}
 }

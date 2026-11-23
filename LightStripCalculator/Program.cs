@@ -1,17 +1,17 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace LightStripCalculator
 {
-	class Program
+	internal class Program
 	{
-		static async Task Main(string[] args)
+		private static async Task Main(string[] args)
 		{
 			try
 			{
@@ -21,7 +21,8 @@ namespace LightStripCalculator
 
 				//How many lights are on the strip.
 				var lightCountS = commandLine["light_count"];
-				if (string.IsNullOrWhiteSpace(lightCountS) || !int.TryParse(lightCountS, out var lightCount) || lightCount < 0)
+				if (string.IsNullOrWhiteSpace(lightCountS) || !int.TryParse(lightCountS, out var lightCount) ||
+				    lightCount < 0)
 				{
 					Console.WriteLine("invalid light count");
 					Console.ReadLine();
@@ -30,7 +31,8 @@ namespace LightStripCalculator
 
 				//The light in sequence that is at the top left of the rectangle.
 				var lightStartS = commandLine["light_start"];
-				if (string.IsNullOrWhiteSpace(lightStartS) || !int.TryParse(lightStartS, out var lightStart) || lightStart < 0 || lightStart > lightCount)
+				if (string.IsNullOrWhiteSpace(lightStartS) || !int.TryParse(lightStartS, out var lightStart) ||
+				    lightStart < 0 || lightStart > lightCount)
 				{
 					Console.WriteLine("invalid light start");
 					Console.ReadLine();
@@ -41,7 +43,8 @@ namespace LightStripCalculator
 				//This is to get the width and height so we can circle around the light strip to get all the lights coordinates.
 				//(29,16.31) is 16:9 for 90 lights
 				var bottomRightS = commandLine["bottom_right"];
-				if (string.IsNullOrWhiteSpace(bottomRightS) || !LightCoord.TryParse(bottomRightS, out var bottomRight) || bottomRight == null)
+				if (string.IsNullOrWhiteSpace(bottomRightS) ||
+				    !LightCoord.TryParse(bottomRightS, out var bottomRight) || bottomRight == null)
 				{
 					Console.WriteLine("invalid bottom right coordinate");
 					Console.ReadLine();
@@ -51,7 +54,8 @@ namespace LightStripCalculator
 				//Pushes in the coordinates of the lights by an amount so they are not sampling the very edge of the screen.
 				var borderDecrease = 1.0f;
 				var borderInS = commandLine["border_decrease"];
-				if (!string.IsNullOrWhiteSpace(borderInS) && (!float.TryParse(borderInS, out borderDecrease) || borderDecrease <= 0.0f || borderDecrease > 1.0f))
+				if (!string.IsNullOrWhiteSpace(borderInS) && (!float.TryParse(borderInS, out borderDecrease) ||
+				                                              borderDecrease <= 0.0f || borderDecrease > 1.0f))
 				{
 					Console.WriteLine("invalid border decrease");
 					Console.ReadLine();
@@ -61,7 +65,7 @@ namespace LightStripCalculator
 				//Depending on which way the light strip is run the x coordinates may need to be flipped.
 				var flipX = false;
 				var flipXInS = commandLine["flipx"];
-				if (!string.IsNullOrWhiteSpace(flipXInS) && (!bool.TryParse(flipXInS, out flipX)))
+				if (!string.IsNullOrWhiteSpace(flipXInS) && !bool.TryParse(flipXInS, out flipX))
 				{
 					Console.WriteLine("invalid flip x");
 					Console.ReadLine();
@@ -71,17 +75,18 @@ namespace LightStripCalculator
 				//Depending on which way the light strip is run the y coordinates may need to be flipped.
 				var flipY = false;
 				var flipYInS = commandLine["flipy"];
-				if (!string.IsNullOrWhiteSpace(flipYInS) && (!bool.TryParse(flipYInS, out flipY)))
+				if (!string.IsNullOrWhiteSpace(flipYInS) && !bool.TryParse(flipYInS, out flipY))
 				{
 					Console.WriteLine("invalid flip y");
 					Console.ReadLine();
 					return;
 				}
 
-				borderDecrease = (1.0f - borderDecrease) + 1.0f;
+				borderDecrease = 1.0f - borderDecrease + 1.0f;
 
 				var rect = Rectangle.FromLTRB(0, 0, bottomRight.Value.X, bottomRight.Value.Y);
-				var bigRect = Rectangle.FromLTRB(0, 0, (int)Math.Floor(bottomRight.Value.X * borderDecrease), (int)Math.Floor(bottomRight.Value.Y * borderDecrease));
+				var bigRect = Rectangle.FromLTRB(0, 0, (int)Math.Floor(bottomRight.Value.X * borderDecrease),
+					(int)Math.Floor(bottomRight.Value.Y * borderDecrease));
 				var dictInt = new Dictionary<int, LightCoord>();
 				var dictFloat = new Dictionary<int, LightCoordF>();
 
@@ -96,6 +101,7 @@ namespace LightStripCalculator
 					if (++lightIter > lightCount - 1)
 						lightIter = 0;
 				}
+
 				//Right
 				for (var y = 0; y < rect.Height; y++)
 				{
@@ -104,6 +110,7 @@ namespace LightStripCalculator
 					if (++lightIter > lightCount - 1)
 						lightIter = 0;
 				}
+
 				//Bottom
 				for (var x = rect.Width; x > 0; x--)
 				{
@@ -112,6 +119,7 @@ namespace LightStripCalculator
 					if (++lightIter > lightCount - 1)
 						lightIter = 0;
 				}
+
 				//Left
 				for (var y = rect.Height; y > 0; y--)
 				{
@@ -126,8 +134,8 @@ namespace LightStripCalculator
 				var yDif = (bigRect.Height - rect.Height) / 2.0f;
 				for (var i = 0; i < lightCount; ++i)
 				{
-					float x = dictInt[i].X + xDif;
-					float y = dictInt[i].Y + yDif;
+					var x = dictInt[i].X + xDif;
+					var y = dictInt[i].Y + yDif;
 					x /= bigRect.Width;
 					y /= bigRect.Height;
 					if (flipX)
@@ -141,7 +149,7 @@ namespace LightStripCalculator
 					File.Delete("lightlist.json");
 				using var fileOut = File.OpenWrite("lightlist.json");
 				var list = dictFloat.OrderBy(x => x.Key).Select(x => x.Value).ToList();
-				await JsonSerializer.SerializeAsync(fileOut, list, new JsonSerializerOptions()
+				await JsonSerializer.SerializeAsync(fileOut, list, new JsonSerializerOptions
 				{
 					WriteIndented = true
 				});

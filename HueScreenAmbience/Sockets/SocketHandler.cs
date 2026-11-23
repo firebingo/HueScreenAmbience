@@ -1,11 +1,11 @@
-﻿using HueScreenAmbience.Hue;
-using LightsShared;
-using LightsShared.Sockets;
-using System;
+﻿using System;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
+using HueScreenAmbience.Hue;
+using LightsShared;
+using LightsShared.Sockets;
 using WebControlClient.Client.Shared;
 using WebControlClient.Shared;
 
@@ -13,13 +13,13 @@ namespace HueScreenAmbience.Sockets
 {
 	public class SocketHandler
 	{
-		private bool _isRunning = false;
+		private Config _config;
 
 		private Core _core;
-		private ScreenReader _screen;
 		private HueCore _hueCore;
-		private Config _config;
+		private bool _isRunning;
 		private FileLogger _logger;
+		private ScreenReader _screen;
 
 		private SocketServer _socketServer;
 
@@ -41,28 +41,36 @@ namespace HueScreenAmbience.Sockets
 			{
 				_socketServer = new SocketServer(_logger);
 				X509Certificate2 cert = null;
-				if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PfxCertLocation) && File.Exists(_config.Model.SocketSettings.PfxCertLocation))
+				if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PfxCertLocation) &&
+				    File.Exists(_config.Model.SocketSettings.PfxCertLocation))
 				{
 					if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PfxCertPassword))
-						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.PfxCertLocation, _config.Model.SocketSettings.PfxCertPassword);
+						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.PfxCertLocation,
+							_config.Model.SocketSettings.PfxCertPassword);
 					else
-						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.PfxCertLocation, string.Empty);
+						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.PfxCertLocation,
+							string.Empty);
 				}
 				else if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PemCertLocation) &&
-						 File.Exists(_config.Model.SocketSettings.PemCertLocation) &&
-						 !string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PemCertPrivateKeyLocation) &&
-						 File.Exists(_config.Model.SocketSettings.PemCertPrivateKeyLocation))
+				         File.Exists(_config.Model.SocketSettings.PemCertLocation) &&
+				         !string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PemCertPrivateKeyLocation) &&
+				         File.Exists(_config.Model.SocketSettings.PemCertPrivateKeyLocation))
 				{
 					if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PemCertPassword))
-						cert = X509Certificate2.CreateFromEncryptedPemFile(_config.Model.SocketSettings.PemCertLocation, _config.Model.SocketSettings.PemCertPassword, _config.Model.SocketSettings.PemCertPrivateKeyLocation);
+						cert = X509Certificate2.CreateFromEncryptedPemFile(_config.Model.SocketSettings.PemCertLocation,
+							_config.Model.SocketSettings.PemCertPassword,
+							_config.Model.SocketSettings.PemCertPrivateKeyLocation);
 					else
-						cert = X509Certificate2.CreateFromPemFile(_config.Model.SocketSettings.PemCertLocation, _config.Model.SocketSettings.PemCertPrivateKeyLocation);
+						cert = X509Certificate2.CreateFromPemFile(_config.Model.SocketSettings.PemCertLocation,
+							_config.Model.SocketSettings.PemCertPrivateKeyLocation);
 
 					if (_config.Model.SocketSettings.PkcsCertHack)
 						cert = X509CertificateLoader.LoadPkcs12(cert.Export(X509ContentType.Pkcs12), null);
 				}
 
-				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort, _config.Model.SocketSettings.AspnetConsoleLog, cert, _config.Model.SocketSettings.SslProtocol);
+				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(),
+					_config.Model.SocketSettings.ListenPort, _config.Model.SocketSettings.AspnetConsoleLog, cert,
+					_config.Model.SocketSettings.SslProtocol);
 				_socketServer.OnClientMessage += HandleClientCommand;
 				_isRunning = true;
 			}
@@ -99,21 +107,23 @@ namespace HueScreenAmbience.Sockets
 						await _core.StopScreenReading();
 						break;
 					case ClientMessageType.GetSAState:
-						response = new ClientResponse<ScreenAmbienceStatus>()
+						response = new ClientResponse<ScreenAmbienceStatus>
 						{
 							Success = true,
 							Message = string.Empty,
 							Type = ClientResponseType.SAData,
-							Data = new ScreenAmbienceStatus()
+							Data = new ScreenAmbienceStatus
 							{
 								IsStarted = _screen.IsRunning,
 								Frame = _screen.Frame,
 								AverageDeltaTime = _screen.AverageDt,
 								IsHueConnected = _hueCore.IsConnectedToBridge,
 								UsingHue = _config.Model.HueSettings.UseHue,
-								UsingRgb = _config.Model.RgbDeviceSettings.UseKeyboards || _config.Model.RgbDeviceSettings.UseMice || _config.Model.RgbDeviceSettings.UseMotherboard,
+								UsingRgb = _config.Model.RgbDeviceSettings.UseKeyboards ||
+								           _config.Model.RgbDeviceSettings.UseMice ||
+								           _config.Model.RgbDeviceSettings.UseMotherboard,
 								UsingLightStrip = _config.Model.LightStripSettings.UseLightStrip,
-								ScreenInfo = new ScreenInfo()
+								ScreenInfo = new ScreenInfo
 								{
 									Id = _screen.ScreenInfo.Source,
 									RealHeight = (int)_screen.ScreenInfo.RealHeight,

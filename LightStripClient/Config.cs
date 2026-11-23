@@ -9,14 +9,13 @@ namespace LightStripClient
 {
 	public class Config
 	{
-		private ConfigModel _config = new ConfigModel();
-		public ConfigModel Model { get => _config; private set => _config = value; }
-
-		private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions()
+		private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
 		{
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			WriteIndented = true
 		};
+
+		public ConfigModel Model { get; private set; } = new ConfigModel();
 
 		public void LoadConfig()
 		{
@@ -24,11 +23,14 @@ namespace LightStripClient
 			{
 				if (File.Exists("Data/Config.json"))
 				{
-					var readJson = JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText("Data/Config.json"), _jsonOptions) ?? throw new Exception("Failed to read config");
-					_config = readJson;
+					var readJson =
+						JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText("Data/Config.json"), _jsonOptions) ??
+						throw new Exception("Failed to read config");
+					Model = readJson;
 					ValidateConfig();
 					SaveConfig();
-					Console.WriteLine($"Config loaded with {_config.LightCount} lights, receiving on port {_config.ReceivePort}");
+					Console.WriteLine(
+						$"Config loaded with {Model.LightCount} lights, receiving on port {Model.ReceivePort}");
 				}
 				else
 				{
@@ -47,7 +49,7 @@ namespace LightStripClient
 		{
 			try
 			{
-				File.WriteAllText("Data/Config.json", JsonSerializer.Serialize(_config, _jsonOptions));
+				File.WriteAllText("Data/Config.json", JsonSerializer.Serialize(Model, _jsonOptions));
 			}
 			catch (Exception e)
 			{
@@ -57,21 +59,23 @@ namespace LightStripClient
 
 		private void ValidateConfig()
 		{
-			_config.ReceivePort = Math.Clamp(_config.ReceivePort, 1, 65535);
-			if (_config.RemoteAddress != null && !IPAddress.TryParse(_config.RemoteAddress, out _))
-				_config.RemoteAddress = null;
-			_ = _config.RemoteAddressIp;
+			Model.ReceivePort = Math.Clamp(Model.ReceivePort, 1, 65535);
+			if (Model.RemoteAddress != null && !IPAddress.TryParse(Model.RemoteAddress, out _))
+				Model.RemoteAddress = null;
+			_ = Model.RemoteAddressIp;
 
-			_config.SocketSettings.ListenPort = Math.Clamp(_config.SocketSettings.ListenPort, 1, 65535);
-			if (!IPAddress.TryParse(_config.SocketSettings.ListenAddress, out _))
-				_config.SocketSettings.ListenAddress = IPAddress.Any.ToString();
-			_ = _config.SocketSettings.ListenIp;
+			Model.SocketSettings.ListenPort = Math.Clamp(Model.SocketSettings.ListenPort, 1, 65535);
+			if (!IPAddress.TryParse(Model.SocketSettings.ListenAddress, out _))
+				Model.SocketSettings.ListenAddress = IPAddress.Any.ToString();
+			_ = Model.SocketSettings.ListenIp;
 		}
 	}
 
 	public class ConfigModel
 	{
-		private IPAddress? _remoteAddressIp = null;
+		public string? RemoteAddress;
+		private IPAddress? _remoteAddressIp;
+
 		[JsonIgnore]
 		public IPAddress? RemoteAddressIp
 		{
@@ -83,20 +87,21 @@ namespace LightStripClient
 				return _remoteAddressIp;
 			}
 		}
-		public string? RemoteAddress = null;
+
 		public int ReceivePort { get; set; } = 9250;
 		public int ReceiveTimeout { get; set; } = 10000;
-		public int LightCount { get; set; } = 0;
+		public int LightCount { get; set; }
 		public SocketSettings SocketSettings { get; set; } = new SocketSettings();
 	}
 
 	public class SocketSettings
 	{
+		private IPAddress? _listenIp;
 		public bool EnableHubSocket { get; set; } = false;
 		public bool AspnetConsoleLog { get; set; } = false;
 		public int ListenPort { get; set; } = 34780;
 		public string ListenAddress { get; set; } = IPAddress.Any.ToString();
-		private IPAddress? _listenIp;
+
 		[JsonIgnore]
 		public IPAddress ListenIp
 		{
@@ -106,6 +111,7 @@ namespace LightStripClient
 				return _listenIp;
 			}
 		}
+
 		public string PfxCertLocation { get; set; } = string.Empty;
 		public string PfxCertPassword { get; set; } = string.Empty;
 		public string PemCertLocation { get; set; } = string.Empty;

@@ -1,9 +1,9 @@
-﻿using LightsShared;
-using SharpGen.Runtime;
-using System;
+﻿using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using LightsShared;
+using SharpGen.Runtime;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
@@ -12,19 +12,19 @@ namespace HueScreenAmbience.DXGICaptureScreen
 {
 	public class DxCapture : IDisposable
 	{
-		private readonly uint _width = 0;
-		private readonly uint _height = 0;
-		private readonly IDXGIFactory7 _factory;
 		private readonly IDXGIAdapter1 _adapter;
 		private readonly ID3D11Device _device;
 		private readonly ID3D11DeviceContext _deviceContext;
+		private readonly IDXGIOutputDuplication _duplicatedOutput;
+		private readonly IDXGIFactory7 _factory;
+		private readonly uint _height;
+		private readonly FileLogger _logger;
 		private readonly IDXGIOutput _output;
 		private readonly IDXGIOutput6 _output6;
-		private readonly IDXGIOutputDuplication _duplicatedOutput;
 		private readonly ID3D11Texture2D _screenTexture;
-		private readonly FileLogger _logger;
+		private readonly uint _width;
 
-		private bool _readingFrame = false;
+		private bool _readingFrame;
 
 		public DxCapture(uint width, uint height, uint adapter, uint monitor, FileLogger logger)
 		{
@@ -34,15 +34,16 @@ namespace HueScreenAmbience.DXGICaptureScreen
 				_width = width;
 				_height = height;
 
-				DXGI.CreateDXGIFactory2<IDXGIFactory7>(false, out _factory);
+				DXGI.CreateDXGIFactory2(false, out _factory);
 				_adapter = DxEnumerate.GetAdapter1(adapter, _factory);
-				D3D11.D3D11CreateDevice(_adapter, DriverType.Unknown, DeviceCreationFlags.None, [FeatureLevel.Level_11_1], out var device, out ID3D11DeviceContext context);
+				D3D11.D3D11CreateDevice(_adapter, DriverType.Unknown, DeviceCreationFlags.None,
+					[FeatureLevel.Level_11_1], out var device, out ID3D11DeviceContext context);
 				_device = device;
 				_deviceContext = context;
 
 				_output = DxEnumerate.GetOutput(monitor, _adapter);
 				_output6 = _output.QueryInterface<IDXGIOutput6>();
-				_duplicatedOutput = _output6.DuplicateOutput1(_device, 1, new Format[] { Format.B8G8R8A8_UNorm });
+				_duplicatedOutput = _output6.DuplicateOutput1(_device, 1, new[] { Format.B8G8R8A8_UNorm });
 
 				var textureDesc = new Texture2DDescription
 				{
@@ -67,13 +68,31 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			}
 		}
 
+		public void Dispose()
+		{
+			while (_readingFrame)
+			{
+				Thread.Sleep(0);
+			}
+
+			_factory?.Dispose();
+			_adapter?.Dispose();
+			_device?.Dispose();
+			_output?.Dispose();
+			_output6?.Dispose();
+			_duplicatedOutput?.Dispose();
+			_screenTexture?.Dispose();
+			GC.SuppressFinalize(this);
+		}
+
 		public bool GetFrame(MemoryStream frameStream)
 		{
 			try
 			{
 				_readingFrame = true;
 				var returnChange = false;
-				var result = _duplicatedOutput.AcquireNextFrame(1000, out var duplicateFrameInformation, out var screenResource);
+				var result =
+					_duplicatedOutput.AcquireNextFrame(1000, out var duplicateFrameInformation, out var screenResource);
 				if (result.Success && duplicateFrameInformation.LastPresentTime != 0)
 				{
 					using (var screenTexture2D = screenResource.QueryInterface<ID3D11Texture2D>())
@@ -88,7 +107,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						}
 					}
 
-					var mapSource = _deviceContext.Map(_screenTexture, 0, MapMode.Read);
+					var mapSource = _deviceContext.Map(_screenTexture, 0);
 
 					var sourcePtr = mapSource.DataPointer;
 					unsafe
@@ -97,7 +116,7 @@ namespace HueScreenAmbience.DXGICaptureScreen
 						fixed (byte* destBytePtr = &frameData[0])
 						{
 							var destPtr = (IntPtr)destBytePtr;
-							for (int y = 0; y < _height; y++)
+							for (var y = 0; y < _height; y++)
 							{
 								MemoryHelpers.CopyMemory(destPtr, sourcePtr, mapSource.RowPitch);
 								sourcePtr = IntPtr.Add(sourcePtr, (int)mapSource.RowPitch);
@@ -129,20 +148,6 @@ namespace HueScreenAmbience.DXGICaptureScreen
 			}
 
 			return false;
-		}
-
-		public void Dispose()
-		{
-			while (_readingFrame)
-				Thread.Sleep(0);
-			_factory?.Dispose();
-			_adapter?.Dispose();
-			_device?.Dispose();
-			_output?.Dispose();
-			_output6?.Dispose();
-			_duplicatedOutput?.Dispose();
-			_screenTexture?.Dispose();
-			GC.SuppressFinalize(this);
 		}
 	}
 }

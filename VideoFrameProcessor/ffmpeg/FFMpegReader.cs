@@ -13,7 +13,8 @@ namespace VideoFrameProcessor.ffmpeg
 			p.StartInfo.UseShellExecute = false;
 			p.StartInfo.RedirectStandardOutput = true;
 			p.StartInfo.FileName = "ffmpeg.exe";
-			p.StartInfo.Arguments = $"-i \"{filePath}\" -f rawvideo -c:v rawvideo -pix_fmt bgra -s {streamInfo.Width}x{streamInfo.Height} pipe:1";
+			p.StartInfo.Arguments =
+				$"-i \"{filePath}\" -f rawvideo -c:v rawvideo -pix_fmt bgra -s {streamInfo.Width}x{streamInfo.Height} pipe:1";
 			var f = 0;
 			var frameLength = streamInfo.Width * streamInfo.Height * 4;
 			var buffer = new byte[config.Model.BufferSize];
@@ -33,6 +34,7 @@ namespace VideoFrameProcessor.ffmpeg
 						if (task.IsCompleted)
 							removeTasks.Add(task);
 					}
+
 					foreach (var r in removeTasks)
 					{
 						frameTasks.Remove(r);
@@ -46,7 +48,8 @@ namespace VideoFrameProcessor.ffmpeg
 					var frameProcessStream = new MemoryStream(frameLength);
 					frame.Seek(0, SeekOrigin.Begin);
 					frame.CopyTo(frameProcessStream);
-					frameTasks.Add(FrameProcessor.ProcessFrame(config, frameProcessStream, f++, streamInfo.Width, streamInfo.Height, outPath));
+					frameTasks.Add(FrameProcessor.ProcessFrame(config, frameProcessStream, f++, streamInfo.Width,
+						streamInfo.Height, outPath));
 					frame.Seek(0, SeekOrigin.Begin);
 					frameBytesRead = 0;
 				}
@@ -60,6 +63,7 @@ namespace VideoFrameProcessor.ffmpeg
 					}
 				}
 			} while (!p.HasExited);
+
 			p.WaitForExit();
 		}
 	}

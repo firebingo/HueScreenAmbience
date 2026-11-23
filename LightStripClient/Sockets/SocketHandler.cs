@@ -1,10 +1,10 @@
-﻿using LightsShared;
-using LightsShared.Sockets;
-using System;
+﻿using System;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
+using LightsShared;
+using LightsShared.Sockets;
 using WebControlClient.Client.Shared;
 using WebControlClient.Shared;
 
@@ -12,11 +12,10 @@ namespace LightStripClient.Sockets
 {
 	public class SocketHandler
 	{
-		private bool _isRunning = false;
-
 		private readonly Config _config;
-		private readonly FileLogger _logger;
 		private readonly LightStripLighter _lighter;
+		private readonly FileLogger _logger;
+		private bool _isRunning;
 		private SocketServer? _socketServer;
 
 
@@ -36,28 +35,37 @@ namespace LightStripClient.Sockets
 			{
 				_socketServer = new SocketServer(_logger);
 				X509Certificate2? cert = null;
-				if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PfxCertLocation) && File.Exists(_config.Model.SocketSettings.PfxCertLocation))
+				if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PfxCertLocation) &&
+				    File.Exists(_config.Model.SocketSettings.PfxCertLocation))
 				{
 					if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PfxCertPassword))
-						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.PfxCertLocation, _config.Model.SocketSettings.PfxCertPassword);
+						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.PfxCertLocation,
+							_config.Model.SocketSettings.PfxCertPassword);
 					else
-						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.PfxCertLocation, string.Empty);
+						cert = X509CertificateLoader.LoadPkcs12FromFile(_config.Model.SocketSettings.PfxCertLocation,
+							string.Empty);
 				}
 				else if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PemCertLocation) &&
-						 File.Exists(_config.Model.SocketSettings.PemCertLocation) &&
-						 !string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PemCertPrivateKeyLocation) &&
-						 File.Exists(_config.Model.SocketSettings.PemCertPrivateKeyLocation))
+				         File.Exists(_config.Model.SocketSettings.PemCertLocation) &&
+				         !string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PemCertPrivateKeyLocation) &&
+				         File.Exists(_config.Model.SocketSettings.PemCertPrivateKeyLocation))
 				{
 					if (!string.IsNullOrWhiteSpace(_config.Model.SocketSettings.PemCertPassword))
-						cert = X509Certificate2.CreateFromEncryptedPemFile(_config.Model.SocketSettings.PemCertLocation, _config.Model.SocketSettings.PemCertPassword, _config.Model.SocketSettings.PemCertPrivateKeyLocation);
+						cert = X509Certificate2.CreateFromEncryptedPemFile(_config.Model.SocketSettings.PemCertLocation,
+							_config.Model.SocketSettings.PemCertPassword,
+							_config.Model.SocketSettings.PemCertPrivateKeyLocation);
 					else
-						cert = X509Certificate2.CreateFromPemFile(_config.Model.SocketSettings.PemCertLocation, _config.Model.SocketSettings.PemCertPrivateKeyLocation);
+						cert = X509Certificate2.CreateFromPemFile(_config.Model.SocketSettings.PemCertLocation,
+							_config.Model.SocketSettings.PemCertPrivateKeyLocation);
 
 					if (_config.Model.SocketSettings.PkcsCertHack)
 						cert = X509CertificateLoader.LoadPkcs12(cert.Export(X509ContentType.Pkcs12), null);
 				}
+
 				//Console.WriteLine($"Loaded X509Certificate2 {cert}");
-				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(), _config.Model.SocketSettings.ListenPort, _config.Model.SocketSettings.AspnetConsoleLog, cert, _config.Model.SocketSettings.SslProtocol);
+				await _socketServer.Start(_config.Model.SocketSettings.ListenIp.ToString(),
+					_config.Model.SocketSettings.ListenPort, _config.Model.SocketSettings.AspnetConsoleLog, cert,
+					_config.Model.SocketSettings.SslProtocol);
 				_socketServer.OnClientMessage += HandleClientCommand;
 				_isRunning = true;
 			}
@@ -89,12 +97,12 @@ namespace LightStripClient.Sockets
 						response.Type = ClientResponseType.Pong;
 						break;
 					case ClientMessageType.GetLSCState:
-						response = new ClientResponse<LightStripStatus>()
+						response = new ClientResponse<LightStripStatus>
 						{
 							Success = true,
 							Message = string.Empty,
 							Type = ClientResponseType.LSCData,
-							Data = new LightStripStatus()
+							Data = new LightStripStatus
 							{
 								Frame = _lighter.Frame,
 								BoundIp = _lighter.BoundIp,
